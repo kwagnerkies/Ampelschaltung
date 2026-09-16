@@ -185,3 +185,30 @@ func TestFaultSwitchBlinksAndRestarts(t *testing.T) {
 		t.Error("die Anlage blieb im Notzustand")
 	}
 }
+
+// Im Notzustand leuchtet nur die mittlere Lampe. Rot und Gruen bleiben dunkel, wie bei einer
+// abgeschalteten Anlage im Strassenverkehr.
+func TestWarningUsesOnlyTheYellowLamp(t *testing.T) {
+	h := newPowerHarness(t)
+	h.run(8 * time.Second)
+	h.flip(faultPin, true)
+
+	mark := len(h.mock.History())
+	h.run(3 * time.Second)
+
+	lit := false
+	for _, pattern := range h.mock.History()[mark:] {
+		for _, direction := range light.Directions() {
+			base := int(direction) * 3
+			if pattern[base] || pattern[base+2] {
+				t.Fatalf("%s zeigt Rot oder Gruen im Notzustand: %v", direction, pattern[base:base+3])
+			}
+			if pattern[base+1] {
+				lit = true
+			}
+		}
+	}
+	if !lit {
+		t.Error("die Gelblampe leuchtete kein einziges Mal")
+	}
+}
