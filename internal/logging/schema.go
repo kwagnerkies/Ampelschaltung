@@ -7,12 +7,12 @@ import "time"
 var (
 	VehicleHeader = []string{
 		"run_id", "zeit_iso", "t_ms", "modus", "zufahrt",
-		"wartezeit_ms", "rueckstau_bei_ankunft", "phase_bei_ankunft", "einschwingen",
+		"wartezeit_ms", "belegt_bei_ankunft", "phase_bei_ankunft", "einschwingen",
 	}
 
 	StateHeader = []string{
 		"run_id", "zeit_iso", "t_ms", "modus", "phase", "phase_dauer_ms", "gruen_ziel_ms",
-		"stau_n", "stau_o", "stau_s", "stau_w", "verlaengerungen",
+		"belegt_n", "belegt_o", "belegt_s", "belegt_w", "verlaengerungen",
 	}
 
 	EventHeader = []string{

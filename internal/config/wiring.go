@@ -42,14 +42,13 @@ func (c *Config) Setup() (controller.Setup, error) {
 		return controller.Setup{}, fmt.Errorf("lampenbelegung: %w", err)
 	}
 	return controller.Setup{
-		Sensors:      c.Hardware.Sensors.Approaches(),
-		Debounce:     c.Hardware.Debounce.Duration(),
-		QueueMapping: c.QueueMapping,
-		LampMatrix:   matrix,
-		Bits:         len(c.Hardware.ShiftRegister.BitOrder),
-		Timing:       c.ControllerTiming(),
-		Follow:       c.Timing.Follow.Duration(),
-		Tick:         controller.DefaultTick,
-		Sample:       c.Logging.StateInterval.Duration(),
+		Sensors:    c.Hardware.Sensors.Approaches(),
+		Debounce:   c.Hardware.Debounce.Duration(),
+		LampMatrix: matrix,
+		Bits:       len(c.Hardware.ShiftRegister.BitOrder),
+		Timing:     c.ControllerTiming(),
+		Follow:     c.Timing.Follow.Duration(),
+		Tick:       controller.DefaultTick,
+		Sample:     c.Logging.StateInterval.Duration(),
 	}, nil
 }

@@ -41,11 +41,6 @@ timing:
 fixed:
   green_ms: 15000
 
-queue_mapping:
-  0: 0
-  1: 1
-  2: 3
-  3: 6
 
 display:
   enabled: true

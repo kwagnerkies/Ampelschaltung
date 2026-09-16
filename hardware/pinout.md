@@ -54,9 +54,8 @@ Kernel mit 15 ms.
 | Sued | 16 | 20 | 21 |
 | West | 23 | 24 | 25 |
 
-S1 liegt etwa eine Fahrzeuglaenge plus Abstand hinter der Haltelinie, S2 etwa zwei. Die
-Abbildung belegter Sensoren auf eine Fahrzeugzahl steht als `queue_mapping` in der
-Konfiguration.
+S1 liegt etwa eine Fahrzeuglaenge plus Abstand hinter der Haltelinie, S2 etwa zwei. Gefuehrt
+wird, bis zu welchem Sensor eine Zufahrt belegt ist, nicht wie viele Fahrzeuge dort stehen.
 
 Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt. Ein stehendes Fahrzeug haelt den
 Kontakt geschlossen, und genau daraus entsteht die Rueckstaumessung.

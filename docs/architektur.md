@@ -49,8 +49,8 @@ Zufahrt faehrt gleichzeitig ab, ihre Abfahrten sind keine Fahrzeugfolge.
 
 **7. Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt.** Genau daraus entsteht die
 Rueckstaumessung: ein stehendes Fahrzeug haelt den Kontakt geschlossen. `detector/occupancy.go`
-fuehrt die Belegung ueber die Zeit, `detector/queue.go` bildet die Zahl belegter Sensoren auf
-eine Fahrzeugzahl ab, und diese Tabelle steht in der Konfiguration, nicht im Code.
+fuehrt die Belegung ueber die Zeit und rechnet ueber Luecken hinweg bis zum hintersten
+belegten Kontakt.
 
 **8. Die Anzeige haengt am Beobachter.** `internal/display` bekommt denselben Zustand wie das
 CSV-Logging, ueber dasselbe `Observer`-Interface. Der Regelkreis kennt kein Display. Gezeichnet
@@ -62,8 +62,7 @@ wirkt erst beim Eintritt in eine Freigabe. Waehrend Gelb oder Allrot umzuschalte
 unzulaessiges Signalbild erzeugen. Dieselbe Datei haelt die Blinkquittung des Resets, die nur
 aus Allrot heraus laeuft.
 
-**10. Alles Physikalische steht in der Konfiguration.** Pins, Bitreihenfolge, Sensorabstaende,
-Rueckstautabelle, alle Zeiten. `config/validate.go` bricht den Start bei fehlerhaften Werten
+**10. Alles Physikalische steht in der Konfiguration.** Pins, Bitreihenfolge, alle Zeiten. `config/validate.go` bricht den Start bei fehlerhaften Werten
 ab. Ein Verdrahtungsfehler ist damit eine Zeile YAML, keine Codeaenderung, und die Anzahl der
 Sensoren je Zufahrt ist frei waehlbar.
 

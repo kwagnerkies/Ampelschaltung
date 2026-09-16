@@ -92,7 +92,7 @@ func (r *Recorder) VehicleLeft(departure traffic.Departure, mode, phase string) 
 		mode,
 		departure.Direction.String(),
 		strconv.FormatInt(departure.Wait.Milliseconds(), 10),
-		strconv.Itoa(departure.Arrival.Queue),
+		strconv.Itoa(departure.Arrival.Reach),
 		phase,
 		r.settling(departure.At),
 	})
@@ -130,7 +130,7 @@ func (r *Recorder) Sample(at time.Time, snapshot controller.Snapshot) {
 		strconv.FormatInt(snapshot.State.Target.Milliseconds(), 10),
 	}
 	for _, direction := range light.Directions() {
-		row = append(row, strconv.Itoa(snapshot.Queues[direction]))
+		row = append(row, strconv.Itoa(snapshot.Reach[direction]))
 	}
 	row = append(row, strconv.Itoa(snapshot.Following))
 	r.run.State().Write(row)

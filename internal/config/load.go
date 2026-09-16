@@ -23,17 +23,10 @@ func Load(path string) (*Config, error) {
 // Parse verarbeitet den Inhalt einer Konfigurationsdatei. name dient nur der Fehlermeldung.
 func Parse(data []byte, name string) (*Config, error) {
 	cfg := Default()
-	// Fuer Abbildungen fuehrt der Decoder die Datei mit dem Default zusammen. Das wuerde
-	// Eintraege der Rueckstautabelle stehen lassen, die die Datei bewusst nicht mehr nennt.
-	cfg.QueueMapping = nil
-
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	if err := dec.Decode(&cfg); err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("konfiguration %s: %w", name, err)
-	}
-	if cfg.QueueMapping == nil {
-		cfg.QueueMapping = Default().QueueMapping
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("konfiguration %s ungueltig:\n%w", name, err)

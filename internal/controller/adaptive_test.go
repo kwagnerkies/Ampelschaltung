@@ -30,9 +30,8 @@ func newAdaptiveHarness(t *testing.T) *harness {
 		t.Fatalf("NewFollowing: %v", err)
 	}
 	c, err := Build(Setup{
-		Sensors:      sensorPins,
-		Debounce:     15 * time.Millisecond,
-		QueueMapping: map[int]int{0: 0, 1: 1, 2: 3, 3: 6},
+		Sensors:  sensorPins,
+		Debounce: 15 * time.Millisecond,
 		LampMatrix: [light.DirectionCount][3]int{
 			light.North: {0, 1, 2},
 			light.East:  {3, 4, 5},

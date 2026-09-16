@@ -10,8 +10,9 @@ import (
 // Arrival ist ein Fahrzeug, das die Erfassung erreicht hat. Phase wird als Zahl mitgefuehrt,
 // damit die Zufahrt den Phasenautomaten nicht kennen muss.
 type Arrival struct {
-	At    time.Time
-	Queue int
+	At time.Time
+	// Reach ist die Zahl belegter Sensoren bei der Ankunft.
+	Reach int
 	Phase int
 }
 

@@ -42,7 +42,7 @@ func (c *Controller) Snapshot(now time.Time) Snapshot {
 		Aspects:   state.Aspects(),
 	}
 	for _, direction := range light.Directions() {
-		snapshot.Queues[direction] = c.approaches[direction].QueueLength()
+		snapshot.Reach[direction] = c.approaches[direction].Reach()
 		if PhaseOf(direction) == state.Phase && state.Stage == StageGreen {
 			// Die freigegebene Richtung zeigt die Restzeit. Sie zaehlt herunter und springt
 			// hoch, sobald ein dicht folgendes Fahrzeug die Freigabe verlaengert.

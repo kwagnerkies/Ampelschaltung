@@ -25,7 +25,6 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 	fmt.Fprintf(w, "  Verlaengerung      %s je Fahrzeug, das binnen %s folgt\n",
 		cfg.Timing.Extension, cfg.Timing.Follow)
 	fmt.Fprintf(w, "  Festzeitbetrieb    Gruen %s\n", cfg.Fixed.Green)
-	fmt.Fprintf(w, "  Rueckstautabelle   %s\n", queueMappingText(cfg.QueueMapping, cfg.Hardware.Sensors.SensorCount()))
 	if cfg.Display.Enabled {
 		fmt.Fprintf(w, "  Anzeige            %s, %d Hz, DC %d, Reset %d, %s\n",
 			cfg.Display.Device, cfg.Display.SpeedHz, cfg.Display.DC, cfg.Display.Reset, cfg.Display.Rotation)
@@ -34,15 +33,4 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 	}
 	fmt.Fprintf(w, "  Logging            %s, Abtastung %s, Puffer %d\n",
 		cfg.Logging.Dir, cfg.Logging.StateInterval, cfg.Logging.Buffer)
-}
-
-func queueMappingText(mapping map[int]int, sensorCount int) string {
-	text := ""
-	for occupied := 0; occupied <= sensorCount; occupied++ {
-		if occupied > 0 {
-			text += ", "
-		}
-		text += fmt.Sprintf("%d belegt = %d Fahrzeuge", occupied, mapping[occupied])
-	}
-	return text
 }

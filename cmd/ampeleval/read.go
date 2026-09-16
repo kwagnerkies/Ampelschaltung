@@ -16,7 +16,7 @@ type Row struct {
 	Mode      string
 	Direction string
 	Wait      time.Duration
-	Queue     int
+	Reach     int
 	Phase     string
 	Settling  bool
 }
@@ -109,15 +109,15 @@ func parseRow(record []string, index map[string]int) (Row, error) {
 	if err != nil {
 		return Row{}, fmt.Errorf("wartezeit_ms: %w", err)
 	}
-	queue, err := strconv.Atoi(field("rueckstau_bei_ankunft"))
+	reach, err := strconv.Atoi(field("belegt_bei_ankunft"))
 	if err != nil {
-		queue = 0
+		reach = 0
 	}
 	return Row{
 		Mode:      field("modus"),
 		Direction: field("zufahrt"),
 		Wait:      time.Duration(wait) * time.Millisecond,
-		Queue:     queue,
+		Reach:     reach,
 		Phase:     field("phase_bei_ankunft"),
 		Settling:  field("einschwingen") == "1",
 	}, nil

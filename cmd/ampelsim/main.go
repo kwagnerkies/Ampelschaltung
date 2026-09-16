@@ -31,7 +31,6 @@ func run() error {
 	// Die Grundlast liegt bewusst unter der Saettigung. Darueber steht mehr im Rueckstau als
 	// die drei Sensoren je Zufahrt sehen, und die gemessene Wartezeit wird unbrauchbar.
 	rates := flag.String("raten", "0.08,0.03,0.08,0.03", "Ankuenfte pro Sekunde fuer Nord,Ost,Sued,West")
-	amplitude := flag.Float64("tagesgang", 0, "Staerke des Tagesgangs zwischen 0 und 1")
 	startClock := flag.String("start", "07:00", "Startzeit der Simulation")
 	logDir := flag.String("logdir", "", "Logverzeichnis fuer die CSV-Dateien")
 	display := flag.Bool("anzeige", false, "Kreuzung im Terminal anzeigen")
@@ -51,12 +50,11 @@ func run() error {
 	}
 
 	options := simOptions{
-		config:    cfg,
-		seed:      *seed,
-		rates:     parsedRates,
-		amplitude: *amplitude,
-		start:     start,
-		logDir:    *logDir,
+		config: cfg,
+		seed:   *seed,
+		rates:  parsedRates,
+		start:  start,
+		logDir: *logDir,
 	}
 
 	modes := []string{*mode}

@@ -17,13 +17,12 @@ import (
 const simStep = 50 * time.Millisecond
 
 type simOptions struct {
-	config    *config.Config
-	mode      string
-	seed      int64
-	rates     [light.DirectionCount]float64
-	amplitude float64
-	start     time.Time
-	logDir    string
+	config *config.Config
+	mode   string
+	seed   int64
+	rates  [light.DirectionCount]float64
+	start  time.Time
+	logDir string
 }
 
 // greenRecord haelt eine Freigabe mit ihrer Zielgruenzeit fest.
@@ -66,7 +65,7 @@ func newSimulation(options simOptions) (*simulation, error) {
 	setup.Tick = simStep
 
 	s := &simulation{
-		arrivals: newArrivals(options.seed, options.rates, options.amplitude, options.start),
+		arrivals: newArrivals(options.seed, options.rates, options.start),
 		clk:      clk,
 		mode:     active.Name(),
 	}

@@ -12,11 +12,7 @@ var base = time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 
 func newApproach(t *testing.T) *Approach {
 	t.Helper()
-	queue, err := detector.NewQueue(map[int]int{0: 0, 1: 1, 2: 3, 3: 6}, 3)
-	if err != nil {
-		t.Fatalf("NewQueue: %v", err)
-	}
-	approach, err := NewApproach(light.North, 3, queue)
+	approach, err := NewApproach(light.North, 3)
 	if err != nil {
 		t.Fatalf("NewApproach: %v", err)
 	}
@@ -105,16 +101,16 @@ func TestQueueOfTwoVehiclesKeepsOrder(t *testing.T) {
 	}
 }
 
-func TestQueueLengthAndArrivalQueue(t *testing.T) {
+func TestReachCountsOccupiedSensors(t *testing.T) {
 	a := newApproach(t)
 
 	apply(t, a, 0, true, 0, 0)
-	if got := a.QueueLength(); got != 1 {
-		t.Errorf("Rueckstau %d, erwartet 1", got)
+	if got := a.Reach(); got != 1 {
+		t.Errorf("belegte Sensoren %d, erwartet 1", got)
 	}
 	apply(t, a, 2, true, time.Second, 0)
-	if got := a.QueueLength(); got != 6 {
-		t.Errorf("Rueckstau %d, erwartet 6", got)
+	if got := a.Reach(); got != 3 {
+		t.Errorf("belegte Sensoren %d, erwartet 3", got)
 	}
 }
 func TestResetClearsEverything(t *testing.T) {
@@ -122,17 +118,13 @@ func TestResetClearsEverything(t *testing.T) {
 	apply(t, a, 2, true, 0, 0)
 
 	a.Reset()
-	if a.Waiting() != 0 || a.QueueLength() != 0 {
-		t.Errorf("nach dem Reset: %d wartend, Rueckstau %d", a.Waiting(), a.QueueLength())
+	if a.Waiting() != 0 || a.Reach() != 0 {
+		t.Errorf("nach dem Reset: %d wartend, Rueckstau %d", a.Waiting(), a.Reach())
 	}
 }
 
 func TestNewApproachRejectsBadParameters(t *testing.T) {
-	queue, err := detector.NewQueue(map[int]int{0: 0, 1: 1}, 1)
-	if err != nil {
-		t.Fatalf("NewQueue: %v", err)
-	}
-	if _, err := NewApproach(light.North, 0, queue); err == nil {
+	if _, err := NewApproach(light.North, 0); err == nil {
 		t.Error("Zufahrt ohne Sensoren wurde angenommen")
 	}
 }

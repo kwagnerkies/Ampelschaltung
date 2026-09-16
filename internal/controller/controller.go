@@ -184,7 +184,6 @@ func (c *Controller) Step(now time.Time) {
 			gap.Round(time.Millisecond), c.watchdog.Limit()))
 		return
 	}
-	c.applyEvents(c.detect.Tick(now))
 
 	state := c.machine.State()
 	endGreen := state.Stage == StageGreen && c.strategy.EndGreen(c.view(now))

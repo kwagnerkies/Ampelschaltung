@@ -52,16 +52,6 @@ func TestParseRejectsInvalid(t *testing.T) {
 			want: "hardware.sensors.west hat 2 Sensoren",
 		},
 		{
-			name: "rueckstautabelle unvollstaendig",
-			yaml: "queue_mapping:\n  0: 0\n  1: 1\n  2: 3\n",
-			want: "fehlt der Eintrag fuer 3 belegte Sensoren",
-		},
-		{
-			name: "rueckstautabelle nicht monoton",
-			yaml: "queue_mapping:\n  0: 0\n  1: 4\n  2: 2\n  3: 6\n",
-			want: "ist kleiner als der Eintrag davor",
-		},
-		{
 			name: "festzeitgruen ueber hoechstgruen",
 			yaml: "fixed:\n  green_ms: 45000\n",
 			want: "ueberschreitet timing.max_green_ms",

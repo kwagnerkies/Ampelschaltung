@@ -164,7 +164,7 @@ Wichtige physikalische Eigenschaft: ein Reed-Kontakt meldet Anwesenheit, nicht D
 
 
 
-Rueckstauschaetzung: die Anzahl belegter Sensoren von der Haltelinie aufwaerts wird auf eine Fahrzeugzahl abgebildet. Belegt S2, gilt der Stau als mindestens bis dorthin reichend, unabhaengig davon, ob S1 zufaellig in einer Luecke zwischen zwei Autos liegt. Die Abbildung ist eine Tabelle in der Konfiguration, kein hartkodierter Ausdruck.
+Rueckstau wird als Zahl belegter Sensoren von der Haltelinie aufwaerts gefuehrt. Belegt S2, zaehlt das bis dorthin, unabhaengig davon, ob S1 zufaellig in einer Luecke zwischen zwei Autos liegt. Eine Umrechnung in Fahrzeuge findet nicht statt, sie waere eine Annahme ohne Beleg.
 
 
 
@@ -262,11 +262,9 @@ ampel/
 
     detector/
 
-      detector.go          Reed-Auswertung, Entprellung
+      detector.go          Reed-Auswertung, Zuordnung der Pins
 
       occupancy.go         Belegung je Sensor
-
-      queue.go             Rueckstauschaetzung
 
       event.go             Ereignistypen
 
@@ -512,7 +510,7 @@ Drei Dateien pro Lauf unter `/var/log/ampel/`, Dateiname mit Zeitstempel und Lau
 
 ```
 
-run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;rueckstau_bei_ankunft;phase_bei_ankunft
+run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;belegt_bei_ankunft;phase_bei_ankunft
 
 ```
 
@@ -524,7 +522,7 @@ run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;rueckstau_bei_ankunft;phase_bei_
 
 ```
 
-run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau_s;stau_w;verlaengerungen
+run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;belegt_n;belegt_o;belegt_s;belegt_w;verlaengerungen
 
 ```
 
@@ -626,16 +624,6 @@ adaptive:
 
 
 
-queue_mapping:
-
-  0: 0
-
-  1: 1
-
-  2: 3
-
-  3: 6
-
 
 
 logging:
@@ -706,7 +694,7 @@ Testumfang:
 
 - `light`: deutsche Signalfolge, korrekte Bitmuster, Rot und Gelb gleichzeitig.
 
-- `detector`: Entprellung, Belegung ueber Zeit, Rueckstauabbildung, prellender Kontakt darf kein Phantomfahrzeug erzeugen.
+- `detector`: Belegung ueber Zeit, Reichweite ueber Luecken hinweg, wiederholter Pegel erzeugt kein Ereignis.
 
 - `controller`: Uebergaenge komplett, kein Zustand ohne Gelb zwischen Gruen und Rot, Konfliktmatrix bei allen Phasenpaaren.
 
@@ -872,7 +860,7 @@ Diese Punkte vor AP2 klaeren, sie beeinflussen die Verdrahtung.
 
 
 
-- Fahrzeuglaenge und damit Sensorabstaende sowie die Rueckstautabelle.
+- Fahrzeuglaenge und damit die Sensorabstaende.
 
 - Ob wirklich drei Sensoren pro Zufahrt verbaut werden oder zwei genuegen. Die Software behandelt die Anzahl bereits als konfigurierbar, damit die Entscheidung spaeter fallen kann.
 

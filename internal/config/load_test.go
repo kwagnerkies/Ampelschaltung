@@ -71,25 +71,3 @@ func TestParseOverridesSingleField(t *testing.T) {
 
 // Die Rueckstautabelle wird ersetzt und nicht mit dem Default zusammengefuehrt, sonst
 // bliebe bei zwei Sensoren der Eintrag fuer drei belegte Sensoren stehen.
-func TestParseReplacesQueueMapping(t *testing.T) {
-	data := []byte(`
-hardware:
-  sensors:
-    north: [5, 6]
-    east: [19, 26]
-    south: [16, 20]
-    west: [23, 24]
-queue_mapping:
-  0: 0
-  1: 1
-  2: 4
-`)
-	cfg, err := Parse(data, "test")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-	want := map[int]int{0: 0, 1: 1, 2: 4}
-	if !reflect.DeepEqual(cfg.QueueMapping, want) {
-		t.Errorf("Rueckstautabelle %v, erwartet %v", cfg.QueueMapping, want)
-	}
-}

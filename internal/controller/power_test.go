@@ -96,8 +96,8 @@ func TestSwitchingOnStartsANewMeasurement(t *testing.T) {
 	h.flip(false)
 	h.flip(true)
 
-	if got := h.controller.Snapshot(h.clk.Now()).Queues[light.East]; got != 0 {
-		t.Errorf("Rueckstau Ost nach dem Einschalten %d, erwartet null", got)
+	if got := h.controller.Snapshot(h.clk.Now()).Reach[light.East]; got != 0 {
+		t.Errorf("belegte Sensoren Ost nach dem Einschalten %d, erwartet null", got)
 	}
 	if h.controller.Metrics().Total() != 0 {
 		t.Errorf("%d Fahrzeuge in den Kennzahlen", h.controller.Metrics().Total())

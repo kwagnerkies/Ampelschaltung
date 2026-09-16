@@ -66,7 +66,7 @@ func TestLaneSensorsShowQueue(t *testing.T) {
 
 func TestArrivalsFollowRate(t *testing.T) {
 	rates := [light.DirectionCount]float64{0.5, 0, 0, 0}
-	a := newArrivals(1, rates, 0, simStart)
+	a := newArrivals(1, rates, simStart)
 
 	count := 0
 	now := simStart
@@ -77,22 +77,6 @@ func TestArrivalsFollowRate(t *testing.T) {
 	// Erwartet werden etwa 300 Ankuenfte in zehn Minuten.
 	if count < 240 || count > 360 {
 		t.Errorf("%d Ankuenfte in zehn Minuten, erwartet etwa 300", count)
-	}
-}
-
-// Der Tagesgang muss Nord und Sued morgens und Ost und West abends staerker belasten.
-func TestArrivalsDailyProfile(t *testing.T) {
-	rates := [light.DirectionCount]float64{0.2, 0.2, 0.2, 0.2}
-	a := newArrivals(1, rates, 0.8, simStart)
-
-	morning := time.Date(2026, 1, 5, 8, 0, 0, 0, time.UTC)
-	evening := time.Date(2026, 1, 5, 17, 0, 0, 0, time.UTC)
-
-	if a.rate(light.North, morning) <= a.rate(light.North, evening) {
-		t.Error("Nord ist morgens nicht staerker belastet")
-	}
-	if a.rate(light.East, evening) <= a.rate(light.East, morning) {
-		t.Error("Ost ist abends nicht staerker belastet")
 	}
 }
 

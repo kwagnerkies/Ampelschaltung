@@ -77,7 +77,7 @@ func TestRecorderWritesVehicleRow(t *testing.T) {
 
 	departure := traffic.Departure{
 		Direction: light.East,
-		Arrival:   traffic.Arrival{At: started.Add(70 * time.Second), Queue: 3, Phase: int(controller.PhaseNS)},
+		Arrival:   traffic.Arrival{At: started.Add(70 * time.Second), Reach: 3, Phase: int(controller.PhaseNS)},
 		At:        started.Add(82 * time.Second),
 		Wait:      12 * time.Second,
 	}
@@ -140,7 +140,7 @@ func TestRecorderWritesEventsAndSamples(t *testing.T) {
 		State:     controller.State{Phase: controller.PhaseNS, Stage: controller.StageGreen, Since: started, Target: 15 * time.Second},
 		Elapsed:   time.Second,
 		Mode:      "festzeit",
-		Queues:    [light.DirectionCount]int{1, 2, 3, 4},
+		Reach:     [light.DirectionCount]int{1, 2, 3, 4},
 		Following: 2,
 	})
 	recorder.Stop(started.Add(30 * time.Second))

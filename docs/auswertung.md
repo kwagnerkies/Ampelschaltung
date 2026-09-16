@@ -16,9 +16,10 @@ Fahrzeuge ueberholen im Modell nicht, deshalb wird der Zufahrt die Warteschlange
 Reihenfolge der Ankunft gefuehrt: die Freigabe der Haltelinie beendet die Wartezeit des
 aeltesten wartenden Fahrzeugs.
 
-Die Rueckstaulaenge ergibt sich aus der Zahl belegter Sensoren von der Haltelinie aufwaerts,
-abgebildet ueber `queue_mapping`. Belegt der hinterste Sensor, gilt der Stau als mindestens
-bis dorthin reichend, auch wenn der mittlere gerade in einer Luecke liegt.
+Die Spalten `belegt_*` nennen, bis zu welchem Sensor eine Zufahrt belegt ist. Belegt der
+hinterste Kontakt, zaehlt das bis dorthin, auch wenn der mittlere gerade in einer Luecke
+liegt. Eine Umrechnung in Fahrzeuge findet nicht statt: sie waere eine Annahme, die die
+Sensoren nicht hergeben.
 
 ## 2. Die drei Dateien
 
@@ -28,13 +29,13 @@ Lauf-Kennung. Trennzeichen ist das Semikolon, Dezimaltrenner der Punkt.
 `vehicles-<lauf>.csv`, eine Zeile pro Fahrzeug. Das ist die Datei fuer die Kennzahl.
 
 ```
-run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;rueckstau_bei_ankunft;phase_bei_ankunft;einschwingen
+run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;belegt_bei_ankunft;phase_bei_ankunft;einschwingen
 ```
 
 `state-<lauf>.csv`, ein Abtastwert je Sekunde, fuer Diagramme ueber den Verlauf.
 
 ```
-run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau_s;stau_w;verlaengerungen
+run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;belegt_n;belegt_o;belegt_s;belegt_w;verlaengerungen
 ```
 
 `events-<lauf>.csv`, jedes Ereignis: `sensor_an`, `sensor_aus`, `phase_start`, `phase_ende`,
@@ -100,12 +101,6 @@ ampeleval ./messung
 `-modus vergleich` faehrt beide Betriebsarten nacheinander mit demselben Ankunftsmuster und
 demselben Startwert des Zufallsgenerators und nennt am Ende den Unterschied. Mit `-seed`
 laesst sich das exakt wiederholen.
-
-Mit `-tagesgang` laesst sich eine Lastspitze ueber den Tag nachbilden:
-
-```
-ampelsim -modus vergleich -tagesgang 0.8 -dauer 2h
-```
 
 Die Spalte `verlaengerungen` in `state.csv` zeigt, wie oft die laufende Freigabe verlaengert
 wurde. Bei dichtem Verkehr steht dort ein wachsender Wert, bei vereinzeltem eine Null.

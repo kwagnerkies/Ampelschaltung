@@ -13,7 +13,8 @@ type Snapshot struct {
 	State   State
 	Elapsed time.Duration
 	Mode    string
-	Queues  [light.DirectionCount]int
+	// Reach ist je Zufahrt die Zahl belegter Sensoren.
+	Reach [light.DirectionCount]int
 	// Following ist die Zahl der Verlaengerungen in der laufenden Freigabe.
 	Following int
 	// Aspects ist das aktuelle Signalbild je Zufahrt.

@@ -4,12 +4,11 @@ package config
 import "time"
 
 type Config struct {
-	Hardware     Hardware    `yaml:"hardware"`
-	Timing       Timing      `yaml:"timing"`
-	Fixed        Fixed       `yaml:"fixed"`
-	QueueMapping map[int]int `yaml:"queue_mapping"`
-	Logging      Logging     `yaml:"logging"`
-	Display      Display     `yaml:"display"`
+	Hardware Hardware `yaml:"hardware"`
+	Timing   Timing   `yaml:"timing"`
+	Fixed    Fixed    `yaml:"fixed"`
+	Logging  Logging  `yaml:"logging"`
+	Display  Display  `yaml:"display"`
 }
 
 type Hardware struct {

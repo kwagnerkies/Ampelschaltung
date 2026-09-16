@@ -7,36 +7,28 @@ import (
 	"ampel/internal/light"
 )
 
-// Detector ordnet GPIO-Pins den Zufahrten zu und entprellt als zweite Stufe hinter der
-// Entprellung im Kernel. Ein Pegel gilt erst als uebernommen, wenn er die Ruhezeit lang
-// stabil war. Ein prellender Kontakt erzeugt damit kein Ereignis.
+// Detector ordnet GPIO-Pins den Zufahrten zu. Entprellt wird im Kernel, nicht hier: der
+// Treiber kann das zuverlaessiger, und eine zweite Stufe in Go wuerde dieselbe Arbeit
+// doppelt machen.
 type Detector struct {
-	sensors  map[int]*sensor
-	order    []int
-	debounce time.Duration
+	sensors map[int]*sensor
 }
 
 type sensor struct {
 	direction light.Direction
 	index     int
-	accepted  bool
-	raw       bool
-	rawAt     time.Time
+	occupied  bool
 }
 
 // New erwartet die Sensorpins je Zufahrt in der Reihenfolge Haltelinie, dann aufwaerts.
-func New(pins [light.DirectionCount][]int, debounce time.Duration) (*Detector, error) {
-	d := &Detector{
-		sensors:  make(map[int]*sensor),
-		debounce: debounce,
-	}
+func New(pins [light.DirectionCount][]int) (*Detector, error) {
+	d := &Detector{sensors: make(map[int]*sensor)}
 	for direction, approach := range pins {
 		for index, pin := range approach {
 			if _, taken := d.sensors[pin]; taken {
 				return nil, fmt.Errorf("BCM %d ist doppelt zugeordnet", pin)
 			}
 			d.sensors[pin] = &sensor{direction: light.Direction(direction), index: index}
-			d.order = append(d.order, pin)
 		}
 	}
 	if len(d.sensors) == 0 {
@@ -45,54 +37,32 @@ func New(pins [light.DirectionCount][]int, debounce time.Duration) (*Detector, e
 	return d, nil
 }
 
-// Feed nimmt eine Flanke auf. Zurueck kommen die Ereignisse, die dadurch gueltig werden.
+// Feed nimmt eine Flanke auf. Ein wiederholter Pegel erzeugt kein Ereignis.
 func (d *Detector) Feed(pin int, occupied bool, at time.Time) ([]SensorEvent, error) {
 	s, ok := d.sensors[pin]
 	if !ok {
 		return nil, fmt.Errorf("BCM %d gehoert zu keiner zufahrt", pin)
 	}
-	if occupied != s.raw {
-		s.raw = occupied
-		s.rawAt = at
+	if occupied == s.occupied {
+		return nil, nil
 	}
-	return d.settle(at), nil
+	s.occupied = occupied
+	return []SensorEvent{{
+		Direction: s.direction,
+		Index:     s.index,
+		Occupied:  occupied,
+		At:        at,
+	}}, nil
 }
 
-// Tick uebernimmt Pegel, die inzwischen lange genug stabil sind. Der Regelkreis ruft das im
-// Takt seiner Schleife auf, damit eine Flanke am Ende eines Prellens nicht liegen bleibt.
-func (d *Detector) Tick(now time.Time) []SensorEvent {
-	return d.settle(now)
-}
-
-// Reset vergisst alle Pegel. Nach dem Reset gilt jede Zufahrt als frei.
+// Reset vergisst alle Pegel. Danach gilt jede Zufahrt als frei.
 func (d *Detector) Reset() {
 	for _, s := range d.sensors {
-		s.accepted = false
-		s.raw = false
-		s.rawAt = time.Time{}
+		s.occupied = false
 	}
 }
 
-func (d *Detector) settle(now time.Time) []SensorEvent {
-	var events []SensorEvent
-	for _, pin := range d.order {
-		s := d.sensors[pin]
-		if s.raw == s.accepted || now.Sub(s.rawAt) < d.debounce {
-			continue
-		}
-		s.accepted = s.raw
-		events = append(events, SensorEvent{
-			Direction: s.direction,
-			Index:     s.index,
-			Occupied:  s.accepted,
-			At:        s.rawAt,
-		})
-	}
-	return events
-}
-
-// Knows sagt, ob dieser Pin zu einem Sensor gehoert. Kippschalter und Taster gehoeren nicht
-// dazu und werden vom Regelkreis anders behandelt.
+// Knows sagt, ob dieser Pin zu einem Sensor gehoert. Der Hauptschalter gehoert nicht dazu.
 func (d *Detector) Knows(pin int) bool {
 	_, ok := d.sensors[pin]
 	return ok

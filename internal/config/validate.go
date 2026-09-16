@@ -13,7 +13,6 @@ func (c *Config) Validate() error {
 	errs = append(errs, c.Fixed.validate(c.Timing)...)
 	errs = append(errs, c.Logging.validate()...)
 	errs = append(errs, c.Display.validate()...)
-	errs = append(errs, validateQueueMapping(c.QueueMapping, c.Hardware.Sensors.SensorCount())...)
 	return errors.Join(errs...)
 }
 
@@ -82,37 +81,6 @@ func (l Logging) validate() []error {
 	}
 	if l.Buffer <= 0 {
 		errs = append(errs, errors.New("logging.buffer muss groesser als null sein"))
-	}
-	return errs
-}
-
-func validateQueueMapping(mapping map[int]int, sensorCount int) []error {
-	var errs []error
-	if sensorCount <= 0 {
-		return nil
-	}
-	previous := -1
-	for occupied := 0; occupied <= sensorCount; occupied++ {
-		vehicles, ok := mapping[occupied]
-		if !ok {
-			errs = append(errs, fmt.Errorf("queue_mapping fehlt der Eintrag fuer %d belegte Sensoren", occupied))
-			continue
-		}
-		if vehicles < 0 {
-			errs = append(errs, fmt.Errorf("queue_mapping[%d] darf nicht negativ sein", occupied))
-		}
-		if vehicles < previous {
-			errs = append(errs, fmt.Errorf("queue_mapping[%d] (%d) ist kleiner als der Eintrag davor (%d)", occupied, vehicles, previous))
-		}
-		previous = vehicles
-	}
-	if mapping[0] != 0 {
-		errs = append(errs, errors.New("queue_mapping[0] muss null Fahrzeuge ergeben"))
-	}
-	for occupied := range mapping {
-		if occupied < 0 || occupied > sensorCount {
-			errs = append(errs, fmt.Errorf("queue_mapping[%d] liegt ausserhalb der Sensoranzahl %d", occupied, sensorCount))
-		}
 	}
 	return errs
 }

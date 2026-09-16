@@ -78,7 +78,7 @@ func TestGroupExcludesSettlingByDefault(t *testing.T) {
 func TestReadPathsFromDirectory(t *testing.T) {
 	dir := t.TempDir()
 	content := strings.Join([]string{
-		"run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;rueckstau_bei_ankunft;phase_bei_ankunft;einschwingen",
+		"run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;belegt_bei_ankunft;phase_bei_ankunft;einschwingen",
 		"r1;2026-05-02T10:00:00.000Z;0;festzeit;Nord;12000;2;NS;0",
 		"r1;2026-05-02T10:00:10.000Z;10000;festzeit;Ost;8000;1;NS;1",
 	}, "\n") + "\n"
@@ -96,7 +96,7 @@ func TestReadPathsFromDirectory(t *testing.T) {
 	if len(rows) != 2 {
 		t.Fatalf("%d Zeilen, erwartet zwei", len(rows))
 	}
-	if rows[0].Wait != 12*time.Second || rows[0].Direction != "Nord" || rows[0].Queue != 2 {
+	if rows[0].Wait != 12*time.Second || rows[0].Direction != "Nord" || rows[0].Reach != 2 {
 		t.Errorf("erste Zeile %+v", rows[0])
 	}
 	if !rows[1].Settling {

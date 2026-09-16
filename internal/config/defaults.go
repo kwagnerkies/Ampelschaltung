@@ -38,8 +38,7 @@ func Default() Config {
 			Follow:    millis(2000),
 			Extension: millis(3000),
 		},
-		Fixed:        Fixed{Green: millis(15000)},
-		QueueMapping: map[int]int{0: 0, 1: 1, 2: 3, 3: 6},
+		Fixed: Fixed{Green: millis(15000)},
 		Display: Display{
 			Enabled:  true,
 			Device:   "/dev/spidev0.0",

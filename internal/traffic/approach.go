@@ -12,27 +12,26 @@ import (
 type Approach struct {
 	direction light.Direction
 	occupancy *detector.Occupancy
-	queue     *detector.Queue
 	tracker   Tracker
 	entry     int
 }
 
-func NewApproach(direction light.Direction, sensorCount int, queue *detector.Queue) (*Approach, error) {
+func NewApproach(direction light.Direction, sensorCount int) (*Approach, error) {
 	if sensorCount <= 0 {
 		return nil, fmt.Errorf("zufahrt %s ohne sensoren", direction)
 	}
 	return &Approach{
 		direction: direction,
 		occupancy: detector.NewOccupancy(sensorCount),
-		queue:     queue,
 		entry:     sensorCount - 1,
 	}, nil
 }
 
 func (a *Approach) Direction() light.Direction { return a.direction }
 
-// QueueLength ist der aktuell geschaetzte Rueckstau in Fahrzeugen.
-func (a *Approach) QueueLength() int { return a.queue.Estimate(a.occupancy) }
+// Reach ist die Zahl der Sensoren, bis zu der die Zufahrt belegt ist. Belegt der hinterste
+// Kontakt, zaehlt das bis dorthin, auch wenn ein Sensor davor gerade in einer Luecke liegt.
+func (a *Approach) Reach() int { return a.occupancy.Reach() }
 
 func (a *Approach) Waiting() int { return a.tracker.Waiting() }
 
@@ -47,9 +46,9 @@ func (a *Approach) Apply(event detector.SensorEvent, phase int) (Departure, bool
 
 	switch {
 	case event.Occupied && event.Index == a.entry:
-		a.tracker.Arrive(Arrival{At: event.At, Queue: a.QueueLength(), Phase: phase})
+		a.tracker.Arrive(Arrival{At: event.At, Reach: a.Reach(), Phase: phase})
 	case event.Occupied && event.Index == 0 && a.tracker.Waiting() == 0:
-		a.tracker.Arrive(Arrival{At: event.At, Queue: a.QueueLength(), Phase: phase})
+		a.tracker.Arrive(Arrival{At: event.At, Reach: a.Reach(), Phase: phase})
 	case !event.Occupied && event.Index == 0:
 		return a.tracker.Depart(a.direction, event.At)
 	}

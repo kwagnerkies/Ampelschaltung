@@ -39,13 +39,13 @@ func render(out io.Writer, s *simulation) {
 	fmt.Fprintf(&b, "Zeit %s   Phase %-11s Ziel %6s   Modus %s\n\n",
 		now.Format("15:04:05"), snapshot.State.Name(), round(snapshot.State.Target), snapshot.Mode)
 
-	fmt.Fprintf(&b, "%18s%-4s Stau %2d\n", "Nord ", aspectLetter(aspects[light.North]), snapshot.Queues[light.North])
+	fmt.Fprintf(&b, "%18s%-4s belegt %d\n", "Nord ", aspectLetter(aspects[light.North]), snapshot.Reach[light.North])
 	fmt.Fprintf(&b, "%18s\n", "|")
-	fmt.Fprintf(&b, "West %-4s Stau %2d ---+--- Ost %-4s Stau %2d\n",
-		aspectLetter(aspects[light.West]), snapshot.Queues[light.West],
-		aspectLetter(aspects[light.East]), snapshot.Queues[light.East])
+	fmt.Fprintf(&b, "West %-4s belegt %d ---+--- Ost %-4s belegt %d\n",
+		aspectLetter(aspects[light.West]), snapshot.Reach[light.West],
+		aspectLetter(aspects[light.East]), snapshot.Reach[light.East])
 	fmt.Fprintf(&b, "%18s\n", "|")
-	fmt.Fprintf(&b, "%18s%-4s Stau %2d\n\n", "Sued ", aspectLetter(aspects[light.South]), snapshot.Queues[light.South])
+	fmt.Fprintf(&b, "%18s%-4s belegt %d\n\n", "Sued ", aspectLetter(aspects[light.South]), snapshot.Reach[light.South])
 
 	fmt.Fprintf(&b, "Warteschlangen im Modell: ")
 	for _, direction := range light.Directions() {

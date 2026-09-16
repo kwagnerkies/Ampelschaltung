@@ -20,15 +20,14 @@ const DefaultFollow = 2 * time.Second
 // Setup beschreibt eine Kreuzung in Zahlen. Betrieb und Simulator verdrahten damit denselben
 // Regelkreis, nur mit anderer Hardware und anderer Uhr.
 type Setup struct {
-	Sensors      [light.DirectionCount][]int
-	Debounce     time.Duration
-	QueueMapping map[int]int
-	Follow       time.Duration
-	LampMatrix   [light.DirectionCount][3]int
-	Bits         int
-	Timing       Timing
-	Tick         time.Duration
-	Sample       time.Duration
+	Sensors    [light.DirectionCount][]int
+	Debounce   time.Duration
+	Follow     time.Duration
+	LampMatrix [light.DirectionCount][3]int
+	Bits       int
+	Timing     Timing
+	Tick       time.Duration
+	Sample     time.Duration
 
 	Strategy strategy.Strategy
 	Clock    clock.Clock
@@ -41,21 +40,17 @@ type Setup struct {
 
 // Build erzeugt Detektor, Zufahrten, Lampenbus und Regelkreis.
 func Build(setup Setup) (*Controller, error) {
-	detect, err := detector.New(setup.Sensors, setup.Debounce)
+	detect, err := detector.New(setup.Sensors)
 	if err != nil {
 		return nil, err
 	}
 	sensorCount := len(setup.Sensors[light.North])
-	queue, err := detector.NewQueue(setup.QueueMapping, sensorCount)
-	if err != nil {
-		return nil, err
-	}
 	var approaches [light.DirectionCount]*traffic.Approach
 	for _, direction := range light.Directions() {
 		if got := len(setup.Sensors[direction]); got != sensorCount {
 			return nil, fmt.Errorf("zufahrt %s hat %d sensoren, nord hat %d", direction, got, sensorCount)
 		}
-		approaches[direction], err = traffic.NewApproach(direction, sensorCount, queue)
+		approaches[direction], err = traffic.NewApproach(direction, sensorCount)
 		if err != nil {
 			return nil, err
 		}
