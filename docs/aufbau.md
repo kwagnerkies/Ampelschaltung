@@ -5,7 +5,9 @@ ohne Tastatur und ohne Bildschirm selbstaendig steuert.
 
 ## 1. Voraussetzungen
 
-- Raspberry Pi 2 Model B mit Raspberry Pi OS Lite, 32 Bit.
+- Raspberry Pi 2 Model B oder Pi 3 mit Raspberry Pi OS Lite. Bei 32 Bit gilt `make pi`, bei
+  64 Bit auf einem Pi 3 stattdessen `make pi64`. Pinbelegung, `gpiochip0` und SPI sind bei
+  beiden gleich.
 - Netzwerk ueber Ethernet. Der Pi 2 hat kein WLAN an Bord.
 - SSH aktiviert, ein Nutzer mit sudo-Recht.
 - Auf dem Arbeitsrechner Go und `make`. Auf dem Pi wird kein Go installiert.

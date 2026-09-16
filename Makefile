@@ -4,15 +4,20 @@ PI_HOST ?= ampel@raspberrypi.local
 PI_BIN ?= /usr/local/bin/ampel
 PI_STAGE ?= /tmp/ampel-install
 
-.PHONY: all build pi test vet fmt lint validate deploy install-pi clean
+.PHONY: all build pi pi64 test vet fmt lint validate deploy install-pi clean
 
 all: fmt vet test build
 
 build:
 	go build -o bin/ ./cmd/...
 
+# pi baut fuer Raspberry Pi OS 32 Bit, das auf Pi 2 und Pi 3 laeuft. pi64 baut fuer die
+# 64-Bit-Variante, die es erst ab Pi 3 gibt.
 pi:
 	GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/$(BINARY)-armv7 ./cmd/ampel
+
+pi64:
+	GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/$(BINARY)-arm64 ./cmd/ampel
 
 test:
 	go test ./...
