@@ -101,6 +101,8 @@ func TestInstallScriptCreatesRequiredPaths(t *testing.T) {
 		filepath.Dir(cfg.Learning.Path),
 		filepath.Dir(installedConf),
 		installedBin,
+		// Die Auswertung muss mitkommen, die Vorfuehrung zeigt die Kennzahlen auf dem Pi.
+		"/usr/local/bin/ampeleval",
 	} {
 		if !strings.Contains(script, path) {
 			t.Errorf("install.sh legt %s nicht an", path)

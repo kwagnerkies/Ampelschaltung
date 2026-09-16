@@ -54,11 +54,12 @@ sudo systemctl stop ampel
 sudo -u ampel /usr/local/bin/ampel -config /etc/ampel/config.yaml -selftest
 ```
 
-Der Selbsttest laesst zuerst jede der zwoelf LEDs einzeln leuchten und nennt dabei Zufahrt
-und Farbe. Leuchtet die falsche Lampe, ist die Bitreihenfolge in der Konfiguration falsch,
-nicht der Code. Danach zeigt er beide Freigabephasen in der deutschen Signalfolge. Zuletzt
-gibt er jede Sensorflanke aus: ein Modellauto ueber die Kontakte schieben und pruefen, ob
-Zufahrt und Sensornummer stimmen. Abbruch mit Strg-C.
+Der Selbsttest laesst zuerst jede der zwoelf LEDs einzeln leuchten und nennt dabei Position
+in der Kette und Lampe. Leuchtet die falsche Lampe, ist die Bitreihenfolge in der
+Konfiguration falsch, nicht der Code. Danach zeigt er beide Freigabephasen in der deutschen
+Signalfolge und wartet am Ende auf den Abbruch mit Strg-C. Sensorflanken gibt er von Anfang
+an aus, also auch waehrend des Lampentests: ein Modellauto ueber die Kontakte schieben und
+pruefen, ob Zufahrt und Sensornummer stimmen.
 
 Haeufige Befunde:
 
@@ -75,8 +76,9 @@ journalctl -u ampel -f
 ```
 
 Der Dienst startet in der Betriebsart, die der Kippschalter beim Start vorgibt: geschlossen
-adaptiv, offen Festzeit. Im laufenden Betrieb wirkt ein Umschalten erst beim naechsten
-Phasenwechsel, nie mitten in einer Freigabe.
+adaptiv, offen Festzeit. Im laufenden Betrieb wirkt ein Umschalten erst beim Beginn der
+naechsten Freigabe, nie mitten in einer laufenden. Bis zu einer halben Minute Verzoegerung
+ist also normal und kein Fehler.
 
 Der Reset-Taster loescht nach zwei Sekunden Dauerdruck den Lernzustand und alle gleitenden
 Mittel. Quittiert wird mit dreimaligem Blinken aller Gelblichter, danach laeuft die Kreuzung

@@ -5,10 +5,16 @@ zwischen adaptiver Steuerung und Festzeitsteuerung.
 
 ## 1. Was gemessen wird
 
-Ein Fahrzeug gilt als angekommen, sobald es einen Sensor der Zufahrt belegt, und als
-abgefahren, sobald es die Haltelinie wieder freigibt. Die Wartezeit ist die Zeit dazwischen.
-Sie enthaelt damit auch die Fahrzeit ueber die letzten Zentimeter, was in beiden Betriebsarten
-gleich ist und den Vergleich nicht verzerrt.
+Ein Fahrzeug gilt als angekommen, sobald es den hintersten Sensor der Zufahrt belegt, oder
+sobald es die Haltelinie belegt und dort noch niemand wartet. Der zweite Fall faengt das
+Fahrzeug, das von Hand direkt auf die Linie gesetzt wird. Als abgefahren gilt es, sobald es
+die Haltelinie wieder freigibt. Die Wartezeit ist die Zeit dazwischen. Sie enthaelt damit
+auch die Fahrzeit ueber die letzten Zentimeter, was in beiden Betriebsarten gleich ist und
+den Vergleich nicht verzerrt.
+
+Fahrzeuge ueberholen im Modell nicht, deshalb wird der Zufahrt die Warteschlange in der
+Reihenfolge der Ankunft gefuehrt: die Freigabe der Haltelinie beendet die Wartezeit des
+aeltesten wartenden Fahrzeugs.
 
 Die Rueckstaulaenge ergibt sich aus der Zahl belegter Sensoren von der Haltelinie aufwaerts,
 abgebildet ueber `queue_mapping`. Belegt der hinterste Sensor, gilt der Stau als mindestens
