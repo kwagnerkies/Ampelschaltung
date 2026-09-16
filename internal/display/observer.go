@@ -35,6 +35,17 @@ func (o *Observer) SensorChanged(event detector.SensorEvent) { o.refresh(event.A
 
 func (o *Observer) PhaseChanged(at time.Time, _ controller.State, _ string) { o.refresh(at) }
 
+// PowerChanged loescht die Anzeige, wenn die Anlage ausgeschaltet wird.
+func (o *Observer) PowerChanged(at time.Time, on bool) {
+	if on {
+		o.refresh(at)
+		return
+	}
+	if err := o.screen.Clear(); err != nil && o.onError != nil {
+		o.onError(err)
+	}
+}
+
 func (o *Observer) Sample(_ time.Time, snapshot controller.Snapshot) { o.render(snapshot) }
 
 func (o *Observer) refresh(at time.Time) {

@@ -79,14 +79,13 @@ sudo systemctl start ampel
 journalctl -u ampel -f
 ```
 
-Der Dienst startet in der Betriebsart, die der Kippschalter beim Start vorgibt: geschlossen
-adaptiv, offen Festzeit. Im laufenden Betrieb wirkt ein Umschalten erst beim Beginn der
-naechsten Freigabe, nie mitten in einer laufenden. Bis zu einer halben Minute Verzoegerung
-ist also normal und kein Fehler.
+Der Betrieb ist immer adaptiv. Der Hauptschalter schaltet die ganze Anlage: offen gehen alle
+Lichter aus, geschlossen beginnt die Kreuzung mit Allrot und laeuft von dort die normale
+Folge. Aus dem dunklen Zustand folgt nie unmittelbar eine Freigabe.
 
-Der Reset-Taster verwirft nach zwei Sekunden Dauerdruck die laufende Messung: Belegung,
-wartende Fahrzeuge und Kennzahlen. Quittiert wird mit dreimaligem Blinken aller Gelblichter,
-danach laeuft die Kreuzung normal weiter und schreibt in einen neuen Lauf.
+Das Einschalten beginnt zugleich eine neue Messung mit neuer Lauf-Kennung im Log. Wer zwei
+Abschnitte sauber trennen will, schaltet dazwischen kurz aus. Auch ein Notzustand endet so:
+aus und wieder an ist der Neustart, den die Sicherheitsregel verlangt.
 
 ## 6. Kaltstart pruefen
 

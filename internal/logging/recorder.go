@@ -104,6 +104,19 @@ func (r *Recorder) ModeChanged(at time.Time, mode string) {
 	r.modeSince = at
 }
 
+// PowerChanged schreibt die Schaltmarke. Beim Einschalten beginnt ein neuer Lauf, damit die
+// Auswertung Abschnitte sauber trennt.
+func (r *Recorder) PowerChanged(at time.Time, on bool) {
+	value, note := "0", "ausgeschaltet"
+	if on {
+		value, note = "1", "eingeschaltet"
+	}
+	r.run.Events().Write(r.event(at, EventPower, "", "", value, r.previous.Name(), note))
+	if on {
+		r.Reset(at)
+	}
+}
+
 func (r *Recorder) Fault(at time.Time, err error) {
 	message := ""
 	if err != nil {

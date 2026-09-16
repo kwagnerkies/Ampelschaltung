@@ -35,9 +35,9 @@ type Options struct {
 	Observer   Observer
 	// FlashHalf ist die halbe Periode des Gelbblinkens im Notzustand.
 	FlashHalf time.Duration
-	// Panel sind die Bedienelemente. Ohne Panel laeuft der Regelkreis in einer festen
-	// Betriebsart, wie es der Simulator braucht.
-	Panel *Panel
+	// Power ist der Hauptschalter. Ohne ihn laeuft die Anlage immer, wie es der Simulator
+	// braucht.
+	Power *Power
 	// Watchdog ist die groesste erlaubte Pause zwischen zwei Takten.
 	Watchdog time.Duration
 	// Follow ist der groesste Abstand, in dem ein Fahrzeug noch als dicht folgend gilt.
@@ -60,7 +60,7 @@ type Controller struct {
 	inputs     <-chan Input
 	observer   Observer
 	metrics    traffic.Metrics
-	panel      *panel
+	power      *power
 	watchdog   *Watchdog
 
 	follow time.Duration
@@ -116,11 +116,8 @@ func New(options Options) (*Controller, error) {
 		lastSample: now,
 		watchdog:   NewWatchdog(options.Watchdog, now),
 	}
-	if options.Panel != nil {
-		if options.Panel.Fixed == nil || options.Panel.Adaptive == nil {
-			return nil, errors.New("regelkreis: das bedienfeld braucht beide betriebsarten")
-		}
-		c.panel = newPanel(*options.Panel, now)
+	if options.Power != nil {
+		c.power = newPower(*options.Power, now)
 	}
 	return c, nil
 }
@@ -173,6 +170,11 @@ func (c *Controller) Step(now time.Time) {
 		c.enterFault(now, err)
 		return
 	}
+	// Der Hauptschalter wird vor dem Notzustand abgefragt: aus und wieder an ist der
+	// Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
+	if c.powerStep(now) {
+		return
+	}
 	if c.machine.State().Phase == PhaseFault {
 		c.flash(now)
 		return
@@ -183,17 +185,12 @@ func (c *Controller) Step(now time.Time) {
 		return
 	}
 	c.applyEvents(c.detect.Tick(now))
-	if c.panelStep(now) {
-		return
-	}
 
 	state := c.machine.State()
-	endGreen := state.Stage == StageGreen &&
-		(c.strategy.EndGreen(c.view(now)) || c.resetWaiting(state))
+	endGreen := state.Stage == StageGreen && c.strategy.EndGreen(c.view(now))
 	if c.machine.Advance(now, endGreen) {
 		state = c.machine.State()
 		if state.Stage == StageGreen {
-			c.applyMode(now)
 			c.following = 0
 			c.lastCrossing = [light.DirectionCount]time.Time{}
 			state = c.machine.State()

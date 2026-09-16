@@ -66,6 +66,12 @@ func (m *Machine) Advance(now time.Time, endGreen bool) bool {
 // nach ihr die volle Allrotzeit gilt.
 func (m *Machine) Hold(now time.Time) { m.state.Since = now }
 
+// Restart beginnt von vorn mit Allrot. Der Hauptschalter nutzt das: aus dem dunklen Zustand
+// darf nie unmittelbar eine Freigabe folgen.
+func (m *Machine) Restart(now time.Time) {
+	m.state = State{Phase: PhaseStartup, Stage: StageAllRed, Since: now}
+}
+
 // Fault setzt den Automaten in den Notzustand. Zurueck fuehrt nur ein Neustart.
 func (m *Machine) Fault(now time.Time) {
 	m.state = State{Phase: PhaseFault, Stage: StageAllRed, Since: now}

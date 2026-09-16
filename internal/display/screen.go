@@ -62,6 +62,13 @@ func (s *Screen) Update(fields [light.DirectionCount]Field) error {
 	return nil
 }
 
+// Clear loescht die Anzeige. Der naechste Update zeichnet danach wieder alles.
+func (s *Screen) Clear() error {
+	width, height := s.canvas.Size()
+	s.drawn = false
+	return s.canvas.Fill(0, 0, width, height, Black)
+}
+
 // AspectColor ist die Farbe eines Signalbildes. RotGelb zeigt Gelb, weil das die Aenderung
 // ankuendigt.
 func AspectColor(aspect light.Aspect) Color {

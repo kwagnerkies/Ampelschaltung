@@ -16,8 +16,8 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 	for i, pins := range cfg.Hardware.Sensors.Approaches() {
 		fmt.Fprintf(w, "  Sensoren %-5s     %v\n", names[i], pins)
 	}
-	fmt.Fprintf(w, "  Bedienelemente     Kippschalter %d, Reset-Taster %d, Entprellung %s\n",
-		cfg.Hardware.ModeSwitch, cfg.Hardware.ResetButton, cfg.Hardware.Debounce)
+	fmt.Fprintf(w, "  Hauptschalter      BCM %d, Entprellung %s\n",
+		cfg.Hardware.PowerSwitch, cfg.Hardware.Debounce)
 	fmt.Fprintf(w, "  Zwischenzeiten     Gelb %s, Allrot %s, RotGelb %s, Summe %s\n",
 		cfg.Timing.Yellow, cfg.Timing.AllRed, cfg.Timing.RedYellow, cfg.Timing.Intergreen())
 	fmt.Fprintf(w, "  Gruenzeiten        Grundzeit %s, hoechstens %s\n",

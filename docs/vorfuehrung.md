@@ -19,30 +19,31 @@ systemctl status ampel
 journalctl -u ampel -n 20
 ```
 
-Kippschalter auf Festzeit stellen, Reset-Taster zwei Sekunden halten. Das dreimalige
-Gelbblinken ist die Quittung; ab hier laeuft ein frischer Lauf ohne Vorwissen.
+Hauptschalter kurz aus und wieder an. Ab hier laeuft eine frische Messung, und du hast
+zugleich gezeigt, dass der Schalter die Anlage wirklich schaltet.
 
-## Abschnitt 1, Festzeit, etwa drei Minuten
+## Abschnitt 1, die Anlage laeuft, etwa zwei Minuten
 
-Kippschalter offen. Beide Richtungen bekommen starr 15 Sekunden Gruen, unabhaengig davon, was
-auf der Fahrbahn steht.
+Hauptschalter geschlossen. Die Kreuzung beginnt mit Allrot und laeuft dann die deutsche
+Signalfolge: Rot, Rot mit Gelb, Gruen, Gelb, Rot. Ohne Verkehr bekommt jede Richtung die
+Grundzeit von fuenf Sekunden.
 
-Fahrzeuge nur auf Nord und Sued schieben, Ost und West leer lassen. Sichtbar wird: die leere
-Richtung bekommt trotzdem ihre volle Freigabe, die volle Richtung wartet.
+Einmal ausschalten und wieder einschalten: alle Lichter gehen aus, und beim Einschalten steht
+zuerst wieder Allrot da. Dazu der Satz, der die Sicherheitsueberlegung zeigt: aus dem dunklen
+Zustand darf nie unmittelbar eine Freigabe folgen, sonst faehrt jemand in eine Kreuzung, die
+eben noch tot war.
 
-Satz dazu: die Anlage kennt die Nachfrage nicht, weil sie sie nicht auswertet, nicht weil sie
-sie nicht messen koennte. Die Wartezeiten werden auch hier aufgezeichnet.
+## Abschnitt 2, die Regelung, etwa drei Minuten
 
-## Abschnitt 2, adaptiv, etwa drei Minuten
-
-Kippschalter schliessen. Der Wechsel wirkt erst beim naechsten Phasenwechsel, ein Umschalten
-mitten in der Freigabe waere ein unzulaessiges Signalbild.
-
-Dasselbe Verkehrsmuster wie in Abschnitt 1 schieben. Sichtbar wird:
+Fahrzeuge nur auf Nord und Sued schieben, Ost und West leer lassen. Sichtbar wird:
 
 - Die belastete Richtung bekommt laengeres Gruen, weil dort Fahrzeug auf Fahrzeug folgt.
 - Die leere Richtung behaelt ihre Grundzeit von fuenf Sekunden.
 - Die Hoechstgruenzeit von zwanzig Sekunden begrenzt, wie lange die andere Richtung wartet.
+
+Den Vergleich zur Festzeitsteuerung zeigst du nicht an der Kreuzung, sondern mit den Zahlen
+aus Abschnitt 4. Er entsteht aus zwei Laeufen: einer mit `-modus adaptiv`, einer mit
+`-modus festzeit`.
 
 ## Abschnitt 3, die Regel am Display, etwa zwei Minuten
 

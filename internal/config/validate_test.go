@@ -13,12 +13,12 @@ func TestParseRejectsInvalid(t *testing.T) {
 	}{
 		{
 			name: "pin doppelt belegt",
-			yaml: "hardware:\n  mode_switch: 17\n",
+			yaml: "hardware:\n  power_switch: 17\n",
 			want: "BCM 17 ist doppelt belegt",
 		},
 		{
 			name: "pin ausserhalb der Stiftleiste",
-			yaml: "hardware:\n  reset_button: 40\n",
+			yaml: "hardware:\n  power_switch: 40\n",
 			want: "liegt ausserhalb von 0 bis 27",
 		},
 		{

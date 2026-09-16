@@ -27,6 +27,7 @@ const (
 	EventPhaseStart = "phase_start"
 	EventPhaseEnd   = "phase_ende"
 	EventModeChange = "modus_wechsel"
+	EventPower      = "hauptschalter"
 	EventReset      = "reset"
 	EventError      = "fehler"
 	EventStart      = "start"

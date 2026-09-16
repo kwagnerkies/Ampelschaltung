@@ -26,8 +26,7 @@ func Default() Config {
 				South: []int{16, 20, 21},
 				West:  []int{23, 24, 25},
 			},
-			ModeSwitch:  4,
-			ResetButton: 18,
+			PowerSwitch: 4,
 			Debounce:    millis(15),
 		},
 		Timing: Timing{

@@ -44,6 +44,12 @@ func (o Observers) Reset(at time.Time) {
 	}
 }
 
+func (o Observers) PowerChanged(at time.Time, on bool) {
+	for _, observer := range o {
+		observer.PowerChanged(at, on)
+	}
+}
+
 func (o Observers) Fault(at time.Time, err error) {
 	for _, observer := range o {
 		observer.Fault(at, err)

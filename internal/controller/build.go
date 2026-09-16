@@ -35,7 +35,7 @@ type Setup struct {
 	Writer   LampWriter
 	Inputs   <-chan Input
 	Observer Observer
-	Panel    *Panel
+	Power    *Power
 	Watchdog time.Duration
 }
 
@@ -79,7 +79,7 @@ func Build(setup Setup) (*Controller, error) {
 		Clock:      setup.Clock,
 		Inputs:     setup.Inputs,
 		Observer:   setup.Observer,
-		Panel:      setup.Panel,
+		Power:      setup.Power,
 		Watchdog:   setup.Watchdog,
 	})
 }

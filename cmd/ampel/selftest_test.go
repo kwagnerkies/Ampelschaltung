@@ -47,7 +47,7 @@ func TestInputPinsCoversSensorsAndControls(t *testing.T) {
 	cfg := config.Default()
 	pins, labels := inputPins(&cfg)
 
-	if want := 4*cfg.Hardware.Sensors.SensorCount() + 2; len(pins) != want {
+	if want := 4*cfg.Hardware.Sensors.SensorCount() + 1; len(pins) != want {
 		t.Fatalf("%d Eingaenge, erwartet %d", len(pins), want)
 	}
 	for _, pin := range pins {

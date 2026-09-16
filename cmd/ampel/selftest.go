@@ -137,9 +137,8 @@ func inputPins(cfg *config.Config) ([]int, map[int]string) {
 			labels[pin] = fmt.Sprintf("%s Sensor %d", names[i], j)
 		}
 	}
-	pins = append(pins, cfg.Hardware.ModeSwitch, cfg.Hardware.ResetButton)
-	labels[cfg.Hardware.ModeSwitch] = "Modus-Kippschalter"
-	labels[cfg.Hardware.ResetButton] = "Reset-Taster"
+	pins = append(pins, cfg.Hardware.PowerSwitch)
+	labels[cfg.Hardware.PowerSwitch] = "Hauptschalter"
 	return pins, labels
 }
 

@@ -31,6 +31,7 @@ type recorder struct {
 	faults   []error
 	modes    []string
 	resets   int
+	power    int
 	samples  int
 }
 
@@ -45,6 +46,8 @@ func (r *recorder) VehicleLeft(d traffic.Departure, _, _ string) {
 func (r *recorder) ModeChanged(_ time.Time, mode string) { r.modes = append(r.modes, mode) }
 
 func (r *recorder) Reset(time.Time) { r.resets++ }
+
+func (r *recorder) PowerChanged(time.Time, bool) { r.power++ }
 
 func (r *recorder) Fault(_ time.Time, err error) { r.faults = append(r.faults, err) }
 

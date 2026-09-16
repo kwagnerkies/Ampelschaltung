@@ -26,7 +26,7 @@ func run() error {
 	validate := flag.Bool("validate", false, "Konfiguration pruefen und beenden")
 	selftest := flag.Bool("selftest", false, "Lampen und Sensoren pruefen, Abbruch mit Strg-C")
 	logDir := flag.String("logdir", "", "Logverzeichnis, ueberschreibt die Konfiguration")
-	mode := flag.String("modus", "festzeit", "Betriebsart festzeit oder adaptiv, gilt nur bis der Kippschalter gelesen ist")
+	mode := flag.String("modus", "adaptiv", "Betriebsart adaptiv oder festzeit, festzeit nur fuer Vergleichsmessungen")
 	flag.Parse()
 
 	cfg, source, err := loadConfig(*path)

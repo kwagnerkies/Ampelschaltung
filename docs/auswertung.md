@@ -38,7 +38,7 @@ run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau
 ```
 
 `events-<lauf>.csv`, jedes Ereignis: `sensor_an`, `sensor_aus`, `phase_start`, `phase_ende`,
-`modus_wechsel`, `reset`, `fehler`, `start`, `stop`.
+`hauptschalter`, `reset`, `fehler`, `start`, `stop`.
 
 ```
 run_id;zeit_iso;t_ms;typ;zufahrt;sensor;wert;phase;bemerkung
@@ -76,10 +76,13 @@ legt dieselben Zahlen als CSV fuer die Ausarbeitung ab.
 
 ## 5. Einen belastbaren Vergleich fahren
 
-1. Reset-Taster zwei Sekunden halten. Das verwirft die alte Messung und beginnt einen neuen Lauf.
-2. Kippschalter auf Festzeit, mindestens zehn Minuten mit einem festen Verkehrsmuster fahren.
-3. Kippschalter auf adaptiv, dasselbe Muster mindestens zehn Minuten fahren.
-4. Beide Abschnitte liegen in denselben Dateien und sind ueber die Spalte `modus` getrennt.
+1. Dienst mit `-modus festzeit` starten, mindestens zehn Minuten mit einem festen
+   Verkehrsmuster fahren, dann beenden.
+2. Dienst mit `-modus adaptiv` starten, dasselbe Muster mindestens zehn Minuten fahren.
+3. Jeder Lauf schreibt eigene Dateien. `ampeleval` liest beide zusammen und trennt sie ueber
+   die Spalte `modus`.
+4. Innerhalb eines Laufs trennt der Hauptschalter Abschnitte: kurz aus und wieder an beginnt
+   eine neue Lauf-Kennung.
 
 Wichtig ist, dass das Verkehrsmuster in beiden Abschnitten gleich ist. Von Hand geschobene
 Fahrzeuge sind dafuer die schwaechste Stelle des Versuchs; wer sauber vergleichen will,

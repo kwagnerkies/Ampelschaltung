@@ -52,8 +52,7 @@ func (h Hardware) validatePins() []error {
 			claim(pin, fmt.Sprintf("hardware.sensors.%s[%d]", approachNames[i], j))
 		}
 	}
-	claim(h.ModeSwitch, "hardware.mode_switch")
-	claim(h.ResetButton, "hardware.reset_button")
+	claim(h.PowerSwitch, "hardware.power_switch")
 	return errs
 }
 

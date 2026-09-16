@@ -10,7 +10,7 @@ Cyberphysisches System auf Raspberry Pi 2 B, Sprache Go, Zielplattform Linux (Ra
 
 
 
-Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet im laufenden Betrieb zwischen adaptiver Steuerung und Festzeitsteuerung um, ein Taster beginnt eine neue Messung. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
+Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet die ganze Anlage ein und aus. Der Betrieb ist immer adaptiv; die Festzeitsteuerung dient nur der Vergleichsmessung und wird auf der Kommandozeile angefordert. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
 
 
 
@@ -70,7 +70,7 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 
 
-Vier Ampelkoepfe zu drei LEDs sind zwoelf Ausgaenge. Vier Zufahrten zu drei Reed-Kontakten sind zwoelf Eingaenge. Dazu Kippschalter und Reset-Taster. Das sind 26 Leitungen und damit praktisch jeder nutzbare GPIO des Pi 2.
+Vier Ampelkoepfe zu drei LEDs sind zwoelf Ausgaenge. Vier Zufahrten zu drei Reed-Kontakten sind zwoelf Eingaenge. Dazu der Hauptschalter und fuenf Leitungen fuer die Anzeige. Das sind 30 Leitungen und damit praktisch jeder nutzbare GPIO des Pi 2.
 
 
 
@@ -128,9 +128,7 @@ Der Plan liegt in der Konfigurationsdatei, nicht im Code. Startbelegung (BCM-Num
 
 | West Sensor 2 | 25 | in, pull-up |
 
-| Modus-Kippschalter | 4 | in, pull-up |
-
-| Reset-Taster | 18 | in, pull-up |
+| Hauptschalter | 4 | in, pull-up |
 
 
 
@@ -310,9 +308,7 @@ ampel/
 
     mode/
 
-      switch.go            Kippschalter
-
-      reset.go             Reset-Taster mit langem Druck
+      switch.go            Entprellter Kippschalter
 
     logging/
 
@@ -478,31 +474,27 @@ Im Simulator liegt die adaptive Steuerung bei gleicher Ankunftsfolge zwischen 23
 
 
 
-### 8.1 Kippschalter
+### 8.1 Hauptschalter
 
 
 
-Wird zyklisch abgefragt, nicht per Interrupt, mit 100 ms Entprellung. Ein Wechsel wirkt nicht sofort mitten in einer Gruenphase, sondern beim naechsten Phasenwechsel. Ein Umschalten waehrend Gelb oder Allrot ist verboten, sonst entstehen unzulaessige Signalbilder.
+Ein Kippschalter schaltet die ganze Anlage. Er wird zyklisch abgefragt, nicht per Interrupt, mit 100 ms Entprellung.
 
 
 
-Der Moduswechsel schreibt eine Marke ins Log, damit die Auswertung beide Abschnitte sauber trennen kann.
+Ausschalten: alle Lichter gehen aus, der Phasenautomat steht still, Sensorereignisse werden verworfen. Eine dunkle Kreuzung ist der ehrliche Zustand einer abgeschalteten Anlage.
 
 
 
-### 8.2 Festzeitsteuerung
+Einschalten: die Anlage beginnt mit Allrot und laeuft von dort die normale Folge. Aus dem dunklen Zustand darf nie unmittelbar eine Freigabe folgen. Zugleich beginnt eine neue Messung mit neuer Lauf-Kennung im Log, und ein Notzustand wird verlassen: aus und wieder an ist der Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
 
 
 
-Feste Gruenzeit fuer beide Phasen, Startwert 15 s, aus der Konfiguration. Keine Verlaengerung, keine Erkennung, kein Lernen. Die Sensoren laufen aber weiter, denn die Wartezeiten muessen auch in diesem Modus gemessen werden. Das ist der ganze Sinn des Vergleichs.
+### 8.2 Betriebsarten
 
 
 
-### 8.3 Reset-Taster
-
-
-
-Verwirft Belegung, wartende Fahrzeuge und Kennzahlen und beginnt damit eine neue Messung. Ausloesung erst nach 2 Sekunden Dauerdruck, damit ein versehentlicher Tastendruck waehrend der Vorfuehrung nichts zerstoert. Quittierung durch dreimaliges kurzes Blinken aller Gelblichter, danach normale Aufnahme des Betriebs. Der Reset startet auch eine neue Lauf-Kennung im Log.
+Der Betrieb ist immer adaptiv. Die Festzeitsteuerung mit fester Gruenzeit aus der Konfiguration laeuft nur auf Anforderung ueber `-modus festzeit` und dient allein der Vergleichsmessung. Die Sensoren laufen in beiden Faellen weiter, denn die Wartezeiten sind die Messgroesse.
 
 
 
@@ -836,9 +828,9 @@ Fertig, wenn die angezeigte Zeit der freigegebenen Richtung sichtbar steigt, sob
 
 
 
-**AP10 Bedienung und Robustheit.** Kippschalter mit Wechsel an der Phasengrenze, Reset mit Langdruck und Blinkquittung, Watchdog, Fehlerzustand.
+**AP10 Bedienung und Robustheit.** Hauptschalter, Watchdog, Fehlerzustand.
 
-Fertig, wenn Umschalten im Betrieb nie ein unzulaessiges Signalbild erzeugt.
+Fertig, wenn Aus- und Einschalten nie ein unzulaessiges Signalbild erzeugt und aus dem dunklen Zustand immer Allrot folgt.
 
 
 

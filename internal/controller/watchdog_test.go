@@ -7,6 +7,15 @@ import (
 	"ampel/internal/light"
 )
 
+func allShow(aspects [light.DirectionCount]light.Aspect, want light.Aspect) bool {
+	for _, aspect := range aspects {
+		if aspect != want {
+			return false
+		}
+	}
+	return true
+}
+
 func TestWatchdogAcceptsRegularTicks(t *testing.T) {
 	w := NewWatchdog(500*time.Millisecond, start)
 	now := start

@@ -26,8 +26,7 @@ hardware:
     east: [19, 26, 12]
     south: [16, 20, 21]
     west: [23, 24, 25]
-  mode_switch: 4
-  reset_button: 18
+  power_switch: 4
   debounce_ms: 15
 
 timing:

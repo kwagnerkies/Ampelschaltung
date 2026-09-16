@@ -4,11 +4,12 @@ import "ampel/internal/detector"
 
 // Feed nimmt eine Flanke auf. Pins, die zu keinem Sensor gehoeren, werden hier ignoriert.
 func (c *Controller) Feed(input Input) {
-	if c.panel != nil && c.panel.knows(input.Pin) {
-		c.panel.level(input.Pin, input.Active)
+	if c.power != nil && input.Pin == c.power.pin {
+		c.power.level = input.Active
 		return
 	}
-	if !c.detect.Knows(input.Pin) {
+	// Ist die Anlage aus, bewegt sich nichts auf der Kreuzung, was zu messen waere.
+	if !c.On() || !c.detect.Knows(input.Pin) {
 		return
 	}
 	events, err := c.detect.Feed(input.Pin, input.Active, input.Time)

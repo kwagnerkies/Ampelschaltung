@@ -41,14 +41,11 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 	}
 	defer func() { _ = inputs.Close() }()
 
-	panel, err := newPanel(cfg, inputs, mode)
+	active, err := newStrategy(cfg, mode)
 	if err != nil {
 		return err
 	}
-	active := panel.Fixed
-	if panel.SwitchClosed {
-		active = panel.Adaptive
-	}
+	power := newPower(cfg, inputs)
 
 	if logDir == "" {
 		logDir = cfg.Logging.Dir
@@ -82,7 +79,7 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 	}
 
 	setup.Strategy = active
-	setup.Panel = panel
+	setup.Power = power
 	setup.Watchdog = controller.DefaultWatchdog
 	setup.Clock = clock.NewReal()
 	setup.Writer = driver
@@ -115,27 +112,26 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 	return err
 }
 
-// newPanel verdrahtet Kippschalter und Reset-Taster. Der beim Start gelesene Schalterpegel
-// bestimmt die erste Betriebsart; laesst er sich nicht lesen, gilt die Kommandozeile.
-func newPanel(cfg *config.Config, source hal.InputSource, mode string) (*controller.Panel, error) {
-	if mode != "festzeit" && mode != "adaptiv" {
-		return nil, fmt.Errorf("unbekannte Betriebsart %q, erlaubt sind festzeit und adaptiv", mode)
+// newStrategy waehlt die Regelung. Der Betrieb ist adaptiv; die Festzeit dient nur der
+// Vergleichsmessung und wird auf der Kommandozeile angefordert.
+func newStrategy(cfg *config.Config, mode string) (strategy.Strategy, error) {
+	switch mode {
+	case "adaptiv":
+		return cfg.Following()
+	case "festzeit":
+		return strategy.NewFixed(cfg.Fixed.Green.Duration()), nil
 	}
-	adaptive, err := cfg.Following()
-	if err != nil {
-		return nil, err
+	return nil, fmt.Errorf("unbekannte Betriebsart %q, erlaubt sind adaptiv und festzeit", mode)
+}
+
+// newPower verdrahtet den Hauptschalter. Laesst sich der Pegel nicht lesen, gilt die Anlage
+// als eingeschaltet: eine dunkle Kreuzung waere der schlechtere Startzustand.
+func newPower(cfg *config.Config, source hal.InputSource) *controller.Power {
+	on := true
+	if closed, err := source.Read(cfg.Hardware.PowerSwitch); err == nil {
+		on = closed
 	}
-	panel := &controller.Panel{
-		SwitchPin:    cfg.Hardware.ModeSwitch,
-		ResetPin:     cfg.Hardware.ResetButton,
-		Fixed:        strategy.NewFixed(cfg.Fixed.Green.Duration()),
-		Adaptive:     adaptive,
-		SwitchClosed: mode == "adaptiv",
-	}
-	if closed, err := source.Read(cfg.Hardware.ModeSwitch); err == nil {
-		panel.SwitchClosed = closed
-	}
-	return panel, nil
+	return &controller.Power{Pin: cfg.Hardware.PowerSwitch, On: on}
 }
 
 // pump uebersetzt die Flanken der Hardwareschicht in die Ereignisse des Regelkreises. Damit

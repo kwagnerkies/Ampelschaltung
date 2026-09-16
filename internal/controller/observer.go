@@ -32,6 +32,8 @@ type Observer interface {
 	ModeChanged(at time.Time, mode string)
 	// Reset meldet den Beginn einer neuen Messung. Das Logging beginnt daraufhin einen neuen Lauf.
 	Reset(at time.Time)
+	// PowerChanged meldet den Hauptschalter.
+	PowerChanged(at time.Time, on bool)
 	Fault(at time.Time, err error)
 	Sample(at time.Time, snapshot Snapshot)
 }
@@ -46,5 +48,6 @@ func (NopObserver) SensorChanged(detector.SensorEvent)            {}
 func (NopObserver) VehicleLeft(traffic.Departure, string, string) {}
 func (NopObserver) ModeChanged(time.Time, string)                 {}
 func (NopObserver) Reset(time.Time)                               {}
+func (NopObserver) PowerChanged(time.Time, bool)                  {}
 func (NopObserver) Fault(time.Time, error)                        {}
 func (NopObserver) Sample(time.Time, Snapshot)                    {}

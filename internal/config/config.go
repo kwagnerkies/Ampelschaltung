@@ -16,8 +16,7 @@ type Hardware struct {
 	Chip          string        `yaml:"chip"`
 	ShiftRegister ShiftRegister `yaml:"shift_register"`
 	Sensors       Sensors       `yaml:"sensors"`
-	ModeSwitch    int           `yaml:"mode_switch"`
-	ResetButton   int           `yaml:"reset_button"`
+	PowerSwitch   int           `yaml:"power_switch"`
 	Debounce      Millis        `yaml:"debounce_ms"`
 }
 
