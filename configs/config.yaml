@@ -1,0 +1,65 @@
+hardware:
+  chip: gpiochip0
+  shift_register:
+    data: 17
+    clock: 27
+    latch: 22
+    bit_order:
+      - N_red
+      - N_yellow
+      - N_green
+      - E_red
+      - E_yellow
+      - E_green
+      - S_red
+      - S_yellow
+      - S_green
+      - W_red
+      - W_yellow
+      - W_green
+      - free
+      - free
+      - free
+      - free
+  sensors:
+    north: [5, 6, 13]
+    east: [19, 26, 12]
+    south: [16, 20, 21]
+    west: [23, 24, 25]
+  mode_switch: 4
+  reset_button: 18
+  debounce_ms: 15
+
+timing:
+  yellow_ms: 3000
+  red_yellow_ms: 1000
+  all_red_ms: 2000
+  min_green_ms: 5000
+  max_green_ms: 25000
+  cycle_ms: 40000
+  gap_ms: 2000
+  extension_ms: 1500
+  max_wait_ms: 60000
+
+fixed:
+  green_ms: 15000
+
+adaptive:
+  demand_alpha: 0.3
+  learn_alpha: 0.1
+  blend_k: 10
+
+queue_mapping:
+  0: 0
+  1: 1
+  2: 3
+  3: 6
+
+logging:
+  dir: /var/log/ampel
+  state_interval_ms: 1000
+  buffer: 4096
+
+learning:
+  path: /var/lib/ampel/histogram.json
+  save_interval_ms: 60000

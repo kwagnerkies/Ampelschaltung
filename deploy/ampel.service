@@ -1,0 +1,28 @@
+[Unit]
+Description=Adaptive Ampelsteuerung der Modellkreuzung
+Documentation=file:/usr/local/share/doc/ampel/aufbau.md
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ampel -config /etc/ampel/config.yaml
+User=ampel
+Group=gpio
+Restart=always
+RestartSec=2
+# SIGTERM fuehrt zum geordneten Herunterfahren: alle Signale auf Rot, Histogramm sichern,
+# CSV-Puffer leeren. Zehn Sekunden reichen dafuer weit.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+ReadWritePaths=/var/log/ampel /var/lib/ampel
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+DevicePolicy=closed
+DeviceAllow=/dev/gpiochip0 rw
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

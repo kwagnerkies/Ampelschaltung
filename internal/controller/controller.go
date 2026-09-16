@@ -1,0 +1,233 @@
+package controller
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"ampel/internal/clock"
+	"ampel/internal/detector"
+	"ampel/internal/light"
+	"ampel/internal/strategy"
+	"ampel/internal/traffic"
+)
+
+// Input ist eine Flanke an einem Eingang. Der Typ steht hier, damit der Regelkreis die
+// Hardwareschicht nicht kennt.
+type Input struct {
+	Pin    int
+	Active bool
+	Time   time.Time
+}
+
+// Options buendelt, was der Regelkreis zum Laufen braucht.
+type Options struct {
+	Timing     Timing
+	Tick       time.Duration
+	Sample     time.Duration
+	Detector   *detector.Detector
+	Approaches [light.DirectionCount]*traffic.Approach
+	Output     *Output
+	Strategy   strategy.Strategy
+	Learner    Learner
+	Clock      clock.Clock
+	Inputs     <-chan Input
+	Observer   Observer
+	// FlashHalf ist die halbe Periode des Gelbblinkens im Notzustand.
+	FlashHalf time.Duration
+	// Panel sind die Bedienelemente. Ohne Panel laeuft der Regelkreis in einer festen
+	// Betriebsart, wie es der Simulator braucht.
+	Panel *Panel
+	// Watchdog ist die groesste erlaubte Pause zwischen zwei Takten.
+	Watchdog time.Duration
+}
+
+// Controller ist der Regelkreis. Ein einziger Goroutine besitzt diesen Zustand; alles andere
+// kommuniziert ueber Kanaele.
+type Controller struct {
+	timing     Timing
+	tick       time.Duration
+	sample     time.Duration
+	flashHalf  time.Duration
+	machine    *Machine
+	detect     *detector.Detector
+	approaches [light.DirectionCount]*traffic.Approach
+	output     *Output
+	strategy   strategy.Strategy
+	learner    Learner
+	clk        clock.Clock
+	inputs     <-chan Input
+	observer   Observer
+	metrics    traffic.Metrics
+	panel      *panel
+	watchdog   *Watchdog
+
+	started      time.Time
+	greenSince   time.Time
+	lastStopLine [light.DirectionCount]time.Time
+	lastSample   time.Time
+	begun        bool
+	flashOn      bool
+	fault        error
+}
+
+func New(options Options) (*Controller, error) {
+	if options.Detector == nil || options.Output == nil || options.Strategy == nil || options.Clock == nil {
+		return nil, errors.New("regelkreis: detektor, ausgabe, strategie und uhr sind pflicht")
+	}
+	for direction, approach := range options.Approaches {
+		if approach == nil {
+			return nil, fmt.Errorf("regelkreis: zufahrt %s fehlt", light.Direction(direction))
+		}
+	}
+	if options.Tick <= 0 {
+		return nil, fmt.Errorf("regelkreis: takt %s", options.Tick)
+	}
+	if options.Observer == nil {
+		options.Observer = NopObserver{}
+	}
+	if options.Learner == nil {
+		options.Learner = NopLearner{}
+	}
+	if options.FlashHalf <= 0 {
+		options.FlashHalf = 500 * time.Millisecond
+	}
+	now := options.Clock.Now()
+	c := &Controller{
+		timing:     options.Timing,
+		tick:       options.Tick,
+		sample:     options.Sample,
+		flashHalf:  options.FlashHalf,
+		machine:    NewMachine(options.Timing, now),
+		detect:     options.Detector,
+		approaches: options.Approaches,
+		output:     options.Output,
+		strategy:   options.Strategy,
+		learner:    options.Learner,
+		clk:        options.Clock,
+		inputs:     options.Inputs,
+		observer:   options.Observer,
+		started:    now,
+		lastSample: now,
+		watchdog:   NewWatchdog(options.Watchdog, now),
+	}
+	if options.Panel != nil {
+		if options.Panel.Fixed == nil || options.Panel.Adaptive == nil {
+			return nil, errors.New("regelkreis: das bedienfeld braucht beide betriebsarten")
+		}
+		c.panel = newPanel(*options.Panel, now)
+	}
+	for direction := range c.lastStopLine {
+		c.lastStopLine[direction] = now
+	}
+	return c, nil
+}
+
+func (c *Controller) State() State { return c.machine.State() }
+
+func (c *Controller) Metrics() *traffic.Metrics { return &c.metrics }
+
+func (c *Controller) Mode() string { return c.strategy.Name() }
+
+// Begin zeigt das Startbild. Der Aufruf ist mehrfach moeglich und wirkt nur einmal; Step
+// holt ihn nach, damit kein Aufrufer ohne Signalbild losfaehrt.
+func (c *Controller) Begin(now time.Time) error {
+	if c.begun {
+		return nil
+	}
+	c.begun = true
+	if err := c.show(); err != nil {
+		return err
+	}
+	c.observer.PhaseChanged(now, c.machine.State(), c.strategy.Name())
+	return nil
+}
+
+// Run haelt die Kreuzung in Betrieb, bis der Kontext endet. Danach steht alles auf Rot.
+func (c *Controller) Run(ctx context.Context) error {
+	now := c.clk.Now()
+	if err := c.Begin(now); err != nil {
+		return err
+	}
+
+	ticker := c.clk.Ticker(c.tick)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return errors.Join(c.Shutdown(), c.fault)
+		case input := <-c.inputs:
+			c.Feed(input)
+		case <-ticker.C():
+			c.Step(c.clk.Now())
+		}
+	}
+}
+
+// Step fuehrt einen Schritt des Regelkreises aus. Der Simulator ruft das direkt auf, damit
+// er ohne Ticker und ohne echte Zeit laufen kann.
+func (c *Controller) Step(now time.Time) {
+	if err := c.Begin(now); err != nil {
+		c.enterFault(now, err)
+		return
+	}
+	if c.machine.State().Phase == PhaseFault {
+		c.flash(now)
+		return
+	}
+	if gap, late := c.watchdog.Kick(now); late {
+		c.enterFault(now, fmt.Errorf("regelkreis hat %s nicht getaktet, erlaubt sind %s",
+			gap.Round(time.Millisecond), c.watchdog.Limit()))
+		return
+	}
+	c.applyEvents(c.detect.Tick(now))
+	if c.panelStep(now) {
+		return
+	}
+
+	state := c.machine.State()
+	endGreen := state.Stage == StageGreen &&
+		(c.strategy.EndGreen(c.view(now)) || c.resetWaiting(state))
+	if c.machine.Advance(now, endGreen) {
+		state = c.machine.State()
+		if state.Stage == StageYellow {
+			// Die Nachfrage wird am Ende jeder Freigabe geglaettet und in das Zeitfenster
+			// gelernt, in dem die Freigabe begann.
+			learn := c.learns()
+			for _, approach := range c.approaches {
+				approach.UpdateDemand()
+				if learn {
+					c.learner.Observe(c.greenSince, approach.Direction(), approach.Demand())
+				}
+			}
+		}
+		if state.Stage == StageGreen {
+			c.applyMode(now)
+			c.greenSince = now
+			c.machine.SetTarget(c.strategy.TargetGreen(c.view(now)))
+			state = c.machine.State()
+		}
+		if err := c.show(); err != nil {
+			c.enterFault(now, err)
+			return
+		}
+		c.observer.PhaseChanged(now, state, c.strategy.Name())
+	}
+	c.learner.Persist(now)
+	c.emitSample(now)
+}
+
+// Reset loescht Lernzustand, gleitende Mittel, Belegung und Kennzahlen. Der Reset-Taster
+// loest das aus.
+func (c *Controller) Reset(now time.Time) {
+	c.learner.Reset()
+	c.detect.Reset()
+	for _, approach := range c.approaches {
+		approach.Reset()
+	}
+	c.metrics.Reset()
+	for direction := range c.lastStopLine {
+		c.lastStopLine[direction] = now
+	}
+}
