@@ -12,8 +12,7 @@ var (
 
 	StateHeader = []string{
 		"run_id", "zeit_iso", "t_ms", "modus", "phase", "phase_dauer_ms", "gruen_ziel_ms",
-		"stau_n", "stau_o", "stau_s", "stau_w",
-		"mittel_n", "mittel_o", "mittel_s", "mittel_w", "prognose_gewicht",
+		"stau_n", "stau_o", "stau_s", "stau_w", "verlaengerungen",
 	}
 
 	EventHeader = []string{

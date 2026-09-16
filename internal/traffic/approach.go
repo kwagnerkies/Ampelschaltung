@@ -69,6 +69,13 @@ func (a *Approach) Apply(event detector.SensorEvent, phase int) (Departure, bool
 	return Departure{}, false
 }
 
+// PredictDemand ist die Nachfrage, die das naechste UpdateDemand ergaebe. Die Anzeige
+// braucht sie, damit ein ankommendes Fahrzeug sofort sichtbar wird und nicht erst beim
+// Phasenwechsel.
+func (a *Approach) PredictDemand() float64 {
+	return a.alpha*float64(a.QueueLength()) + (1-a.alpha)*a.demand
+}
+
 // UpdateDemand glaettet die Nachfrage. Der Regelkreis ruft das am Ende jeder Phase auf.
 func (a *Approach) UpdateDemand() {
 	a.demand = a.alpha*float64(a.QueueLength()) + (1-a.alpha)*a.demand

@@ -22,13 +22,11 @@ func (c *Controller) applyEvents(events []detector.SensorEvent) {
 	phase := int(c.machine.State().Phase)
 	for _, event := range events {
 		c.observer.SensorChanged(event)
-		if event.Index == 0 {
-			c.lastStopLine[event.Direction] = event.At
-		}
 		departure, ok := c.approaches[event.Direction].Apply(event, phase)
 		if !ok {
 			continue
 		}
+		c.countCrossing(departure.At, departure.Direction)
 		c.metrics.Add(departure)
 		c.observer.VehicleLeft(departure, c.strategy.Name(), Phase(departure.Arrival.Phase).String())
 	}

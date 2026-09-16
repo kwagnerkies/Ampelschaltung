@@ -3,7 +3,7 @@ package mode
 import "time"
 
 // Button erkennt einen langen Druck. Erst nach hold loest er aus, damit ein versehentlicher
-// Tastendruck waehrend der Vorfuehrung den Lernzustand nicht loescht.
+// Tastendruck waehrend der Vorfuehrung die laufende Messung nicht verwirft.
 type Button struct {
 	hold      time.Duration
 	pressed   bool

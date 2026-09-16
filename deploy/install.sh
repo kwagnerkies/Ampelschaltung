@@ -34,7 +34,7 @@ else
 fi
 
 install -d -m 0755 /etc/ampel "$DOCS"
-install -d -m 0755 -o ampel -g gpio /var/log/ampel /var/lib/ampel
+install -d -m 0755 -o ampel -g gpio /var/log/ampel
 install -m 0755 "$binary" "$BIN"
 
 # Die Auswertung gehoert auf den Pi, sonst ist bei der Vorfuehrung kein Rechner noetig, um

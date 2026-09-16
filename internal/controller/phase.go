@@ -67,6 +67,15 @@ func (p Phase) Directions() []light.Direction {
 	return nil
 }
 
+// PhaseOf ist die Freigabephase, zu der eine Zufahrt gehoert.
+func PhaseOf(direction light.Direction) Phase {
+	switch direction {
+	case light.North, light.South:
+		return PhaseNS
+	}
+	return PhaseEW
+}
+
 // Other ist die jeweils andere Freigabephase. Aus dem Start und aus der Stoerung heraus
 // beginnt Nord und Sued.
 func (p Phase) Other() Phase {

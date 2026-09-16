@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"ampel/internal/config"
-	"ampel/internal/learning"
 	"ampel/internal/light"
 )
 
@@ -36,8 +35,6 @@ func run() error {
 	startClock := flag.String("start", "07:00", "Startzeit der Simulation")
 	logDir := flag.String("logdir", "", "Logverzeichnis fuer die CSV-Dateien")
 	display := flag.Bool("anzeige", false, "Kreuzung im Terminal anzeigen")
-	learn := flag.Bool("lernen", false, "Tagesprofil mitlernen")
-	learnPath := flag.String("lernpfad", "", "Lernzustand laden und speichern")
 	flag.Parse()
 
 	cfg, err := loadConfig(*configPath)
@@ -53,12 +50,8 @@ func run() error {
 		return err
 	}
 
-	if *learnPath != "" {
-		*learn = true
-	}
 	options := simOptions{
 		config:    cfg,
-		learnPath: *learnPath,
 		seed:      *seed,
 		rates:     parsedRates,
 		amplitude: *amplitude,
@@ -74,10 +67,6 @@ func run() error {
 	var results []result
 	for _, name := range modes {
 		options.mode = name
-		options.histogram = nil
-		if *learn && name == "adaptiv" {
-			options.histogram = loadHistogram(*learnPath, os.Stderr)
-		}
 		r, err := simulate(options, *duration, *display)
 		if err != nil {
 			return err
@@ -123,19 +112,6 @@ func printResults(out io.Writer, results []result, duration time.Duration) {
 	share := 100 * (1 - float64(better.truth)/float64(worse.truth))
 	fmt.Fprintf(out, "\n%s liegt %.1f Prozent unter %s (%s gegen %s).\n",
 		better.mode, share, worse.mode, round(better.truth), round(worse.truth))
-}
-
-// loadHistogram laedt den Lernzustand. Fehlt er oder ist er unbrauchbar, beginnt der Lauf
-// mit einem leeren Profil; der Grund steht auf der Fehlerausgabe.
-func loadHistogram(path string, out io.Writer) *learning.Histogram {
-	if path == "" {
-		return learning.New()
-	}
-	histogram, err := learning.Load(path)
-	if err != nil {
-		fmt.Fprintf(out, "Hinweis: %v\n", err)
-	}
-	return histogram
 }
 
 func loadConfig(path string) (*config.Config, error) {

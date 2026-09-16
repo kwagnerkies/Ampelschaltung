@@ -34,7 +34,7 @@ run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;rueckstau_bei_ankunft;phase_bei_
 `state-<lauf>.csv`, ein Abtastwert je Sekunde, fuer Diagramme ueber den Verlauf.
 
 ```
-run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau_s;stau_w;mittel_n;mittel_o;mittel_s;mittel_w;prognose_gewicht
+run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau_s;stau_w;verlaengerungen
 ```
 
 `events-<lauf>.csv`, jedes Ereignis: `sensor_an`, `sensor_aus`, `phase_start`, `phase_ende`,
@@ -76,7 +76,7 @@ legt dieselben Zahlen als CSV fuer die Ausarbeitung ab.
 
 ## 5. Einen belastbaren Vergleich fahren
 
-1. Reset-Taster zwei Sekunden halten. Das leert den Lernzustand und beginnt einen neuen Lauf.
+1. Reset-Taster zwei Sekunden halten. Das verwirft die alte Messung und beginnt einen neuen Lauf.
 2. Kippschalter auf Festzeit, mindestens zehn Minuten mit einem festen Verkehrsmuster fahren.
 3. Kippschalter auf adaptiv, dasselbe Muster mindestens zehn Minuten fahren.
 4. Beide Abschnitte liegen in denselben Dateien und sind ueber die Spalte `modus` getrennt.
@@ -98,15 +98,14 @@ ampeleval ./messung
 demselben Startwert des Zufallsgenerators und nennt am Ende den Unterschied. Mit `-seed`
 laesst sich das exakt wiederholen.
 
-Der Tagesgang und das Lernen:
+Mit `-tagesgang` laesst sich eine Lastspitze ueber den Tag nachbilden:
 
 ```
-ampelsim -modus adaptiv -tagesgang 0.8 -dauer 2h -lernpfad ./histogramm.json
+ampelsim -modus vergleich -tagesgang 0.8 -dauer 2h
 ```
 
-Mehrere Laeufe mit demselben `-lernpfad` sind mehrere Tage mit demselben Muster. Die
-Zielgruenzeit steigt dann schon vor der Lastspitze, weil das Prognosegewicht mit der Zahl der
-Beobachtungen waechst. Die Spalte `prognose_gewicht` in `state.csv` zeigt diesen Fortschritt.
+Die Spalte `verlaengerungen` in `state.csv` zeigt, wie oft die laufende Freigabe verlaengert
+wurde. Bei dichtem Verkehr steht dort ein wachsender Wert, bei vereinzeltem eine Null.
 
 ## 7. Grenzen der Messung
 

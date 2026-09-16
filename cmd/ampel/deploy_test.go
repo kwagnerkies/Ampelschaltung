@@ -74,7 +74,7 @@ func TestUnitMatchesConfig(t *testing.T) {
 	unit := read(t, unitPath)
 
 	writable := strings.Fields(directive(unit, "ReadWritePaths"))
-	for _, path := range []string{cfg.Logging.Dir, filepath.Dir(cfg.Learning.Path)} {
+	for _, path := range []string{cfg.Logging.Dir} {
 		if !contains(writable, path) {
 			t.Errorf("ReadWritePaths %v enthaelt %s nicht", writable, path)
 		}
@@ -98,7 +98,6 @@ func TestInstallScriptCreatesRequiredPaths(t *testing.T) {
 
 	for _, path := range []string{
 		cfg.Logging.Dir,
-		filepath.Dir(cfg.Learning.Path),
 		filepath.Dir(installedConf),
 		installedBin,
 		// Die Auswertung muss mitkommen, die Vorfuehrung zeigt die Kennzahlen auf dem Pi.

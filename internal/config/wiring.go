@@ -16,17 +16,13 @@ func (c *Config) ControllerTiming() controller.Timing {
 	}
 }
 
-// StrategyParams sind die Grenzwerte der Regelung.
-func (c *Config) StrategyParams() strategy.Params {
-	return strategy.Params{
-		MinGreen:   c.Timing.MinGreen.Duration(),
-		MaxGreen:   c.Timing.MaxGreen.Duration(),
-		Cycle:      c.Timing.Cycle.Duration(),
-		Intergreen: c.Timing.Intergreen(),
-		Gap:        c.Timing.Gap.Duration(),
-		Extension:  c.Timing.Extension.Duration(),
-		MaxWait:    c.Timing.MaxWait.Duration(),
-	}
+// Following ist die verkehrsabhaengige Verlaengerung aus der Konfiguration.
+func (c *Config) Following() (*strategy.Following, error) {
+	return strategy.NewFollowing(
+		c.Timing.BaseGreen.Duration(),
+		c.Timing.Extension.Duration(),
+		c.Timing.MaxGreen.Duration(),
+	)
 }
 
 // Setup uebersetzt die Konfiguration in die Beschreibung der Kreuzung. Hardware, Uhr,
@@ -44,6 +40,7 @@ func (c *Config) Setup() (controller.Setup, error) {
 		LampMatrix:   matrix,
 		Bits:         len(c.Hardware.ShiftRegister.BitOrder),
 		Timing:       c.ControllerTiming(),
+		Follow:       c.Timing.Follow.Duration(),
 		Tick:         controller.DefaultTick,
 		Sample:       c.Logging.StateInterval.Duration(),
 	}, nil

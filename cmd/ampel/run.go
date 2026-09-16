@@ -11,7 +11,6 @@ import (
 	"ampel/internal/config"
 	"ampel/internal/controller"
 	"ampel/internal/hal"
-	"ampel/internal/learning"
 	"ampel/internal/logging"
 	"ampel/internal/strategy"
 )
@@ -68,13 +67,6 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 	setup.Strategy = active
 	setup.Panel = panel
 	setup.Watchdog = controller.DefaultWatchdog
-	// Der Lernzustand steht immer bereit, denn der Kippschalter kann jederzeit in den
-	// adaptiven Betrieb wechseln. Gelernt wird nur dort, das entscheidet der Regelkreis.
-	blender, err := newBlender(cfg, started, out)
-	if err != nil {
-		return err
-	}
-	setup.Learner = blender
 	setup.Clock = clock.NewReal()
 	setup.Writer = driver
 	setup.Inputs = pump(ctx, inputs.Events())
@@ -85,7 +77,6 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 		return err
 	}
 
-	defer blender.Flush()
 	recorder.Start(started)
 	fmt.Fprintf(out, "Betrieb gestartet, Modus %s, Lauf %s, Logverzeichnis %s\n", control.Mode(), run.ID(), logDir)
 	err = control.Run(ctx)
@@ -103,32 +94,13 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 	return err
 }
 
-// newBlender laedt den Lernzustand und richtet die Mischung ein. Ein fehlender oder
-// unbrauchbarer Stand ist kein Startfehler, sondern ein leerer Anfang mit Hinweis im Log.
-func newBlender(cfg *config.Config, started time.Time, out io.Writer) (*learning.Blender, error) {
-	path := cfg.Learning.Path
-	histogram, err := learning.Load(path)
-	if err != nil {
-		fmt.Fprintf(out, "Hinweis: %v\n", err)
-	}
-	return learning.NewBlender(learning.Options{
-		Histogram: histogram,
-		Alpha:     cfg.Adaptive.LearnAlpha,
-		K:         cfg.Adaptive.BlendK,
-		SaveEvery: cfg.Learning.SaveInterval.Duration(),
-		Now:       started,
-		Save:      func(h *learning.Histogram) error { return learning.Save(path, h) },
-		OnError:   func(err error) { fmt.Fprintf(out, "Lernzustand nicht gespeichert: %v\n", err) },
-	})
-}
-
 // newPanel verdrahtet Kippschalter und Reset-Taster. Der beim Start gelesene Schalterpegel
 // bestimmt die erste Betriebsart; laesst er sich nicht lesen, gilt die Kommandozeile.
 func newPanel(cfg *config.Config, source hal.InputSource, mode string) (*controller.Panel, error) {
 	if mode != "festzeit" && mode != "adaptiv" {
 		return nil, fmt.Errorf("unbekannte Betriebsart %q, erlaubt sind festzeit und adaptiv", mode)
 	}
-	adaptive, err := strategy.NewAdaptive(cfg.StrategyParams())
+	adaptive, err := cfg.Following()
 	if err != nil {
 		return nil, err
 	}

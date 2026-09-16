@@ -57,7 +57,7 @@ func sequenceSteps(timing config.Timing) []step {
 	for _, free := range []int{ns, ew} {
 		steps = append(steps,
 			step{phase(free, light.AspectRedYellow), timing.RedYellow.Duration()},
-			step{phase(free, light.AspectGreen), timing.MinGreen.Duration()},
+			step{phase(free, light.AspectGreen), timing.BaseGreen.Duration()},
 			step{phase(free, light.AspectYellow), timing.Yellow.Duration()},
 			step{allRed, timing.AllRed.Duration()},
 		)

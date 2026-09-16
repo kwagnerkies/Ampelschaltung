@@ -137,12 +137,11 @@ func TestRecorderWritesEventsAndSamples(t *testing.T) {
 	recorder.SensorChanged(detector.SensorEvent{Direction: light.South, Index: 1, Occupied: true, At: started.Add(2 * time.Second)})
 	recorder.Fault(started.Add(20*time.Second), errors.New("konflikt"))
 	recorder.Sample(started.Add(time.Second), controller.Snapshot{
-		State:   controller.State{Phase: controller.PhaseNS, Stage: controller.StageGreen, Since: started, Target: 15 * time.Second},
-		Elapsed: time.Second,
-		Mode:    "festzeit",
-		Queues:  [light.DirectionCount]int{1, 2, 3, 4},
-		Demands: [light.DirectionCount]float64{0.5, 1.25, 0, 0},
-		Weight:  0.75,
+		State:     controller.State{Phase: controller.PhaseNS, Stage: controller.StageGreen, Since: started, Target: 15 * time.Second},
+		Elapsed:   time.Second,
+		Mode:      "festzeit",
+		Queues:    [light.DirectionCount]int{1, 2, 3, 4},
+		Following: 2,
 	})
 	recorder.Stop(started.Add(30 * time.Second))
 	if err := run.Close(); err != nil {
@@ -170,7 +169,7 @@ func TestRecorderWritesEventsAndSamples(t *testing.T) {
 	if len(row) != len(StateHeader) {
 		t.Fatalf("%d Spalten, erwartet %d", len(row), len(StateHeader))
 	}
-	if row[4] != "NS_Gruen" || row[6] != "15000" || row[7] != "1" || row[11] != "0.500" || row[15] != "0.750" {
+	if row[4] != "NS_Gruen" || row[6] != "15000" || row[7] != "1" || row[11] != "2" {
 		t.Errorf("Zustandszeile %v", row)
 	}
 }

@@ -13,38 +13,16 @@ const (
 	resetPin  = 18
 )
 
-var params = strategy.Params{
-	MinGreen:   5 * time.Second,
-	MaxGreen:   25 * time.Second,
-	Cycle:      40 * time.Second,
-	Intergreen: timing.Intergreen(),
-	Gap:        2 * time.Second,
-	Extension:  1500 * time.Millisecond,
-	MaxWait:    60 * time.Second,
-}
-
-// spyLearner zaehlt, wie oft der Lernzustand geloescht und beobachtet wurde.
-type spyLearner struct {
-	NopLearner
-	observed int
-	resets   int
-}
-
-func (s *spyLearner) Observe(time.Time, light.Direction, float64) { s.observed++ }
-
-func (s *spyLearner) Reset() { s.resets++ }
-
 // newPanelHarness startet im Festzeitbetrieb mit offenem Kippschalter.
-func newPanelHarness(t *testing.T, learner *spyLearner) *harness {
+func newPanelHarness(t *testing.T) *harness {
 	t.Helper()
-	adaptive, err := strategy.NewAdaptive(params)
+	adaptive, err := strategy.NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)
 	if err != nil {
-		t.Fatalf("NewAdaptive: %v", err)
+		t.Fatalf("NewFollowing: %v", err)
 	}
 	fixed := strategy.NewFixed(15 * time.Second)
 	return newHarness(t, 15*time.Second, func(setup *Setup) {
 		setup.Strategy = fixed
-		setup.Learner = learner
 		setup.Panel = &Panel{
 			SwitchPin: switchPin,
 			ResetPin:  resetPin,
@@ -74,7 +52,7 @@ func (h *harness) waitForMode(from string, limit time.Duration) (State, time.Tim
 // Der Kippschalter wirkt nicht mitten in der Freigabe, sondern erst beim naechsten
 // Phasenwechsel.
 func TestModeSwitchTakesEffectAtGreenStart(t *testing.T) {
-	h := newPanelHarness(t, &spyLearner{})
+	h := newPanelHarness(t)
 	h.run(5 * time.Second)
 	if got := h.controller.Mode(); got != "festzeit" {
 		t.Fatalf("Startmodus %s, erwartet festzeit", got)
@@ -106,7 +84,7 @@ func TestModeSwitchTakesEffectAtGreenStart(t *testing.T) {
 
 // Ein prellender Kippschalter darf keinen Moduswechsel ausloesen.
 func TestModeSwitchIgnoresBouncing(t *testing.T) {
-	h := newPanelHarness(t, &spyLearner{})
+	h := newPanelHarness(t)
 	h.run(2 * time.Second)
 	for i := 0; i < 8; i++ {
 		h.press(switchPin, i%2 == 0)
@@ -126,7 +104,7 @@ func TestModeSwitchIgnoresBouncing(t *testing.T) {
 // Das Umschalten im Betrieb darf nie ein unzulaessiges Signalbild erzeugen. Der Schalter
 // kippt dabei absichtlich in jeder Phasenlage.
 func TestSwitchingNeverBreaksSignalRules(t *testing.T) {
-	h := newPanelHarness(t, &spyLearner{})
+	h := newPanelHarness(t)
 	closed := false
 	for i := 0; i < 230; i++ {
 		closed = !closed
@@ -157,22 +135,6 @@ func TestSwitchingNeverBreaksSignalRules(t *testing.T) {
 	}
 }
 
-// Der Festzeitbetrieb misst mit, lernt aber nicht. Erst der adaptive Betrieb fuellt das
-// Tagesprofil.
-func TestFixedModeDoesNotLearn(t *testing.T) {
-	learner := &spyLearner{}
-	h := newPanelHarness(t, learner)
-	h.run(2 * time.Minute)
-	if learner.observed != 0 {
-		t.Fatalf("%d Beobachtungen im Festzeitbetrieb, erwartet keine", learner.observed)
-	}
-
-	h.press(switchPin, true)
-	h.run(2 * time.Minute)
-	if learner.observed == 0 {
-		t.Error("der adaptive Betrieb lernte nichts")
-	}
-}
 func allShow(aspects [light.DirectionCount]light.Aspect, want light.Aspect) bool {
 	for _, aspect := range aspects {
 		if aspect != want {

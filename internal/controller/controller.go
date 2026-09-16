@@ -30,7 +30,6 @@ type Options struct {
 	Approaches [light.DirectionCount]*traffic.Approach
 	Output     *Output
 	Strategy   strategy.Strategy
-	Learner    Learner
 	Clock      clock.Clock
 	Inputs     <-chan Input
 	Observer   Observer
@@ -41,6 +40,8 @@ type Options struct {
 	Panel *Panel
 	// Watchdog ist die groesste erlaubte Pause zwischen zwei Takten.
 	Watchdog time.Duration
+	// Follow ist der groesste Abstand, in dem ein Fahrzeug noch als dicht folgend gilt.
+	Follow time.Duration
 }
 
 // Controller ist der Regelkreis. Ein einziger Goroutine besitzt diesen Zustand; alles andere
@@ -55,7 +56,6 @@ type Controller struct {
 	approaches [light.DirectionCount]*traffic.Approach
 	output     *Output
 	strategy   strategy.Strategy
-	learner    Learner
 	clk        clock.Clock
 	inputs     <-chan Input
 	observer   Observer
@@ -63,9 +63,13 @@ type Controller struct {
 	panel      *panel
 	watchdog   *Watchdog
 
-	started      time.Time
-	greenSince   time.Time
-	lastStopLine [light.DirectionCount]time.Time
+	follow time.Duration
+
+	started time.Time
+	// lastCrossing ist je Zufahrt die letzte Ueberfahrt der Haltelinie in dieser Freigabe,
+	// following die Zahl der dicht darauf folgenden Fahrzeuge.
+	lastCrossing [light.DirectionCount]time.Time
+	following    int
 	lastSample   time.Time
 	begun        bool
 	flashOn      bool
@@ -87,8 +91,8 @@ func New(options Options) (*Controller, error) {
 	if options.Observer == nil {
 		options.Observer = NopObserver{}
 	}
-	if options.Learner == nil {
-		options.Learner = NopLearner{}
+	if options.Follow <= 0 {
+		options.Follow = DefaultFollow
 	}
 	if options.FlashHalf <= 0 {
 		options.FlashHalf = 500 * time.Millisecond
@@ -104,7 +108,7 @@ func New(options Options) (*Controller, error) {
 		approaches: options.Approaches,
 		output:     options.Output,
 		strategy:   options.Strategy,
-		learner:    options.Learner,
+		follow:     options.Follow,
 		clk:        options.Clock,
 		inputs:     options.Inputs,
 		observer:   options.Observer,
@@ -117,9 +121,6 @@ func New(options Options) (*Controller, error) {
 			return nil, errors.New("regelkreis: das bedienfeld braucht beide betriebsarten")
 		}
 		c.panel = newPanel(*options.Panel, now)
-	}
-	for direction := range c.lastStopLine {
-		c.lastStopLine[direction] = now
 	}
 	return c, nil
 }
@@ -191,21 +192,10 @@ func (c *Controller) Step(now time.Time) {
 		(c.strategy.EndGreen(c.view(now)) || c.resetWaiting(state))
 	if c.machine.Advance(now, endGreen) {
 		state = c.machine.State()
-		if state.Stage == StageYellow {
-			// Die Nachfrage wird am Ende jeder Freigabe geglaettet und in das Zeitfenster
-			// gelernt, in dem die Freigabe begann.
-			learn := c.learns()
-			for _, approach := range c.approaches {
-				approach.UpdateDemand()
-				if learn {
-					c.learner.Observe(c.greenSince, approach.Direction(), approach.Demand())
-				}
-			}
-		}
 		if state.Stage == StageGreen {
 			c.applyMode(now)
-			c.greenSince = now
-			c.machine.SetTarget(c.strategy.TargetGreen(c.view(now)))
+			c.following = 0
+			c.lastCrossing = [light.DirectionCount]time.Time{}
 			state = c.machine.State()
 		}
 		if err := c.show(); err != nil {
@@ -214,20 +204,22 @@ func (c *Controller) Step(now time.Time) {
 		}
 		c.observer.PhaseChanged(now, state, c.strategy.Name())
 	}
-	c.learner.Persist(now)
+	// Die Zielzeit waechst mit jedem dicht folgenden Fahrzeug, deshalb wird sie in jedem Takt
+	// nachgefuehrt. Anzeige und Log zeigen damit immer den geltenden Wert.
+	if c.machine.State().Stage == StageGreen {
+		c.machine.SetTarget(c.strategy.TargetGreen(c.view(now)))
+	}
 	c.emitSample(now)
 }
 
-// Reset loescht Lernzustand, gleitende Mittel, Belegung und Kennzahlen. Der Reset-Taster
-// loest das aus.
+// Reset verwirft Belegung, wartende Fahrzeuge und Kennzahlen und beginnt damit eine neue
+// Messung. Der Reset-Taster loest das aus.
 func (c *Controller) Reset(now time.Time) {
-	c.learner.Reset()
 	c.detect.Reset()
 	for _, approach := range c.approaches {
 		approach.Reset()
 	}
 	c.metrics.Reset()
-	for direction := range c.lastStopLine {
-		c.lastStopLine[direction] = now
-	}
+	c.following = 0
+	c.lastCrossing = [light.DirectionCount]time.Time{}
 }

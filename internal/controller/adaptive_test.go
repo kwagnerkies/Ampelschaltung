@@ -25,9 +25,9 @@ func newAdaptiveHarness(t *testing.T) *harness {
 	clk := clock.NewFake(start)
 	mock := hal.NewMock(16, 4096)
 	observer := &recorder{}
-	adaptive, err := strategy.NewAdaptive(params)
+	adaptive, err := strategy.NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)
 	if err != nil {
-		t.Fatalf("NewAdaptive: %v", err)
+		t.Fatalf("NewFollowing: %v", err)
 	}
 	c, err := Build(Setup{
 		Sensors:      sensorPins,
@@ -57,7 +57,8 @@ func newAdaptiveHarness(t *testing.T) *harness {
 	return &harness{controller: c, clk: clk, mock: mock, observer: observer}
 }
 
-// Einseitige Last muss messbar laengeres Gruen fuer die belastete Richtung erzeugen.
+// Dicht aufeinander folgende Fahrzeuge muessen die Freigabe ihrer Richtung verlaengern, eine
+// Richtung mit vereinzeltem Verkehr behaelt die Grundzeit.
 func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
@@ -76,7 +77,7 @@ func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 	if ns < ew+5*time.Second {
 		t.Errorf("Nord und Sued erhalten %s Gruen, Ost und West %s; erwartet mindestens fuenf Sekunden mehr", ns, ew)
 	}
-	if ns > 25*time.Second+time.Second {
+	if ns > 30*time.Second+time.Second {
 		t.Errorf("Gruenzeit %s ueberschreitet die Hoechstgruenzeit", ns)
 	}
 	if len(h.observer.faults) != 0 {

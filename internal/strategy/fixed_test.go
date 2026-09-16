@@ -32,7 +32,7 @@ func TestFixedEndsOnlyAfterGreenTime(t *testing.T) {
 		{time.Minute, true},
 	}
 	for _, tc := range cases {
-		view := View{Now: start.Add(tc.elapsed), GreenSince: start, OtherQueue: 10, OtherOldestWait: time.Hour}
+		view := View{Now: start.Add(tc.elapsed), GreenSince: start, Following: 5}
 		if got := f.EndGreen(view); got != tc.want {
 			t.Errorf("nach %s ergibt EndGreen %v, erwartet %v", tc.elapsed, got, tc.want)
 		}

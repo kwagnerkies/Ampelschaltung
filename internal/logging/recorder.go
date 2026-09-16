@@ -53,7 +53,7 @@ func (r *Recorder) Stop(at time.Time) {
 // Reset schreibt die Resetmarke und beginnt einen neuen Lauf. Der Regelkreis darf daran
 // nicht scheitern, deshalb wird ein Fehler gemerkt statt gemeldet; Err gibt ihn heraus.
 func (r *Recorder) Reset(at time.Time) {
-	r.run.Events().Write(r.event(at, EventReset, "", "", "", "", "lernzustand geloescht"))
+	r.run.Events().Write(r.event(at, EventReset, "", "", "", "", "messung zurueckgesetzt"))
 	r.modeSince = at
 	if err := r.run.Rotate(at); err != nil && r.err == nil {
 		r.err = fmt.Errorf("neuen Lauf beginnen: %w", err)
@@ -125,10 +125,7 @@ func (r *Recorder) Sample(at time.Time, snapshot controller.Snapshot) {
 	for _, direction := range light.Directions() {
 		row = append(row, strconv.Itoa(snapshot.Queues[direction]))
 	}
-	for _, direction := range light.Directions() {
-		row = append(row, strconv.FormatFloat(snapshot.Demands[direction], 'f', 3, 64))
-	}
-	row = append(row, strconv.FormatFloat(snapshot.Weight, 'f', 3, 64))
+	row = append(row, strconv.Itoa(snapshot.Following))
 	r.run.State().Write(row)
 }
 

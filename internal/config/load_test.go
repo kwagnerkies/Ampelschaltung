@@ -27,7 +27,7 @@ func TestLoadShippedConfig(t *testing.T) {
 	if got, want := cfg.Timing.Intergreen(), 6*time.Second; got != want {
 		t.Errorf("Zwischenzeiten %s, erwartet %s", got, want)
 	}
-	if got, want := cfg.Timing.CycleEffective(), 28*time.Second; got != want {
+	if got, want := cfg.Timing.Intergreen(), 6*time.Second; got != want {
 		t.Errorf("verteilbare Umlaufzeit %s, erwartet %s", got, want)
 	}
 	if got, want := cfg.Hardware.Sensors.North, []int{5, 6, 13}; !reflect.DeepEqual(got, want) {

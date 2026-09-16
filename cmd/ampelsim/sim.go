@@ -8,7 +8,6 @@ import (
 	"ampel/internal/config"
 	"ampel/internal/controller"
 	"ampel/internal/hal"
-	"ampel/internal/learning"
 	"ampel/internal/light"
 	"ampel/internal/logging"
 	"ampel/internal/strategy"
@@ -25,10 +24,6 @@ type simOptions struct {
 	amplitude float64
 	start     time.Time
 	logDir    string
-	// histogram schaltet das Lernen ein. Mehrere Laeufe mit demselben Histogramm sind
-	// mehrere Tage mit demselben Muster.
-	histogram *learning.Histogram
-	learnPath string
 }
 
 // greenRecord haelt eine Freigabe mit ihrer Zielgruenzeit fest.
@@ -47,7 +42,6 @@ type simulation struct {
 	clk      *clock.Fake
 	run      *logging.Run
 	recorder *logging.Recorder
-	blender  *learning.Blender
 	mode     string
 
 	greens    []greenRecord
@@ -83,26 +77,6 @@ func newSimulation(options simOptions) (*simulation, error) {
 		}
 		s.recorder = logging.NewRecorder(s.run, options.start, logging.DefaultSettle, active.Name())
 		setup.Observer = s.recorder
-	}
-
-	if options.histogram != nil {
-		s.blender, err = learning.NewBlender(learning.Options{
-			Histogram: options.histogram,
-			Alpha:     cfg.Adaptive.LearnAlpha,
-			K:         cfg.Adaptive.BlendK,
-			SaveEvery: cfg.Learning.SaveInterval.Duration(),
-			Now:       options.start,
-			Save: func(h *learning.Histogram) error {
-				if options.learnPath == "" {
-					return nil
-				}
-				return learning.Save(options.learnPath, h)
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-		setup.Learner = s.blender
 	}
 
 	s.control, err = controller.Build(setup)
@@ -178,9 +152,6 @@ func (s *simulation) walk(duration time.Duration, show func(*simulation)) {
 }
 
 func (s *simulation) close() error {
-	if s.blender != nil {
-		s.blender.Flush()
-	}
 	if s.recorder != nil {
 		s.recorder.Stop(s.clk.Now())
 	}
@@ -232,7 +203,7 @@ func newStrategy(mode string, cfg *config.Config) (strategy.Strategy, error) {
 	case "festzeit":
 		return strategy.NewFixed(cfg.Fixed.Green.Duration()), nil
 	case "adaptiv":
-		return strategy.NewAdaptive(cfg.StrategyParams())
+		return cfg.Following()
 	}
 	return nil, fmt.Errorf("unbekannte Betriebsart %q, erlaubt sind festzeit und adaptiv", mode)
 }

@@ -72,7 +72,7 @@ func TestSequenceWrapsGreenInTransitions(t *testing.T) {
 
 func TestSequenceHoldsComeFromConfig(t *testing.T) {
 	cfg := config.Default()
-	cfg.Timing.MinGreen = config.Millis(4 * time.Second)
+	cfg.Timing.BaseGreen = config.Millis(4 * time.Second)
 	steps := sequenceSteps(cfg.Timing)
 
 	for _, s := range steps {

@@ -9,8 +9,6 @@ Steuerung.
   Kreuzung ohne Tastatur wieder steuert.
 - Selbsttest fahren, alle zwoelf Lampen und alle zwoelf Sensoren einmal ausloesen.
 - Mindestens zwoelf Modellautos bereitlegen, alle mit gleich gepoltem Magneten.
-- Einen Lauf mit Tagesgang in der Simulation erzeugen und `histogramm.json` auf den Pi
-  legen, damit der Lernabschnitt nicht bei null beginnt.
 - Ersatz mitnehmen: geladenes Netzteil, zweite SD-Karte, Laptop mit `ampelsim`.
 
 ## Vorbereitung am Tag selbst
@@ -42,18 +40,22 @@ mitten in der Freigabe waere ein unzulaessiges Signalbild.
 
 Dasselbe Verkehrsmuster wie in Abschnitt 1 schieben. Sichtbar wird:
 
-- Die belastete Richtung bekommt laengeres Gruen.
-- Die leere Richtung wird nach der Mindestzeit abgebrochen.
-- Ein Fahrzeug an der Haltelinie der leeren Richtung fordert die Freigabe an.
-- Wartet eine Richtung ueber eine Minute, wird umgeschaltet, egal was die Nachfrage sagt.
+- Die belastete Richtung bekommt laengeres Gruen, weil dort Fahrzeug auf Fahrzeug folgt.
+- Die leere Richtung behaelt ihre Grundzeit von fuenf Sekunden.
+- Die Hoechstgruenzeit von zwanzig Sekunden begrenzt, wie lange die andere Richtung wartet.
 
-## Abschnitt 3, Lernen, etwa zwei Minuten
+## Abschnitt 3, die Regel am Display, etwa zwei Minuten
 
-Auf den vorbereiteten Lernzustand verweisen: `prognose_gewicht` in `state.csv` steigt mit der
-Zahl der Beobachtungen, die Steuerung schaltet vorausschauend statt nur reaktiv.
+Jetzt auf das Display zeigen. Dort stehen die vier Gruenzeiten im Kreuz, in der Farbe des
+jeweiligen Signalbildes.
 
-Dann den Reset-Taster zwei Sekunden halten. Nach der Blinkquittung ist das Wissen weg, die
-Steuerung ist wieder rein reaktiv, und der Unterschied ist im selben Verkehr sofort sichtbar.
+Ein einzelnes Auto ueber die Haltelinie schieben: nichts passiert, die Zahl bleibt bei der
+Grundzeit. Dann zwei Autos dicht hintereinander: die Zahl der freigegebenen Richtung springt
+um drei Sekunden hoch. Noch eines hinterher, und sie springt wieder.
+
+Das ist die ganze Regel, und sie ist in einem Satz erklaert: zwei Fahrzeuge kurz hintereinander
+bedeuten, dass noch mehr kommt, also bekommt diese Richtung mehr Zeit. Bei der Hoechstgruenzeit
+ist Schluss, sonst wartet die andere Richtung zu lange.
 
 ## Abschnitt 4, Zahlen, etwa zwei Minuten
 
@@ -68,8 +70,8 @@ steht.
 
 ## Fragen, die kommen
 
-- Warum Maximum statt Summe der Nachfrage einer Phase? Massgeblich ist der schlechteste Arm.
-  Eine Summe wuerde zwei halbvolle Zufahrten wie eine volle behandeln.
+- Warum zaehlt ihr je Zufahrt und nicht je Phase? Nord und Sued fahren gleichzeitig ab. Wer
+  beide zusammen zaehlt, haelt jede symmetrische Last faelschlich fuer dichten Verkehr.
 - Warum sind die Zwischenzeiten fest? Gelb, Allrot und RotGelb sind Sicherheit, keine
   Stellgroesse. Keine Strategie darf sie anfassen.
 - Was passiert bei einem Fehler? Die Sicherheitspruefung sitzt unmittelbar vor der Ausgabe.

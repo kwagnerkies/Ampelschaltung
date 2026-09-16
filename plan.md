@@ -10,7 +10,7 @@ Cyberphysisches System auf Raspberry Pi 2 B, Sprache Go, Zielplattform Linux (Ra
 
 
 
-Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung berechnet Gruenzeiten adaptiv aus der gemessenen Nachfrage und lernt zusaetzlich ein Tageszeitprofil. Ein Kippschalter schaltet im laufenden Betrieb zwischen adaptiver Steuerung und Festzeitsteuerung um, ein Taster loescht den Lernzustand.
+Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet im laufenden Betrieb zwischen adaptiver Steuerung und Festzeitsteuerung um, ein Taster beginnt eine neue Messung. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
 
 
 
@@ -200,7 +200,7 @@ Vier Schichten, Abhaengigkeiten zeigen nur nach unten.
 
 1. **HAL**: physische Ein- und Ausgabe. Kennt GPIO, kennt keine Ampeln.
 
-2. **Domaene**: Detektor, Ampelkopf, Zufahrtszustand, Phasenautomat, Strategien, Lernen. Kennt keine Hardware, nur Interfaces.
+2. **Domaene**: Detektor, Ampelkopf, Zufahrtszustand, Phasenautomat, Strategien, Anzeige. Kennt keine Hardware, nur Interfaces.
 
 3. **Anwendung**: der Regelkreis, der alles verdrahtet und den Zustand besitzt.
 
@@ -300,13 +300,13 @@ ampel/
 
       params.go            Grenzwerte und Berechnung
 
-    learning/
+    display/
 
-      histogram.go         Tageszeitprofil
+      screen.go            Anordnung der vier Gruenzeiten im Kreuz
 
-      store.go             Persistenz als JSON
+      digits.go            Ziffern aus sieben Segmenten
 
-      blend.go             Mischung Messung und Prognose
+      observer.go          Anbindung an den Regelkreis
 
     mode/
 
@@ -424,149 +424,53 @@ Die Zwischenzeiten sind fest und werden von keiner Strategie veraendert. Nur die
 
 
 
-### 6.1 Nachfragegroessen
+Die Regelung ist bewusst auf eine einzige Regel beschraenkt, damit sie in wenigen Saetzen erklaerbar bleibt.
 
 
 
-Je Zufahrt werden gefuehrt:
+### 6.1 Die Regel
 
 
 
-- `queue`: aktuell geschaetzte Rueckstaulaenge in Fahrzeugen.
-
-- `demand`: exponentiell geglaettetes Mittel der Rueckstaulaenge, aktualisiert am Ende jeder Phase, `alpha = 0.3`.
-
-- `oldestWait`: Wartezeit des am laengsten wartenden Fahrzeugs.
-
-
-
-Nachfrage einer Phase ist das Maximum der beteiligten Zufahrten, nicht die Summe. Massgeblich ist der schlechteste Arm.
-
-
-
-### 6.2 Berechnung der Gruenzeit
-
-
-
-Beim Wechsel in eine Phase wird eine Zielgruenzeit gesetzt:
+Jede Freigabe beginnt mit einer Grundgruenzeit. Faehrt ein Fahrzeug innerhalb der Folgezeit nach seinem Vorgaenger ueber dieselbe Haltelinie, wird die Freigabe um eine feste Verlaengerung erhoeht. Zwei dicht aufeinander folgende Fahrzeuge bedeuten also die erste Verlaengerung, jedes weitere eine weitere.
 
 
 
 ```
 
-share   = demand(P) / (demand(P) + demand(Q) + eps)
+ziel = grundzeit + verlaengerung * anzahl dicht folgender fahrzeuge
 
-target  = clamp(cycleEffective * share, gMin, gMax)
-
-```
-
-
-
-`cycleEffective` ist die Umlaufzeit abzueglich aller Zwischenzeiten. Startwerte: `cycle = 40 s`, `gMin = 5 s`, `gMax = 25 s`.
-
-
-
-### 6.3 Verlaengerung und Abbruch
-
-
-
-Zusaetzlich zur Zielzeit arbeitet die Phase verkehrsabhaengig, wie eine echte Anforderungssteuerung:
-
-
-
-- **Verlaengerung**: meldet der Haltelinien-Sensor innerhalb von `gapTime` (Startwert 2 s) eine weitere Fahrzeugbewegung, wird die Gruenzeit um `extension` (Startwert 1,5 s) verlaengert, hoechstens bis `gMax`.
-
-- **Abbruch bei Luecke**: passiert innerhalb von `gapTime` nichts mehr und ist `gMin` erreicht, endet die Phase vorzeitig.
-
-- **Abbruch bei Leerlauf**: ist die eigene Phase leer und die andere hat Nachfrage, endet die Phase sofort nach `gMin`.
-
-- **Verhungerungsschutz**: uebersteigt `oldestWait` der wartenden Richtung `maxWait` (Startwert 60 s), erfolgt der Wechsel unabhaengig von jeder anderen Regel. Diese Regel hat oberste Prioritaet.
-
-
-
-### 6.4 Verhalten ohne Verkehr
-
-
-
-Sind alle Zufahrten leer, bleibt die zuletzt gruene Phase gruen und wechselt erst auf Anforderung. Das ist realistisch und macht die Adaptivitaet in der Vorfuehrung sofort sichtbar.
-
-
-
-## 7. Lernkomponente
-
-
-
-### 7.1 Datenstruktur
-
-
-
-Ein Histogramm mit 96 Zeitfenstern zu 15 Minuten ueber den Tag. Je Fenster und Zufahrt werden gespeichert: geglaetteter Nachfragemittelwert und Anzahl der Beobachtungen.
-
-
-
-```go
-
-type Slot struct {
-
-    Demand  [4]float64
-
-    Samples [4]int
-
-}
-
-
-
-type Histogram struct {
-
-    Slots   [96]Slot
-
-    Updated time.Time
-
-    Version int
-
-}
+ziel = min(ziel, hoechstgruenzeit)
 
 ```
 
 
 
-Aktualisierung am Ende jeder Phase mit `alpha = 0.1` in das Fenster, in dem die Phase begann.
+Startwerte: Grundzeit 5 s, Verlaengerung 3 s, Folgezeit 2 s, Hoechstgruenzeit 20 s. Die Werte wurden im Simulator gesucht, nicht geraten.
 
 
 
-### 7.2 Mischung von Messung und Prognose
+### 6.2 Was bewusst fehlt
 
 
 
-Der Regler nutzt nicht die Rohmessung, sondern eine Mischung. Das Gewicht der Prognose waechst mit der Zahl der Beobachtungen:
+Keine geglaettete Nachfrage, keine Aufteilung einer Umlaufzeit, kein Lueckenabbruch, kein Verhungerungsschutz, kein Lernen. Die Hoechstgruenzeit allein begrenzt, wie lange die andere Richtung wartet.
 
 
 
-```
-
-w      = samples / (samples + k)      k = 10
-
-demand = (1 - w) * live + w * predicted
-
-```
+### 6.3 Gemessen wird trotzdem
 
 
 
-Frisch nach dem Reset ist `w` nahe null und das System reagiert rein reaktiv. Nach mehreren Durchlaeufen schaltet es vorausschauend. Genau dieser Unterschied ist der Vorfuehreffekt.
+Rueckstau und Wartezeiten werden in beiden Betriebsarten weiter erfasst, denn sie sind die Messgroesse des Projekts. Sie gehen nur nicht mehr in die Regelung ein.
 
 
 
-### 7.3 Persistenz
+### 6.4 Ergebnis
 
 
 
-- Ablage als JSON unter `/var/lib/ampel/histogram.json`.
-
-- Schreiben alle 60 Sekunden und beim geordneten Beenden, atomar ueber temporaere Datei und `os.Rename`.
-
-- Beim Start laden. Fehlt oder ist die Datei defekt, wird ohne Fehler leer gestartet und das protokolliert.
-
-- Ein `Version`-Feld erlaubt spaeteres Verwerfen inkompatibler Staende.
+Im Simulator liegt die adaptive Steuerung bei gleicher Ankunftsfolge zwischen 23 und 27 Prozent unter der Festzeitsteuerung mit 15 s Gruen, bei vergleichbarer Hoechstwartezeit.
 
 
 
@@ -598,7 +502,7 @@ Feste Gruenzeit fuer beide Phasen, Startwert 15 s, aus der Konfiguration. Keine 
 
 
 
-Loescht das Histogramm und alle gleitenden Mittel. Ausloesung erst nach 2 Sekunden Dauerdruck, damit ein versehentlicher Tastendruck waehrend der Vorfuehrung nichts zerstoert. Quittierung durch dreimaliges kurzes Blinken aller Gelblichter, danach normale Aufnahme des Betriebs. Der Reset startet auch eine neue Lauf-Kennung im Log.
+Verwirft Belegung, wartende Fahrzeuge und Kennzahlen und beginnt damit eine neue Messung. Ausloesung erst nach 2 Sekunden Dauerdruck, damit ein versehentlicher Tastendruck waehrend der Vorfuehrung nichts zerstoert. Quittierung durch dreimaliges kurzes Blinken aller Gelblichter, danach normale Aufnahme des Betriebs. Der Reset startet auch eine neue Lauf-Kennung im Log.
 
 
 
@@ -628,7 +532,7 @@ run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;rueckstau_bei_ankunft;phase_bei_
 
 ```
 
-run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau_s;stau_w;mittel_n;mittel_o;mittel_s;mittel_w;prognose_gewicht
+run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;stau_n;stau_o;stau_s;stau_w;verlaengerungen
 
 ```
 
@@ -708,17 +612,13 @@ timing:
 
   all_red_ms: 2000
 
-  min_green_ms: 5000
+  base_green_ms: 5000
 
-  max_green_ms: 25000
+  max_green_ms: 20000
 
-  cycle_ms: 40000
+  follow_ms: 2000
 
-  gap_ms: 2000
-
-  extension_ms: 1500
-
-  max_wait_ms: 60000
+  extension_ms: 3000
 
 
 
@@ -731,10 +631,6 @@ fixed:
 adaptive:
 
   demand_alpha: 0.3
-
-  learn_alpha: 0.1
-
-  blend_k: 10
 
 
 
@@ -760,17 +656,11 @@ logging:
 
 
 
-learning:
-
-  path: /var/lib/ampel/histogram.json
-
-  save_interval_ms: 60000
-
 ```
 
 
 
-Validierung beim Laden: Pins duerfen sich nicht doppeln, `min_green` kleiner `max_green`, Bitreihenfolge muss genau zwoelf belegte Positionen haben. Fehlerhafte Konfiguration bricht den Start ab.
+Validierung beim Laden: Pins duerfen sich nicht doppeln, `base_green` nicht groesser als `max_green`, Bitreihenfolge muss genau zwoelf belegte Positionen haben. Fehlerhafte Konfiguration bricht den Start ab.
 
 
 
@@ -788,7 +678,7 @@ Auch ein Modell soll nie zwei konfliktaere Gruensignale zeigen. Die Pruefung lie
 
 - Ein Watchdog prueft, ob der Regelkreis innerhalb von 500 ms getickt hat. Bei Ueberschreitung wird `PhaseFault` erzwungen.
 
-- `SIGINT` und `SIGTERM` fuehren ueber `context.Context` zu geordnetem Herunterfahren: alle Signale auf Rot, Histogramm speichern, CSV leeren und schliessen, GPIO-Leitungen freigeben.
+- `SIGINT` und `SIGTERM` fuehren ueber `context.Context` zu geordnetem Herunterfahren: alle Signale auf Rot, CSV leeren und schliessen, GPIO-Leitungen freigeben.
 
 - Vor jedem `recover` in `main` steht der Versuch, alle Ausgaenge abzuschalten. Ein leuchtendes Gruen nach einem Absturz ist der schlechteste denkbare Endzustand.
 
@@ -828,9 +718,9 @@ Testumfang:
 
 - `controller`: Uebergaenge komplett, kein Zustand ohne Gelb zwischen Gruen und Rot, Konfliktmatrix bei allen Phasenpaaren.
 
-- `strategy`: Grenzwerte werden eingehalten, Verhungerungsschutz greift, Verlaengerung stoppt bei `gMax`, asymmetrische Last erzeugt asymmetrische Gruenzeiten.
+- `strategy`: jedes dicht folgende Fahrzeug verlaengert um eine Stufe, die Verlaengerung stoppt bei der Hoechstgruenzeit, vereinzelter Verkehr verlaengert nicht.
 
-- `learning`: Histogramm konvergiert bei wiederholtem Muster, Mischgewicht steigt mit Beobachtungszahl, Reset leert vollstaendig, defekte JSON-Datei fuehrt zu leerem Start ohne Absturz.
+- `display`: die Anordnung ist ein Kreuz, nur geaenderte Zahlen werden neu gezeichnet, Sekunden werden gerundet.
 
 - Integrationstest: kompletter Lauf mit Mock-HAL und Fake-Clock ueber simulierte 30 Minuten, adaptiv gegen Festzeit bei identischem Ankunftsmuster. Der Test schlaegt fehl, wenn adaptiv nicht besser abschneidet.
 
@@ -928,9 +818,9 @@ Fertig, wenn ein Festzeitlauf eine mittlere Wartezeit ausgibt.
 
 
 
-**AP7 Adaptive Steuerung.** Nachfragegroessen, Zielgruenzeit, Verlaengerung, Lueckenabbruch, Verhungerungsschutz.
+**AP7 Adaptive Steuerung.** Grundgruenzeit, Zaehlung dicht folgender Fahrzeuge je Zufahrt, Verlaengerung bis zur Hoechstgruenzeit.
 
-Fertig, wenn einseitige Last messbar laengeres Gruen fuer die belastete Richtung erzeugt.
+Fertig, wenn dichter Verkehr messbar laengeres Gruen fuer die belastete Richtung erzeugt.
 
 
 
@@ -940,9 +830,9 @@ Fertig, wenn der Vergleich reproduzierbar einen Wartezeitvorteil zeigt.
 
 
 
-**AP9 Lernen.** Histogramm, Persistenz, Mischung, Reset.
+**AP9 Anzeige.** Displaytreiber, Darstellung der vier Gruenzeiten im Kreuz, Farbe nach Signalbild.
 
-Fertig, wenn nach mehreren simulierten Tagen mit gleichem Muster die Gruenzeit vor der Lastspitze steigt und der Reset dieses Verhalten wieder entfernt.
+Fertig, wenn die angezeigte Zeit der freigegebenen Richtung sichtbar steigt, sobald zwei Fahrzeuge dicht hintereinander ueber die Haltelinie fahren.
 
 
 

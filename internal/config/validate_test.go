@@ -22,24 +22,14 @@ func TestParseRejectsInvalid(t *testing.T) {
 			want: "liegt ausserhalb von 0 bis 27",
 		},
 		{
-			name: "mindestgruen nicht kleiner als hoechstgruen",
-			yaml: "timing:\n  min_green_ms: 25000\n",
-			want: "muss kleiner als timing.max_green_ms",
-		},
-		{
-			name: "umlaufzeit zu kurz",
-			yaml: "timing:\n  cycle_ms: 20000\n",
-			want: "laesst nach Abzug der Zwischenzeiten",
+			name: "grundgruen ueber hoechstgruen",
+			yaml: "timing:\n  base_green_ms: 40000\n",
+			want: "darf timing.max_green_ms",
 		},
 		{
 			name: "gelbzeit null",
 			yaml: "timing:\n  yellow_ms: 0\n",
 			want: "timing.yellow_ms muss groesser als null sein",
-		},
-		{
-			name: "hoechstwartezeit zu klein",
-			yaml: "timing:\n  max_wait_ms: 8000\n",
-			want: "timing.max_wait_ms",
 		},
 		{
 			name: "lampe fehlt in der bitreihenfolge",
@@ -72,9 +62,9 @@ func TestParseRejectsInvalid(t *testing.T) {
 			want: "ist kleiner als der Eintrag davor",
 		},
 		{
-			name: "festzeitgruen unter mindestgruen",
-			yaml: "fixed:\n  green_ms: 2000\n",
-			want: "unterschreitet timing.min_green_ms",
+			name: "festzeitgruen ueber hoechstgruen",
+			yaml: "fixed:\n  green_ms: 45000\n",
+			want: "ueberschreitet timing.max_green_ms",
 		},
 		{
 			name: "glaettungsfaktor ausserhalb des bereichs",
@@ -93,7 +83,7 @@ func TestParseRejectsInvalid(t *testing.T) {
 		},
 		{
 			name: "dauer als text",
-			yaml: "timing:\n  gap_ms: zwei sekunden\n",
+			yaml: "timing:\n  follow_ms: zwei sekunden\n",
 			want: "ganzzahlige millisekunden erwartet",
 		},
 	}
@@ -116,12 +106,11 @@ func TestValidateCollectsAllErrors(t *testing.T) {
 	cfg := Default()
 	cfg.Hardware.Chip = ""
 	cfg.Logging.Dir = ""
-	cfg.Learning.Path = ""
 	err := cfg.Validate()
 	if err == nil {
-		t.Fatal("drei Verstoesse wurden nicht gemeldet")
+		t.Fatal("zwei Verstoesse wurden nicht gemeldet")
 	}
-	for _, want := range []string{"hardware.chip", "logging.dir", "learning.path"} {
+	for _, want := range []string{"hardware.chip", "logging.dir"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("Fehler %q enthaelt nicht %q", err, want)
 		}

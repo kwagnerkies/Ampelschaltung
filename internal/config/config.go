@@ -10,7 +10,6 @@ type Config struct {
 	Adaptive     Adaptive    `yaml:"adaptive"`
 	QueueMapping map[int]int `yaml:"queue_mapping"`
 	Logging      Logging     `yaml:"logging"`
-	Learning     Learning    `yaml:"learning"`
 }
 
 type Hardware struct {
@@ -40,12 +39,13 @@ type Timing struct {
 	Yellow    Millis `yaml:"yellow_ms"`
 	RedYellow Millis `yaml:"red_yellow_ms"`
 	AllRed    Millis `yaml:"all_red_ms"`
-	MinGreen  Millis `yaml:"min_green_ms"`
+	// BaseGreen ist die Grundgruenzeit der adaptiven Steuerung, MaxGreen ihre Obergrenze.
+	BaseGreen Millis `yaml:"base_green_ms"`
 	MaxGreen  Millis `yaml:"max_green_ms"`
-	Cycle     Millis `yaml:"cycle_ms"`
-	Gap       Millis `yaml:"gap_ms"`
+	// Follow ist der groesste Abstand, in dem ein Fahrzeug noch als dicht folgend gilt,
+	// Extension die Verlaengerung, die es ausloest.
+	Follow    Millis `yaml:"follow_ms"`
 	Extension Millis `yaml:"extension_ms"`
-	MaxWait   Millis `yaml:"max_wait_ms"`
 }
 
 type Fixed struct {
@@ -54,19 +54,12 @@ type Fixed struct {
 
 type Adaptive struct {
 	DemandAlpha float64 `yaml:"demand_alpha"`
-	LearnAlpha  float64 `yaml:"learn_alpha"`
-	BlendK      float64 `yaml:"blend_k"`
 }
 
 type Logging struct {
 	Dir           string `yaml:"dir"`
 	StateInterval Millis `yaml:"state_interval_ms"`
 	Buffer        int    `yaml:"buffer"`
-}
-
-type Learning struct {
-	Path         string `yaml:"path"`
-	SaveInterval Millis `yaml:"save_interval_ms"`
 }
 
 // Approaches liefert die Sensorpins in der festen Reihenfolge Nord, Ost, Sued, West.
@@ -83,10 +76,4 @@ func (s Sensors) SensorCount() int {
 // Intergreen ist die Summe der Zwischenzeiten eines Phasenwechsels: Gelb, Allrot, RotGelb.
 func (t Timing) Intergreen() time.Duration {
 	return t.Yellow.Duration() + t.AllRed.Duration() + t.RedYellow.Duration()
-}
-
-// CycleEffective ist die Umlaufzeit abzueglich der Zwischenzeiten beider Wechsel eines Umlaufs.
-// Nur diese Zeit steht als Gruenzeit zur Verteilung bereit.
-func (t Timing) CycleEffective() time.Duration {
-	return t.Cycle.Duration() - 2*t.Intergreen()
 }

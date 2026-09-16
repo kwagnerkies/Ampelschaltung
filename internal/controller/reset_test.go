@@ -10,25 +10,21 @@ import (
 // Der Reset loest erst nach zwei Sekunden Dauerdruck aus und quittiert mit dreimaligem
 // Blinken aller Gelblichter.
 func TestResetNeedsLongPressAndBlinks(t *testing.T) {
-	learner := &spyLearner{}
-	h := newPanelHarness(t, learner)
+	h := newPanelHarness(t)
 	h.run(4 * time.Second)
 
 	h.press(resetPin, true)
 	h.run(time.Second)
 	h.press(resetPin, false)
 	h.run(time.Second)
-	if learner.resets != 0 {
-		t.Fatal("ein kurzer Druck loeschte den Lernzustand")
+	if h.observer.resets != 0 {
+		t.Fatal("ein kurzer Druck loeste den Reset aus")
 	}
 
 	h.press(resetPin, true)
 	h.run(2100 * time.Millisecond)
-	if learner.resets != 1 {
-		t.Fatalf("%d Loeschungen nach langem Druck, erwartet eine", learner.resets)
-	}
 	if h.observer.resets != 1 {
-		t.Fatalf("%d Resetmarken im Log, erwartet eine", h.observer.resets)
+		t.Fatalf("%d Resetmarken nach langem Druck, erwartet eine", h.observer.resets)
 	}
 	h.press(resetPin, false)
 
@@ -59,7 +55,7 @@ func TestResetNeedsLongPressAndBlinks(t *testing.T) {
 // Nach der Quittung nimmt die Kreuzung den Betrieb wieder auf, ohne die Signalfolge zu
 // verletzen.
 func TestResumesAfterAcknowledgement(t *testing.T) {
-	h := newPanelHarness(t, &spyLearner{})
+	h := newPanelHarness(t)
 	h.run(4 * time.Second)
 	h.press(resetPin, true)
 	h.run(2100 * time.Millisecond)

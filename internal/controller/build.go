@@ -14,6 +14,9 @@ import (
 // DefaultTick ist der Takt der Ereignisschleife.
 const DefaultTick = 50 * time.Millisecond
 
+// DefaultFollow ist der groesste Abstand, in dem ein Fahrzeug noch als dicht folgend gilt.
+const DefaultFollow = 2 * time.Second
+
 // Setup beschreibt eine Kreuzung in Zahlen. Betrieb und Simulator verdrahten damit denselben
 // Regelkreis, nur mit anderer Hardware und anderer Uhr.
 type Setup struct {
@@ -21,6 +24,7 @@ type Setup struct {
 	Debounce     time.Duration
 	QueueMapping map[int]int
 	DemandAlpha  float64
+	Follow       time.Duration
 	LampMatrix   [light.DirectionCount][3]int
 	Bits         int
 	Timing       Timing
@@ -28,7 +32,6 @@ type Setup struct {
 	Sample       time.Duration
 
 	Strategy strategy.Strategy
-	Learner  Learner
 	Clock    clock.Clock
 	Writer   LampWriter
 	Inputs   <-chan Input
@@ -73,7 +76,7 @@ func Build(setup Setup) (*Controller, error) {
 		Approaches: approaches,
 		Output:     NewOutput(bus, setup.Writer),
 		Strategy:   setup.Strategy,
-		Learner:    setup.Learner,
+		Follow:     setup.Follow,
 		Clock:      setup.Clock,
 		Inputs:     setup.Inputs,
 		Observer:   setup.Observer,

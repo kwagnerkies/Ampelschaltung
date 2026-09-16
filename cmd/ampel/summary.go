@@ -20,17 +20,14 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 		cfg.Hardware.ModeSwitch, cfg.Hardware.ResetButton, cfg.Hardware.Debounce)
 	fmt.Fprintf(w, "  Zwischenzeiten     Gelb %s, Allrot %s, RotGelb %s, Summe %s\n",
 		cfg.Timing.Yellow, cfg.Timing.AllRed, cfg.Timing.RedYellow, cfg.Timing.Intergreen())
-	fmt.Fprintf(w, "  Gruenzeiten        min %s, max %s, Umlauf %s, davon verteilbar %s\n",
-		cfg.Timing.MinGreen, cfg.Timing.MaxGreen, cfg.Timing.Cycle, cfg.Timing.CycleEffective())
-	fmt.Fprintf(w, "  Anforderung        Luecke %s, Verlaengerung %s, Hoechstwartezeit %s\n",
-		cfg.Timing.Gap, cfg.Timing.Extension, cfg.Timing.MaxWait)
+	fmt.Fprintf(w, "  Gruenzeiten        Grundzeit %s, hoechstens %s\n",
+		cfg.Timing.BaseGreen, cfg.Timing.MaxGreen)
+	fmt.Fprintf(w, "  Verlaengerung      %s je Fahrzeug, das binnen %s folgt\n",
+		cfg.Timing.Extension, cfg.Timing.Follow)
 	fmt.Fprintf(w, "  Festzeitbetrieb    Gruen %s\n", cfg.Fixed.Green)
-	fmt.Fprintf(w, "  Adaptiv            demand_alpha %v, learn_alpha %v, blend_k %v\n",
-		cfg.Adaptive.DemandAlpha, cfg.Adaptive.LearnAlpha, cfg.Adaptive.BlendK)
 	fmt.Fprintf(w, "  Rueckstautabelle   %s\n", queueMappingText(cfg.QueueMapping, cfg.Hardware.Sensors.SensorCount()))
 	fmt.Fprintf(w, "  Logging            %s, Abtastung %s, Puffer %d\n",
 		cfg.Logging.Dir, cfg.Logging.StateInterval, cfg.Logging.Buffer)
-	fmt.Fprintf(w, "  Lernzustand        %s, Sicherung alle %s\n", cfg.Learning.Path, cfg.Learning.SaveInterval)
 }
 
 func queueMappingText(mapping map[int]int, sensorCount int) string {

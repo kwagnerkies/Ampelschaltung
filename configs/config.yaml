@@ -34,20 +34,16 @@ timing:
   yellow_ms: 3000
   red_yellow_ms: 1000
   all_red_ms: 2000
-  min_green_ms: 5000
-  max_green_ms: 25000
-  cycle_ms: 40000
-  gap_ms: 2000
-  extension_ms: 1500
-  max_wait_ms: 60000
+  base_green_ms: 5000
+  max_green_ms: 20000
+  follow_ms: 2000
+  extension_ms: 3000
 
 fixed:
   green_ms: 15000
 
 adaptive:
   demand_alpha: 0.3
-  learn_alpha: 0.1
-  blend_k: 10
 
 queue_mapping:
   0: 0
@@ -59,7 +55,3 @@ logging:
   dir: /var/log/ampel
   state_interval_ms: 1000
   buffer: 4096
-
-learning:
-  path: /var/lib/ampel/histogram.json
-  save_interval_ms: 60000

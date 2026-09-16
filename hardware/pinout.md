@@ -66,7 +66,7 @@ Kontakt geschlossen, und genau daraus entsteht die Rueckstaumessung.
 | Funktion | BCM | Pin der Leiste | Wirkung |
 |---|---|---|---|
 | Kippschalter | 4 | 7 | geschlossen adaptiv, offen Festzeit |
-| Reset-Taster | 18 | 12 | zwei Sekunden halten loescht den Lernzustand |
+| Reset-Taster | 18 | 12 | zwei Sekunden halten beginnt eine neue Messung |
 
 Beide schalten wie die Sensoren gegen Masse. Der Kippschalter wird zyklisch abgefragt und mit
 100 ms entprellt, weil ein mechanischer Schalter laenger prellt als ein Reed-Kontakt.

@@ -33,7 +33,7 @@ Das Ziel kopiert Programm, Konfiguration, Dienst und Dokumentation auf den Pi un
 `deploy/install.sh` auf. Das Skript
 
 - legt den Systemnutzer `ampel` in der Gruppe `gpio` an,
-- legt `/etc/ampel`, `/var/log/ampel` und `/var/lib/ampel` an,
+- legt `/etc/ampel` und `/var/log/ampel` an,
 - installiert `/usr/local/bin/ampel` und `/etc/systemd/system/ampel.service`,
 - prueft die Konfiguration mit `ampel -validate`,
 - aktiviert den Dienst und startet ihn.
@@ -80,9 +80,9 @@ adaptiv, offen Festzeit. Im laufenden Betrieb wirkt ein Umschalten erst beim Beg
 naechsten Freigabe, nie mitten in einer laufenden. Bis zu einer halben Minute Verzoegerung
 ist also normal und kein Fehler.
 
-Der Reset-Taster loescht nach zwei Sekunden Dauerdruck den Lernzustand und alle gleitenden
-Mittel. Quittiert wird mit dreimaligem Blinken aller Gelblichter, danach laeuft die Kreuzung
-normal weiter und schreibt in einen neuen Lauf.
+Der Reset-Taster verwirft nach zwei Sekunden Dauerdruck die laufende Messung: Belegung,
+wartende Fahrzeuge und Kennzahlen. Quittiert wird mit dreimaligem Blinken aller Gelblichter,
+danach laeuft die Kreuzung normal weiter und schreibt in einen neuen Lauf.
 
 ## 6. Kaltstart pruefen
 
@@ -101,7 +101,7 @@ ls -l /var/log/ampel
 ```
 
 Faellt das Programm aus, startet systemd es nach zwei Sekunden neu. Beim geordneten Beenden
-gehen alle Signale auf Rot, das Histogramm wird gesichert und die CSV-Puffer werden geleert.
+gehen alle Signale auf Rot und die CSV-Puffer werden geleert.
 
 ## 7. Wenn nichts leuchtet
 

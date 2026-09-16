@@ -10,7 +10,7 @@ import (
 // Ruhezeiten der Bedienelemente. Ein mechanischer Kippschalter prellt laenger als ein
 // Reed-Kontakt, deshalb 100 ms statt der 15 ms der Fahrbahnsensoren. Der Reset loest erst
 // nach zwei Sekunden Dauerdruck aus, damit ein versehentlicher Druck waehrend der
-// Vorfuehrung den Lernzustand nicht loescht.
+// Vorfuehrung die laufende Messung nicht verwirft.
 const (
 	DefaultSwitchDebounce = 100 * time.Millisecond
 	DefaultResetHold      = 2 * time.Second
@@ -149,10 +149,4 @@ func (c *Controller) applyMode(now time.Time) {
 	}
 	c.strategy = next
 	c.observer.ModeChanged(now, next.Name())
-}
-
-// learns sagt, ob die laufende Betriebsart das Tagesprofil mitlernt. Die Festzeitsteuerung
-// misst die Wartezeiten mit, lernt aber nicht.
-func (c *Controller) learns() bool {
-	return c.panel == nil || c.strategy != c.panel.config.Fixed
 }

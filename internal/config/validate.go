@@ -13,7 +13,6 @@ func (c *Config) Validate() error {
 	errs = append(errs, c.Fixed.validate(c.Timing)...)
 	errs = append(errs, c.Adaptive.validate()...)
 	errs = append(errs, c.Logging.validate()...)
-	errs = append(errs, c.Learning.validate()...)
 	errs = append(errs, validateQueueMapping(c.QueueMapping, c.Hardware.Sensors.SensorCount())...)
 	return errors.Join(errs...)
 }
@@ -27,31 +26,21 @@ func (t Timing) validate() []error {
 		{"timing.yellow_ms", t.Yellow},
 		{"timing.red_yellow_ms", t.RedYellow},
 		{"timing.all_red_ms", t.AllRed},
-		{"timing.min_green_ms", t.MinGreen},
+		{"timing.base_green_ms", t.BaseGreen},
 		{"timing.max_green_ms", t.MaxGreen},
-		{"timing.cycle_ms", t.Cycle},
-		{"timing.gap_ms", t.Gap},
+		{"timing.follow_ms", t.Follow},
 		{"timing.extension_ms", t.Extension},
-		{"timing.max_wait_ms", t.MaxWait},
 	}
 	for _, d := range durations {
 		if d.value <= 0 {
 			errs = append(errs, fmt.Errorf("%s muss groesser als null sein", d.name))
 		}
 	}
-	if t.MinGreen >= t.MaxGreen {
-		errs = append(errs, fmt.Errorf("timing.min_green_ms (%s) muss kleiner als timing.max_green_ms (%s) sein", t.MinGreen, t.MaxGreen))
-	}
-	if effective := t.CycleEffective(); effective < 2*t.MinGreen.Duration() {
-		errs = append(errs, fmt.Errorf("timing.cycle_ms laesst nach Abzug der Zwischenzeiten nur %s Gruenzeit, benoetigt werden zweimal timing.min_green_ms (%s)", effective, t.MinGreen))
+	if t.BaseGreen > t.MaxGreen {
+		errs = append(errs, fmt.Errorf("timing.base_green_ms (%s) darf timing.max_green_ms (%s) nicht ueberschreiten", t.BaseGreen, t.MaxGreen))
 	}
 	if t.Extension > t.MaxGreen {
 		errs = append(errs, fmt.Errorf("timing.extension_ms (%s) darf timing.max_green_ms (%s) nicht ueberschreiten", t.Extension, t.MaxGreen))
-	}
-	// Unterhalb dieser Grenze greift der Verhungerungsschutz noch vor dem ersten regulaeren
-	// Wechsel und die Steuerung wechselt dauerhaft mit Mindestgruenzeit.
-	if lower := t.MinGreen.Duration() + t.Intergreen(); t.MaxWait.Duration() <= lower {
-		errs = append(errs, fmt.Errorf("timing.max_wait_ms (%s) muss groesser als timing.min_green_ms plus Zwischenzeiten (%s) sein", t.MaxWait, lower))
 	}
 	return errs
 }
@@ -60,27 +49,16 @@ func (f Fixed) validate(t Timing) []error {
 	if f.Green <= 0 {
 		return []error{errors.New("fixed.green_ms muss groesser als null sein")}
 	}
-	if f.Green < t.MinGreen {
-		return []error{fmt.Errorf("fixed.green_ms (%s) unterschreitet timing.min_green_ms (%s)", f.Green, t.MinGreen)}
+	if f.Green > t.MaxGreen {
+		return []error{fmt.Errorf("fixed.green_ms (%s) ueberschreitet timing.max_green_ms (%s)", f.Green, t.MaxGreen)}
 	}
 	return nil
 }
 
 func (a Adaptive) validate() []error {
 	var errs []error
-	for _, alpha := range []struct {
-		name  string
-		value float64
-	}{
-		{"adaptive.demand_alpha", a.DemandAlpha},
-		{"adaptive.learn_alpha", a.LearnAlpha},
-	} {
-		if alpha.value <= 0 || alpha.value > 1 {
-			errs = append(errs, fmt.Errorf("%s muss zwischen null (ausschliesslich) und eins liegen, ist %v", alpha.name, alpha.value))
-		}
-	}
-	if a.BlendK <= 0 {
-		errs = append(errs, fmt.Errorf("adaptive.blend_k muss groesser als null sein, ist %v", a.BlendK))
+	if a.DemandAlpha <= 0 || a.DemandAlpha > 1 {
+		errs = append(errs, fmt.Errorf("adaptive.demand_alpha muss zwischen null (ausschliesslich) und eins liegen, ist %v", a.DemandAlpha))
 	}
 	return errs
 }
@@ -95,17 +73,6 @@ func (l Logging) validate() []error {
 	}
 	if l.Buffer <= 0 {
 		errs = append(errs, errors.New("logging.buffer muss groesser als null sein"))
-	}
-	return errs
-}
-
-func (l Learning) validate() []error {
-	var errs []error
-	if l.Path == "" {
-		errs = append(errs, errors.New("learning.path darf nicht leer sein"))
-	}
-	if l.SaveInterval <= 0 {
-		errs = append(errs, errors.New("learning.save_interval_ms muss groesser als null sein"))
 	}
 	return errs
 }
