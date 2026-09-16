@@ -35,6 +35,19 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	}
 	defer func() { _ = driver.Close() }()
 
+	screen, closeDisplay, err := openDisplay(chip, cfg, out)
+	if err != nil {
+		fmt.Fprintln(out, "Hinweis: Anzeige nicht verfuegbar:", err)
+	} else {
+		defer closeDisplay()
+	}
+	if screen != nil {
+		fmt.Fprintln(out, "Anzeigetest: alle vier Felder zeigen 88 in Gruen, Rot, Gelb und Weiss.")
+		if err := showTestPattern(screen); err != nil {
+			fmt.Fprintln(out, "Anzeige:", err)
+		}
+	}
+
 	pins, labels := inputPins(cfg)
 	inputs, err := hal.NewGPIOInput(cfg.Hardware.Chip, pins, cfg.Hardware.Debounce.Duration(), selftestBuffer, clock.NewReal())
 	if err != nil {

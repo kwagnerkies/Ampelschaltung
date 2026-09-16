@@ -7,34 +7,35 @@ import (
 	"ampel/internal/light"
 )
 
-// Das ist die Zusage der Anzeige: waehrend der Freigabe steht dort, wie lange sie noch
-// dauert, und diese Zahl waechst mit jedem dicht folgenden Fahrzeug.
-func TestDisplayedGreenGrowsWithFollowingVehicles(t *testing.T) {
+// Das ist die Zusage der Anzeige: die freigegebene Richtung zeigt ihre Restzeit, und diese
+// Zahl springt hoch, sobald zwei Fahrzeuge dicht hintereinander ueber die Haltelinie fahren.
+func TestDisplayedGreenJumpsWhenVehiclesFollow(t *testing.T) {
 	h := newAdaptiveHarness(t)
-	loads := []*load{
-		{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 700 * time.Millisecond},
-		{direction: light.South, stopLine: 16, upstream: []int{20, 21}, interval: 700 * time.Millisecond},
-	}
-	h.drive(loads, 9*time.Second)
+	h.run(7 * time.Second)
 
 	state := h.controller.State()
 	if state.Phase != PhaseNS || state.Stage != StageGreen {
 		t.Fatalf("Zustand %s, erwartet eine laufende Freigabe fuer Nord und Sued", state.Name())
 	}
-	snapshot := h.controller.Snapshot(h.clk.Now())
-	if snapshot.Following == 0 {
-		t.Fatal("kein Fahrzeug wurde als dicht folgend gezaehlt")
+	before := h.controller.Snapshot(h.clk.Now())
+
+	loads := []*load{{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 700 * time.Millisecond}}
+	h.drive(loads, 2*time.Second)
+
+	after := h.controller.Snapshot(h.clk.Now())
+	if after.Following <= before.Following {
+		t.Fatalf("%d Verlaengerungen, vorher %d", after.Following, before.Following)
 	}
-	if got := snapshot.Green[light.North]; got <= 8*time.Second {
-		t.Errorf("Nord zeigt %s, erwartet mehr als die Grundzeit von 8s", got)
+	if after.Green[light.North] <= before.Green[light.North] {
+		t.Errorf("Restzeit fiel von %s auf %s, erwartet einen Sprung nach oben",
+			before.Green[light.North], after.Green[light.North])
 	}
-	if snapshot.Green[light.North] != snapshot.Green[light.South] {
+	if after.Green[light.North] != after.Green[light.South] {
 		t.Errorf("Nord zeigt %s, Sued %s, beide teilen sich die Freigabe",
-			snapshot.Green[light.North], snapshot.Green[light.South])
+			after.Green[light.North], after.Green[light.South])
 	}
-	// Die wartende Richtung zeigt ihre Grundzeit, sie hat noch nichts verlaengert.
-	if got := snapshot.Green[light.East]; got != 8*time.Second {
-		t.Errorf("Ost zeigt %s, erwartet die Grundzeit von 8s", got)
+	if got := after.Green[light.East]; got != 8*time.Second {
+		t.Errorf("die wartende Richtung zeigt %s, erwartet ihre Grundzeit von 8s", got)
 	}
 }
 

@@ -26,6 +26,12 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 		cfg.Timing.Extension, cfg.Timing.Follow)
 	fmt.Fprintf(w, "  Festzeitbetrieb    Gruen %s\n", cfg.Fixed.Green)
 	fmt.Fprintf(w, "  Rueckstautabelle   %s\n", queueMappingText(cfg.QueueMapping, cfg.Hardware.Sensors.SensorCount()))
+	if cfg.Display.Enabled {
+		fmt.Fprintf(w, "  Anzeige            %s, %d Hz, DC %d, Reset %d, %s\n",
+			cfg.Display.Device, cfg.Display.SpeedHz, cfg.Display.DC, cfg.Display.Reset, cfg.Display.Rotation)
+	} else {
+		fmt.Fprintln(w, "  Anzeige            abgeschaltet")
+	}
 	fmt.Fprintf(w, "  Logging            %s, Abtastung %s, Puffer %d\n",
 		cfg.Logging.Dir, cfg.Logging.StateInterval, cfg.Logging.Buffer)
 }

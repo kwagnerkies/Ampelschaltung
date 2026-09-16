@@ -44,7 +44,11 @@ func (c *Controller) Snapshot(now time.Time) Snapshot {
 	for _, direction := range light.Directions() {
 		snapshot.Queues[direction] = c.approaches[direction].QueueLength()
 		if PhaseOf(direction) == state.Phase && state.Stage == StageGreen {
-			snapshot.Green[direction] = state.Target
+			// Die freigegebene Richtung zeigt die Restzeit. Sie zaehlt herunter und springt
+			// hoch, sobald ein dicht folgendes Fahrzeug die Freigabe verlaengert.
+			if remaining := state.Target - snapshot.Elapsed; remaining > 0 {
+				snapshot.Green[direction] = remaining
+			}
 		} else {
 			// Die wartende Richtung zeigt ihre Grundzeit: verlaengert wird erst, wenn dort
 			// tatsaechlich Fahrzeuge fahren.

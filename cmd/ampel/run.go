@@ -10,6 +10,7 @@ import (
 	"ampel/internal/clock"
 	"ampel/internal/config"
 	"ampel/internal/controller"
+	"ampel/internal/display"
 	"ampel/internal/hal"
 	"ampel/internal/logging"
 	"ampel/internal/strategy"
@@ -64,19 +65,39 @@ func runControl(ctx context.Context, cfg *config.Config, logDir, mode string, ou
 		return err
 	}
 	recorder := logging.NewRecorder(run, started, logging.DefaultSettle, active.Name())
+	observers := controller.Observers{recorder}
+
+	// Die Anzeige ist Zubehoer. Laesst sie sich nicht oeffnen, steuert die Kreuzung trotzdem.
+	screen, closeDisplay, err := openDisplay(chip, cfg, out)
+	if err != nil {
+		fmt.Fprintln(out, "Hinweis: Anzeige nicht verfuegbar:", err)
+	} else {
+		defer closeDisplay()
+	}
+	var panelDisplay *display.Observer
+	if screen != nil {
+		panelDisplay = display.NewObserver(screen, nil,
+			func(err error) { fmt.Fprintln(out, "Anzeige:", err) })
+		observers = append(observers, panelDisplay)
+	}
+
 	setup.Strategy = active
 	setup.Panel = panel
 	setup.Watchdog = controller.DefaultWatchdog
 	setup.Clock = clock.NewReal()
 	setup.Writer = driver
 	setup.Inputs = pump(ctx, inputs.Events())
-	setup.Observer = recorder
+	setup.Observer = observers
 
 	control, err := controller.Build(setup)
 	if err != nil {
 		return err
 	}
 
+	if panelDisplay != nil {
+		panelDisplay.Source(control.Snapshot)
+		panelDisplay.Sample(started, control.Snapshot(started))
+	}
 	recorder.Start(started)
 	fmt.Fprintf(out, "Betrieb gestartet, Modus %s, Lauf %s, Logverzeichnis %s\n", control.Mode(), run.ID(), logDir)
 	err = control.Run(ctx)

@@ -8,6 +8,7 @@ Type=simple
 ExecStart=/usr/local/bin/ampel -config /etc/ampel/config.yaml
 User=ampel
 Group=gpio
+SupplementaryGroups=spi
 Restart=always
 RestartSec=2
 # SIGTERM fuehrt zum geordneten Herunterfahren: alle Signale auf Rot, Histogramm sichern,
@@ -21,6 +22,7 @@ ProtectHome=true
 PrivateTmp=true
 DevicePolicy=closed
 DeviceAllow=/dev/gpiochip0 rw
+DeviceAllow=/dev/spidev0.0 rw
 StandardOutput=journal
 StandardError=journal
 

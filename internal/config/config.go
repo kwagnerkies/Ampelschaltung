@@ -9,6 +9,7 @@ type Config struct {
 	Fixed        Fixed       `yaml:"fixed"`
 	QueueMapping map[int]int `yaml:"queue_mapping"`
 	Logging      Logging     `yaml:"logging"`
+	Display      Display     `yaml:"display"`
 }
 
 type Hardware struct {
@@ -49,6 +50,17 @@ type Timing struct {
 
 type Fixed struct {
 	Green Millis `yaml:"green_ms"`
+}
+
+// Display ist die Anzeige der Gruenzeiten. Ohne sie laeuft die Kreuzung weiter, deshalb ist
+// sie abschaltbar.
+type Display struct {
+	Enabled  bool   `yaml:"enabled"`
+	Device   string `yaml:"spi"`
+	SpeedHz  int    `yaml:"speed_hz"`
+	DC       int    `yaml:"dc"`
+	Reset    int    `yaml:"reset"`
+	Rotation string `yaml:"rotation"`
 }
 
 type Logging struct {

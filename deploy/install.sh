@@ -24,14 +24,15 @@ fi
 
 # Die Gruppe gpio bringt Raspberry Pi OS mit. Fehlt sie, gehoert /dev/gpiochip0 niemandem,
 # den der Dienst erreichen kann.
-if ! getent group gpio >/dev/null; then
-	groupadd --system gpio
-fi
+for group in gpio spi; do
+	if ! getent group "$group" >/dev/null; then
+		groupadd --system "$group"
+	fi
+done
 if ! getent passwd ampel >/dev/null; then
 	useradd --system --no-create-home --shell /usr/sbin/nologin --gid gpio ampel
-else
-	usermod --append --groups gpio ampel
 fi
+usermod --append --groups gpio,spi ampel
 
 install -d -m 0755 /etc/ampel "$DOCS"
 install -d -m 0755 -o ampel -g gpio /var/log/ampel
@@ -55,6 +56,12 @@ install -m 0644 "$SRC/ampel.service" "$UNIT"
 for doc in aufbau.md auswertung.md vorfuehrung.md; do
 	[ -f "$SRC/$doc" ] && install -m 0644 "$SRC/$doc" "$DOCS/$doc"
 done
+
+# Die Anzeige haengt an SPI. Ohne diese Zeile in /boot/config.txt gibt es kein spidev.
+if [ -e /boot/config.txt ] && ! grep -q "^dtparam=spi=on" /boot/config.txt; then
+	echo "dtparam=spi=on" >> /boot/config.txt
+	echo "SPI eingeschaltet, die Anzeige arbeitet erst nach einem Neustart."
+fi
 
 "$BIN" -config "$CONFIG" -validate
 

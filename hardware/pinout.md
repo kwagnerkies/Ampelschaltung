@@ -61,6 +61,30 @@ Konfiguration.
 Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt. Ein stehendes Fahrzeug haelt den
 Kontakt geschlossen, und genau daraus entsteht die Rueckstaumessung.
 
+## Anzeige
+
+Ein 2,4-Zoll-TFT mit ILI9341 an SPI0. Gezeigt werden die vier Gruenzeiten im Kreuz, in der
+Farbe des jeweiligen Signalbildes.
+
+| Signal des Moduls | BCM | Pin der Leiste |
+|---|---|---|
+| SCK | 11 | 23 |
+| MOSI (SDI) | 10 | 19 |
+| CS | 8 | 24 |
+| DC (RS) | 7 | 26 |
+| RESET | 2 | 3 |
+| LED | fest auf 3,3 V | 1 oder 17 |
+| VCC | 3,3 V | 1 oder 17 |
+| GND | Masse | 6 |
+
+MISO bleibt frei, gelesen wird nichts. SPI muss eingeschaltet sein: `dtparam=spi=on` in
+`/boot/config.txt`, danach Neustart. Das Installationsskript traegt die Zeile ein, falls sie
+fehlt.
+
+Wichtig beim Kauf: es muss die SPI-Bauart sein, erkennbar an einer Stiftreihe mit `SDI`,
+`SCK`, `DC` und `RESET`. Die Arduino-Aufsteckplatine mit `D0` bis `D7` ist 8 Bit parallel und
+braucht dreizehn Leitungen, die hier nicht frei sind.
+
 ## Bedienelemente
 
 | Funktion | BCM | Pin der Leiste | Wirkung |

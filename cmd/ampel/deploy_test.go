@@ -28,12 +28,22 @@ func read(t *testing.T, path string) string {
 
 // directive liefert den Wert einer Zeile der Unit.
 func directive(unit, key string) string {
+	values := directives(unit, key)
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+// directives liefert alle Werte eines mehrfach erlaubten Schluessels.
+func directives(unit, key string) []string {
+	var values []string
 	for _, line := range strings.Split(unit, "\n") {
 		if name, value, found := strings.Cut(strings.TrimSpace(line), "="); found && name == key {
-			return strings.TrimSpace(value)
+			values = append(values, strings.TrimSpace(value))
 		}
 	}
-	return ""
+	return values
 }
 
 // Der Dienst muss das installierte Programm mit der installierten Konfiguration starten und
@@ -79,8 +89,16 @@ func TestUnitMatchesConfig(t *testing.T) {
 			t.Errorf("ReadWritePaths %v enthaelt %s nicht", writable, path)
 		}
 	}
-	if got, want := directive(unit, "DeviceAllow"), "/dev/"+cfg.Hardware.Chip+" rw"; got != want {
-		t.Errorf("DeviceAllow ist %q, erwartet %q", got, want)
+	allowed := directives(unit, "DeviceAllow")
+	wanted := []string{"/dev/" + cfg.Hardware.Chip + " rw"}
+	if cfg.Display.Enabled {
+		// Ohne Freigabe des SPI-Geraets bleibt die Anzeige dunkel, obwohl die Steuerung laeuft.
+		wanted = append(wanted, cfg.Display.Device+" rw")
+	}
+	for _, want := range wanted {
+		if !contains(allowed, want) {
+			t.Errorf("DeviceAllow %v enthaelt %q nicht", allowed, want)
+		}
 	}
 	if got := directive(unit, "ProtectSystem"); got == "strict" && len(writable) == 0 {
 		t.Error("ProtectSystem=strict ohne ReadWritePaths macht das Logverzeichnis unbeschreibbar")

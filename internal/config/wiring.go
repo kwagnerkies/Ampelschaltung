@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"ampel/internal/controller"
+	"ampel/internal/hal"
 	"ampel/internal/strategy"
 )
 
@@ -23,6 +24,14 @@ func (c *Config) Following() (*strategy.Following, error) {
 		c.Timing.Extension.Duration(),
 		c.Timing.MaxGreen.Duration(),
 	)
+}
+
+// TFTRotation uebersetzt die Angabe aus der Konfiguration in das Register des Controllers.
+func (d Display) TFTRotation() int {
+	if d.Rotation == "hoch" {
+		return hal.RotationPortrait
+	}
+	return hal.RotationLandscape
 }
 
 // Setup uebersetzt die Konfiguration in die Beschreibung der Kreuzung. Hardware, Uhr,

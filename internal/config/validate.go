@@ -12,6 +12,7 @@ func (c *Config) Validate() error {
 	errs = append(errs, c.Timing.validate()...)
 	errs = append(errs, c.Fixed.validate(c.Timing)...)
 	errs = append(errs, c.Logging.validate()...)
+	errs = append(errs, c.Display.validate()...)
 	errs = append(errs, validateQueueMapping(c.QueueMapping, c.Hardware.Sensors.SensorCount())...)
 	return errors.Join(errs...)
 }
@@ -52,6 +53,23 @@ func (f Fixed) validate(t Timing) []error {
 		return []error{fmt.Errorf("fixed.green_ms (%s) ueberschreitet timing.max_green_ms (%s)", f.Green, t.MaxGreen)}
 	}
 	return nil
+}
+
+func (d Display) validate() []error {
+	if !d.Enabled {
+		return nil
+	}
+	var errs []error
+	if d.Device == "" {
+		errs = append(errs, errors.New("display.spi darf nicht leer sein"))
+	}
+	if d.SpeedHz <= 0 {
+		errs = append(errs, errors.New("display.speed_hz muss groesser als null sein"))
+	}
+	if d.Rotation != "quer" && d.Rotation != "hoch" {
+		errs = append(errs, fmt.Errorf("display.rotation ist %q, erlaubt sind quer und hoch", d.Rotation))
+	}
+	return errs
 }
 
 func (l Logging) validate() []error {

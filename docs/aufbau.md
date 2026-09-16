@@ -54,6 +54,10 @@ sudo systemctl stop ampel
 sudo -u ampel /usr/local/bin/ampel -config /etc/ampel/config.yaml -selftest
 ```
 
+Der Selbsttest prueft auch die Anzeige: alle vier Felder zeigen 88 in Gruen, Rot, Gelb und
+Weiss. Steht die Zahl auf dem Kopf, ist `display.rotation` falsch; ist Rot blau, sind die
+Farbkanaele des Moduls vertauscht und `display.rotation` muss auf die andere Variante.
+
 Der Selbsttest laesst zuerst jede der zwoelf LEDs einzeln leuchten und nennt dabei Position
 in der Kette und Lampe. Leuchtet die falsche Lampe, ist die Bitreihenfolge in der
 Konfiguration falsch, nicht der Code. Danach zeigt er beide Freigabephasen in der deutschen
@@ -113,6 +117,9 @@ gehen alle Signale auf Rot und die CSV-Puffer werden geleert.
   Selbsttest.
 - Alle Lichter blinken gelb: der Regelkreis ist im Notzustand. Ursache steht im Journal, aus
   dem Notzustand fuehrt nur ein Neustart.
+- Die Anzeige bleibt dunkel, die Kreuzung laeuft: der Grund steht im Journal. Meist fehlt
+  `dtparam=spi=on` in `/boot/config.txt`, oder der Nutzer `ampel` ist nicht in der Gruppe
+  `spi`. Die Anzeige ist bewusst Zubehoer und haelt die Steuerung nie an.
 
 ## 8. Zusammenspiel der Programme
 

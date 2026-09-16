@@ -41,6 +41,14 @@ func Default() Config {
 		},
 		Fixed:        Fixed{Green: millis(15000)},
 		QueueMapping: map[int]int{0: 0, 1: 1, 2: 3, 3: 6},
+		Display: Display{
+			Enabled:  true,
+			Device:   "/dev/spidev0.0",
+			SpeedHz:  24000000,
+			DC:       7,
+			Reset:    2,
+			Rotation: "quer",
+		},
 		Logging: Logging{
 			Dir:           "/var/log/ampel",
 			StateInterval: millis(1000),

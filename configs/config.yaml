@@ -48,6 +48,14 @@ queue_mapping:
   2: 3
   3: 6
 
+display:
+  enabled: true
+  spi: /dev/spidev0.0
+  speed_hz: 24000000
+  dc: 7
+  reset: 2
+  rotation: quer
+
 logging:
   dir: /var/log/ampel
   state_interval_ms: 1000
