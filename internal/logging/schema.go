@@ -26,7 +26,6 @@ const (
 	EventSensorOff  = "sensor_aus"
 	EventPhaseStart = "phase_start"
 	EventPhaseEnd   = "phase_ende"
-	EventModeChange = "modus_wechsel"
 	EventPower      = "hauptschalter"
 	EventReset      = "reset"
 	EventError      = "fehler"
@@ -34,6 +33,6 @@ const (
 	EventStop       = "stop"
 )
 
-// DefaultSettle ist die Einschwingphase nach einem Moduswechsel. Fahrzeuge aus dieser Zeit
+// DefaultSettle ist die Einschwingphase am Anfang eines Laufs. Fahrzeuge aus dieser Zeit
 // werden markiert und in der Auswertung standardmaessig ausgeschlossen.
 const DefaultSettle = time.Minute

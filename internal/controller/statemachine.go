@@ -62,10 +62,6 @@ func (m *Machine) Advance(now time.Time, endGreen bool) bool {
 	return true
 }
 
-// Hold setzt den Beginn des laufenden Abschnitts neu. Die Blinkquittung nutzt das, damit
-// nach ihr die volle Allrotzeit gilt.
-func (m *Machine) Hold(now time.Time) { m.state.Since = now }
-
 // Restart beginnt von vorn mit Allrot. Der Hauptschalter nutzt das: aus dem dunklen Zustand
 // darf nie unmittelbar eine Freigabe folgen.
 func (m *Machine) Restart(now time.Time) {

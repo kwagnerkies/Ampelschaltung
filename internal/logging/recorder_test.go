@@ -99,12 +99,12 @@ func TestRecorderWritesVehicleRow(t *testing.T) {
 	}
 }
 
-// Die ersten sechzig Sekunden nach einem Moduswechsel sind Einschwingphase und werden
-// markiert, damit die Auswertung sie ausschliessen kann.
-func TestRecorderMarksSettlingAfterModeChange(t *testing.T) {
+// Die ersten sechzig Sekunden eines Laufs sind Einschwingphase und werden markiert, damit die
+// Auswertung sie ausschliessen kann. Das Einschalten der Anlage beginnt einen solchen Lauf.
+func TestRecorderMarksSettlingAfterPowerOn(t *testing.T) {
 	run, dir := newRun(t)
-	recorder := NewRecorder(run, started, time.Minute, "festzeit")
-	recorder.ModeChanged(started.Add(5*time.Minute), "adaptiv")
+	recorder := NewRecorder(run, started, time.Minute, "adaptiv")
+	recorder.PowerChanged(started.Add(5*time.Minute), true)
 
 	inside := traffic.Departure{Direction: light.North, At: started.Add(5*time.Minute + 30*time.Second)}
 	outside := traffic.Departure{Direction: light.North, At: started.Add(6*time.Minute + 30*time.Second)}

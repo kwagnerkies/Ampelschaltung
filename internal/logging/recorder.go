@@ -98,12 +98,6 @@ func (r *Recorder) VehicleLeft(departure traffic.Departure, mode, phase string) 
 	})
 }
 
-func (r *Recorder) ModeChanged(at time.Time, mode string) {
-	r.run.Events().Write(r.event(at, EventModeChange, "", "", "", r.previous.Name(), mode))
-	r.mode = mode
-	r.modeSince = at
-}
-
 // PowerChanged schreibt die Schaltmarke. Beim Einschalten beginnt ein neuer Lauf, damit die
 // Auswertung Abschnitte sauber trennt.
 func (r *Recorder) PowerChanged(at time.Time, on bool) {
@@ -161,8 +155,8 @@ func (r *Recorder) since(at time.Time) int64 {
 	return at.Sub(r.started).Milliseconds()
 }
 
-// settling markiert die ersten Sekunden nach einem Moduswechsel. Die Auswertung schliesst
-// diese Zeilen standardmaessig aus.
+// settling markiert die ersten Sekunden eines Laufs. In dieser Zeit steht noch Rueckstau aus
+// der Zeit davor in den Zufahrten, deshalb schliesst die Auswertung diese Zeilen aus.
 func (r *Recorder) settling(at time.Time) string {
 	if at.Sub(r.modeSince) < r.settle {
 		return "1"

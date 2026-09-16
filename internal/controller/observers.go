@@ -32,12 +32,6 @@ func (o Observers) VehicleLeft(departure traffic.Departure, mode, phase string) 
 	}
 }
 
-func (o Observers) ModeChanged(at time.Time, mode string) {
-	for _, observer := range o {
-		observer.ModeChanged(at, mode)
-	}
-}
-
 func (o Observers) Reset(at time.Time) {
 	for _, observer := range o {
 		observer.Reset(at)

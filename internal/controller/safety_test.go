@@ -93,12 +93,3 @@ func TestCheckAcceptsRegularStates(t *testing.T) {
 		})
 	}
 }
-
-func TestConflicting(t *testing.T) {
-	if Conflicting(light.North, light.South) || Conflicting(light.East, light.West) {
-		t.Error("gegenueberliegende Zufahrten gelten als konfliktaer")
-	}
-	if !Conflicting(light.North, light.East) || !Conflicting(light.West, light.South) {
-		t.Error("kreuzende Zufahrten gelten als vertraeglich")
-	}
-}

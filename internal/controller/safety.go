@@ -44,8 +44,3 @@ func Check(aspects [light.DirectionCount]light.Aspect) error {
 	}
 	return nil
 }
-
-// Conflicting sagt, ob sich zwei Zufahrten kreuzen.
-func Conflicting(a, b light.Direction) bool {
-	return conflicts[a][b]
-}
