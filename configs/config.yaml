@@ -42,9 +42,6 @@ timing:
 fixed:
   green_ms: 15000
 
-adaptive:
-  demand_alpha: 0.3
-
 queue_mapping:
   0: 0
   1: 1

@@ -11,7 +11,6 @@ func (c *Config) Validate() error {
 	errs = append(errs, c.Hardware.validate()...)
 	errs = append(errs, c.Timing.validate()...)
 	errs = append(errs, c.Fixed.validate(c.Timing)...)
-	errs = append(errs, c.Adaptive.validate()...)
 	errs = append(errs, c.Logging.validate()...)
 	errs = append(errs, validateQueueMapping(c.QueueMapping, c.Hardware.Sensors.SensorCount())...)
 	return errors.Join(errs...)
@@ -53,14 +52,6 @@ func (f Fixed) validate(t Timing) []error {
 		return []error{fmt.Errorf("fixed.green_ms (%s) ueberschreitet timing.max_green_ms (%s)", f.Green, t.MaxGreen)}
 	}
 	return nil
-}
-
-func (a Adaptive) validate() []error {
-	var errs []error
-	if a.DemandAlpha <= 0 || a.DemandAlpha > 1 {
-		errs = append(errs, fmt.Errorf("adaptive.demand_alpha muss zwischen null (ausschliesslich) und eins liegen, ist %v", a.DemandAlpha))
-	}
-	return errs
 }
 
 func (l Logging) validate() []error {

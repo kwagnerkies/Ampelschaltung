@@ -40,7 +40,6 @@ func Default() Config {
 			Extension: millis(3000),
 		},
 		Fixed:        Fixed{Green: millis(15000)},
-		Adaptive:     Adaptive{DemandAlpha: 0.3},
 		QueueMapping: map[int]int{0: 0, 1: 1, 2: 3, 3: 6},
 		Logging: Logging{
 			Dir:           "/var/log/ampel",

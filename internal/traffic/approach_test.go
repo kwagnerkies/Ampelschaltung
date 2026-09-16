@@ -16,7 +16,7 @@ func newApproach(t *testing.T) *Approach {
 	if err != nil {
 		t.Fatalf("NewQueue: %v", err)
 	}
-	approach, err := NewApproach(light.North, 3, queue, 0.3)
+	approach, err := NewApproach(light.North, 3, queue)
 	if err != nil {
 		t.Fatalf("NewApproach: %v", err)
 	}
@@ -49,9 +49,6 @@ func TestVehicleFromArrivalToDeparture(t *testing.T) {
 	}
 	if !a.AtStopLine() {
 		t.Error("Haltelinie gilt als frei")
-	}
-	if got, want := a.OldestWait(base.Add(5*time.Second)), 5*time.Second; got != want {
-		t.Errorf("aelteste Wartezeit %s, erwartet %s", got, want)
 	}
 
 	departure, ok := apply(t, a, 0, false, 12*time.Second, 1)
@@ -120,30 +117,13 @@ func TestQueueLengthAndArrivalQueue(t *testing.T) {
 		t.Errorf("Rueckstau %d, erwartet 6", got)
 	}
 }
-
-func TestUpdateDemandSmooths(t *testing.T) {
-	a := newApproach(t)
-	apply(t, a, 0, true, 0, 0)
-
-	a.UpdateDemand()
-	if got := a.Demand(); got < 0.29 || got > 0.31 {
-		t.Errorf("Nachfrage %v, erwartet etwa 0.3", got)
-	}
-	a.UpdateDemand()
-	if got := a.Demand(); got < 0.5 || got > 0.52 {
-		t.Errorf("Nachfrage %v, erwartet etwa 0.51", got)
-	}
-}
-
 func TestResetClearsEverything(t *testing.T) {
 	a := newApproach(t)
 	apply(t, a, 2, true, 0, 0)
-	a.UpdateDemand()
 
 	a.Reset()
-	if a.Waiting() != 0 || a.QueueLength() != 0 || a.Demand() != 0 {
-		t.Errorf("nach dem Reset: %d wartend, Rueckstau %d, Nachfrage %v",
-			a.Waiting(), a.QueueLength(), a.Demand())
+	if a.Waiting() != 0 || a.QueueLength() != 0 {
+		t.Errorf("nach dem Reset: %d wartend, Rueckstau %d", a.Waiting(), a.QueueLength())
 	}
 }
 
@@ -152,10 +132,7 @@ func TestNewApproachRejectsBadParameters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewQueue: %v", err)
 	}
-	if _, err := NewApproach(light.North, 0, queue, 0.3); err == nil {
+	if _, err := NewApproach(light.North, 0, queue); err == nil {
 		t.Error("Zufahrt ohne Sensoren wurde angenommen")
-	}
-	if _, err := NewApproach(light.North, 1, queue, 1.5); err == nil {
-		t.Error("alpha ausserhalb des Bereichs wurde angenommen")
 	}
 }

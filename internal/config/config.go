@@ -7,7 +7,6 @@ type Config struct {
 	Hardware     Hardware    `yaml:"hardware"`
 	Timing       Timing      `yaml:"timing"`
 	Fixed        Fixed       `yaml:"fixed"`
-	Adaptive     Adaptive    `yaml:"adaptive"`
 	QueueMapping map[int]int `yaml:"queue_mapping"`
 	Logging      Logging     `yaml:"logging"`
 }
@@ -50,10 +49,6 @@ type Timing struct {
 
 type Fixed struct {
 	Green Millis `yaml:"green_ms"`
-}
-
-type Adaptive struct {
-	DemandAlpha float64 `yaml:"demand_alpha"`
 }
 
 type Logging struct {

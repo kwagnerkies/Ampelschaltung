@@ -52,13 +52,4 @@ func (t *Tracker) Depart(direction light.Direction, at time.Time) (Departure, bo
 
 func (t *Tracker) Waiting() int { return len(t.waiting) }
 
-// OldestWait ist die Wartezeit des am laengsten wartenden Fahrzeugs. Sie treibt den
-// Verhungerungsschutz.
-func (t *Tracker) OldestWait(now time.Time) time.Duration {
-	if len(t.waiting) == 0 {
-		return 0
-	}
-	return now.Sub(t.waiting[0].At)
-}
-
 func (t *Tracker) Reset() { t.waiting = nil }

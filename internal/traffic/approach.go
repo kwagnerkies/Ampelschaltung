@@ -2,7 +2,6 @@ package traffic
 
 import (
 	"fmt"
-	"time"
 
 	"ampel/internal/detector"
 	"ampel/internal/light"
@@ -15,24 +14,17 @@ type Approach struct {
 	occupancy *detector.Occupancy
 	queue     *detector.Queue
 	tracker   Tracker
-	alpha     float64
-	demand    float64
 	entry     int
 }
 
-// NewApproach erwartet die geglaettete Gewichtung alpha aus der Konfiguration.
-func NewApproach(direction light.Direction, sensorCount int, queue *detector.Queue, alpha float64) (*Approach, error) {
+func NewApproach(direction light.Direction, sensorCount int, queue *detector.Queue) (*Approach, error) {
 	if sensorCount <= 0 {
 		return nil, fmt.Errorf("zufahrt %s ohne sensoren", direction)
-	}
-	if alpha <= 0 || alpha > 1 {
-		return nil, fmt.Errorf("zufahrt %s: alpha %v liegt nicht zwischen null und eins", direction, alpha)
 	}
 	return &Approach{
 		direction: direction,
 		occupancy: detector.NewOccupancy(sensorCount),
 		queue:     queue,
-		alpha:     alpha,
 		entry:     sensorCount - 1,
 	}, nil
 }
@@ -42,12 +34,7 @@ func (a *Approach) Direction() light.Direction { return a.direction }
 // QueueLength ist der aktuell geschaetzte Rueckstau in Fahrzeugen.
 func (a *Approach) QueueLength() int { return a.queue.Estimate(a.occupancy) }
 
-// Demand ist das geglaettete Mittel der Rueckstaulaenge.
-func (a *Approach) Demand() float64 { return a.demand }
-
 func (a *Approach) Waiting() int { return a.tracker.Waiting() }
-
-func (a *Approach) OldestWait(now time.Time) time.Duration { return a.tracker.OldestWait(now) }
 
 func (a *Approach) AtStopLine() bool { return a.occupancy.AtStopLine() }
 
@@ -69,21 +56,8 @@ func (a *Approach) Apply(event detector.SensorEvent, phase int) (Departure, bool
 	return Departure{}, false
 }
 
-// PredictDemand ist die Nachfrage, die das naechste UpdateDemand ergaebe. Die Anzeige
-// braucht sie, damit ein ankommendes Fahrzeug sofort sichtbar wird und nicht erst beim
-// Phasenwechsel.
-func (a *Approach) PredictDemand() float64 {
-	return a.alpha*float64(a.QueueLength()) + (1-a.alpha)*a.demand
-}
-
-// UpdateDemand glaettet die Nachfrage. Der Regelkreis ruft das am Ende jeder Phase auf.
-func (a *Approach) UpdateDemand() {
-	a.demand = a.alpha*float64(a.QueueLength()) + (1-a.alpha)*a.demand
-}
-
-// Reset loescht Belegung, wartende Fahrzeuge und die geglaettete Nachfrage.
+// Reset loescht Belegung und wartende Fahrzeuge.
 func (a *Approach) Reset() {
 	a.occupancy.Reset()
 	a.tracker.Reset()
-	a.demand = 0
 }

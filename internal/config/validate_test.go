@@ -67,11 +67,6 @@ func TestParseRejectsInvalid(t *testing.T) {
 			want: "ueberschreitet timing.max_green_ms",
 		},
 		{
-			name: "glaettungsfaktor ausserhalb des bereichs",
-			yaml: "adaptive:\n  demand_alpha: 1.4\n",
-			want: "adaptive.demand_alpha muss zwischen null",
-		},
-		{
 			name: "puffer null",
 			yaml: "logging:\n  buffer: 0\n",
 			want: "logging.buffer muss groesser als null sein",

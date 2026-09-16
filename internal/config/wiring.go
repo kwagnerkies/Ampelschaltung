@@ -36,7 +36,6 @@ func (c *Config) Setup() (controller.Setup, error) {
 		Sensors:      c.Hardware.Sensors.Approaches(),
 		Debounce:     c.Hardware.Debounce.Duration(),
 		QueueMapping: c.QueueMapping,
-		DemandAlpha:  c.Adaptive.DemandAlpha,
 		LampMatrix:   matrix,
 		Bits:         len(c.Hardware.ShiftRegister.BitOrder),
 		Timing:       c.ControllerTiming(),

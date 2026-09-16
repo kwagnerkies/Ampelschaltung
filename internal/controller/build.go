@@ -23,7 +23,6 @@ type Setup struct {
 	Sensors      [light.DirectionCount][]int
 	Debounce     time.Duration
 	QueueMapping map[int]int
-	DemandAlpha  float64
 	Follow       time.Duration
 	LampMatrix   [light.DirectionCount][3]int
 	Bits         int
@@ -56,7 +55,7 @@ func Build(setup Setup) (*Controller, error) {
 		if got := len(setup.Sensors[direction]); got != sensorCount {
 			return nil, fmt.Errorf("zufahrt %s hat %d sensoren, nord hat %d", direction, got, sensorCount)
 		}
-		approaches[direction], err = traffic.NewApproach(direction, sensorCount, queue, setup.DemandAlpha)
+		approaches[direction], err = traffic.NewApproach(direction, sensorCount, queue)
 		if err != nil {
 			return nil, err
 		}

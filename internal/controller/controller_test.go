@@ -66,7 +66,6 @@ func newHarness(t *testing.T, green time.Duration, tune ...func(*Setup)) *harnes
 		Sensors:      sensorPins,
 		Debounce:     15 * time.Millisecond,
 		QueueMapping: map[int]int{0: 0, 1: 1, 2: 3, 3: 6},
-		DemandAlpha:  0.3,
 		LampMatrix: [light.DirectionCount][3]int{
 			light.North: {0, 1, 2},
 			light.East:  {3, 4, 5},
