@@ -8,7 +8,6 @@ import (
 	"ampel/internal/detector"
 	"ampel/internal/light"
 	"ampel/internal/strategy"
-	"ampel/internal/traffic"
 )
 
 // DefaultTick ist der Takt der Ereignisschleife.
@@ -34,7 +33,7 @@ type Setup struct {
 	Writer   LampWriter
 	Inputs   <-chan Input
 	Observer Observer
-	Power    *Power
+	Switches *Switches
 	Watchdog time.Duration
 }
 
@@ -45,15 +44,12 @@ func Build(setup Setup) (*Controller, error) {
 		return nil, err
 	}
 	sensorCount := len(setup.Sensors[light.North])
-	var approaches [light.DirectionCount]*traffic.Approach
+	var occupancy [light.DirectionCount]*detector.Occupancy
 	for _, direction := range light.Directions() {
 		if got := len(setup.Sensors[direction]); got != sensorCount {
 			return nil, fmt.Errorf("zufahrt %s hat %d sensoren, nord hat %d", direction, got, sensorCount)
 		}
-		approaches[direction], err = traffic.NewApproach(direction, sensorCount)
-		if err != nil {
-			return nil, err
-		}
+		occupancy[direction] = detector.NewOccupancy(sensorCount)
 	}
 	bus, err := light.NewBus(setup.LampMatrix, setup.Bits)
 	if err != nil {
@@ -63,18 +59,18 @@ func Build(setup Setup) (*Controller, error) {
 		setup.Tick = DefaultTick
 	}
 	return New(Options{
-		Timing:     setup.Timing,
-		Tick:       setup.Tick,
-		Sample:     setup.Sample,
-		Detector:   detect,
-		Approaches: approaches,
-		Output:     NewOutput(bus, setup.Writer),
-		Strategy:   setup.Strategy,
-		Follow:     setup.Follow,
-		Clock:      setup.Clock,
-		Inputs:     setup.Inputs,
-		Observer:   setup.Observer,
-		Power:      setup.Power,
-		Watchdog:   setup.Watchdog,
+		Timing:    setup.Timing,
+		Tick:      setup.Tick,
+		Sample:    setup.Sample,
+		Detector:  detect,
+		Occupancy: occupancy,
+		Output:    NewOutput(bus, setup.Writer),
+		Strategy:  setup.Strategy,
+		Follow:    setup.Follow,
+		Clock:     setup.Clock,
+		Inputs:    setup.Inputs,
+		Observer:  setup.Observer,
+		Switches:  setup.Switches,
+		Watchdog:  setup.Watchdog,
 	})
 }

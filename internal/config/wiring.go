@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"ampel/internal/controller"
 	"ampel/internal/hal"
@@ -43,12 +44,11 @@ func (c *Config) Setup() (controller.Setup, error) {
 	}
 	return controller.Setup{
 		Sensors:    c.Hardware.Sensors.Approaches(),
-		Debounce:   c.Hardware.Debounce.Duration(),
 		LampMatrix: matrix,
 		Bits:       len(c.Hardware.ShiftRegister.BitOrder),
 		Timing:     c.ControllerTiming(),
 		Follow:     c.Timing.Follow.Duration(),
 		Tick:       controller.DefaultTick,
-		Sample:     c.Logging.StateInterval.Duration(),
+		Sample:     time.Second,
 	}, nil
 }

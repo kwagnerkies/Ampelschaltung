@@ -4,11 +4,11 @@ import "ampel/internal/detector"
 
 // Feed nimmt eine Flanke auf. Pins, die zu keinem Sensor gehoeren, werden hier ignoriert.
 func (c *Controller) Feed(input Input) {
-	if c.power != nil && input.Pin == c.power.pin {
-		c.power.level = input.Active
+	if c.switches != nil && c.switches.knows(input.Pin) {
+		c.switches.level(input.Pin, input.Active)
 		return
 	}
-	// Ist die Anlage aus, bewegt sich nichts auf der Kreuzung, was zu messen waere.
+	// Ist die Anlage aus, bewegt sich nichts auf der Kreuzung, was zu erfassen waere.
 	if !c.On() || !c.detect.Knows(input.Pin) {
 		return
 	}
@@ -19,16 +19,14 @@ func (c *Controller) Feed(input Input) {
 	c.applyEvents(events)
 }
 
+// applyEvents fuehrt die Belegung nach. Gibt ein Fahrzeug die Haltelinie wieder frei, hat es
+// die Kreuzung ueberfahren: das ist das Ereignis, das die Freigabe verlaengern kann.
 func (c *Controller) applyEvents(events []detector.SensorEvent) {
-	phase := int(c.machine.State().Phase)
 	for _, event := range events {
 		c.observer.SensorChanged(event)
-		departure, ok := c.approaches[event.Direction].Apply(event, phase)
-		if !ok {
-			continue
+		c.occupancy[event.Direction].Apply(event.Index, event.Occupied, event.At)
+		if event.Index == 0 && !event.Occupied {
+			c.countCrossing(event.At, event.Direction)
 		}
-		c.countCrossing(departure.At, departure.Direction)
-		c.metrics.Add(departure)
-		c.observer.VehicleLeft(departure, c.strategy.Name(), Phase(departure.Arrival.Phase).String())
 	}
 }

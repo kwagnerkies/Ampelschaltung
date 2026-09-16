@@ -5,7 +5,6 @@ import (
 
 	"ampel/internal/detector"
 	"ampel/internal/light"
-	"ampel/internal/traffic"
 )
 
 // Snapshot ist der Abtastwert des Regelkreises fuer Zustandslog und Anzeige.
@@ -29,9 +28,6 @@ type Snapshot struct {
 type Observer interface {
 	PhaseChanged(at time.Time, state State, mode string)
 	SensorChanged(event detector.SensorEvent)
-	VehicleLeft(departure traffic.Departure, mode string, phase string)
-	// Reset meldet den Beginn einer neuen Messung. Das Logging beginnt daraufhin einen neuen Lauf.
-	Reset(at time.Time)
 	// PowerChanged meldet den Hauptschalter.
 	PowerChanged(at time.Time, on bool)
 	Fault(at time.Time, err error)
@@ -43,10 +39,8 @@ type NopObserver struct{}
 
 var _ Observer = NopObserver{}
 
-func (NopObserver) PhaseChanged(time.Time, State, string)         {}
-func (NopObserver) SensorChanged(detector.SensorEvent)            {}
-func (NopObserver) VehicleLeft(traffic.Departure, string, string) {}
-func (NopObserver) Reset(time.Time)                               {}
-func (NopObserver) PowerChanged(time.Time, bool)                  {}
-func (NopObserver) Fault(time.Time, error)                        {}
-func (NopObserver) Sample(time.Time, Snapshot)                    {}
+func (NopObserver) PhaseChanged(time.Time, State, string) {}
+func (NopObserver) SensorChanged(detector.SensorEvent)    {}
+func (NopObserver) PowerChanged(time.Time, bool)          {}
+func (NopObserver) Fault(time.Time, error)                {}
+func (NopObserver) Sample(time.Time, Snapshot)            {}

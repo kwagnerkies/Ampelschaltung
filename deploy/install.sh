@@ -5,7 +5,6 @@ set -eu
 
 SRC=${1:-$(dirname "$0")}
 BIN=/usr/local/bin/ampel
-EVAL=/usr/local/bin/ampeleval
 CONFIG=/etc/ampel/config.yaml
 UNIT=/etc/systemd/system/ampel.service
 DOCS=/usr/local/share/doc/ampel
@@ -35,16 +34,8 @@ fi
 usermod --append --groups gpio,spi ampel
 
 install -d -m 0755 /etc/ampel "$DOCS"
-install -d -m 0755 -o ampel -g gpio /var/log/ampel
 install -m 0755 "$binary" "$BIN"
 
-# Die Auswertung gehoert auf den Pi, sonst ist bei der Vorfuehrung kein Rechner noetig, um
-# die Kennzahlen zu zeigen.
-evaluation=$SRC/ampeleval-armv7
-[ -f "$evaluation" ] || evaluation=$SRC/ampeleval
-if [ -f "$evaluation" ]; then
-	install -m 0755 "$evaluation" "$EVAL"
-fi
 
 if [ -f "$CONFIG" ]; then
 	echo "$CONFIG bleibt unveraendert, neue Vorlage liegt als $CONFIG.neu"
@@ -53,7 +44,7 @@ else
 	install -m 0644 "$SRC/config.yaml" "$CONFIG"
 fi
 install -m 0644 "$SRC/ampel.service" "$UNIT"
-for doc in aufbau.md auswertung.md vorfuehrung.md; do
+for doc in aufbau.md vorfuehrung.md architektur.md; do
 	[ -f "$SRC/$doc" ] && install -m 0644 "$SRC/$doc" "$DOCS/$doc"
 done
 

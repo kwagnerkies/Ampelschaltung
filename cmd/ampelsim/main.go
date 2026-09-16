@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"strconv"
@@ -25,14 +24,12 @@ func main() {
 
 func run() error {
 	configPath := flag.String("config", "configs/config.yaml", "Pfad zur Konfigurationsdatei")
-	mode := flag.String("modus", "vergleich", "festzeit, adaptiv oder vergleich")
-	duration := flag.Duration("dauer", 30*time.Minute, "simulierte Dauer")
+	duration := flag.Duration("dauer", 10*time.Minute, "simulierte Dauer")
 	seed := flag.Int64("seed", 1, "Startwert des Zufallsgenerators")
-	// Die Grundlast liegt bewusst unter der Saettigung. Darueber steht mehr im Rueckstau als
-	// die drei Sensoren je Zufahrt sehen, und die gemessene Wartezeit wird unbrauchbar.
+	// Die Grundlast liegt bewusst unter der Saettigung. Darueber steht mehr in der Zufahrt,
+	// als die Sensoren sehen.
 	rates := flag.String("raten", "0.08,0.03,0.08,0.03", "Ankuenfte pro Sekunde fuer Nord,Ost,Sued,West")
 	startClock := flag.String("start", "07:00", "Startzeit der Simulation")
-	logDir := flag.String("logdir", "", "Logverzeichnis fuer die CSV-Dateien")
 	display := flag.Bool("anzeige", false, "Kreuzung im Terminal anzeigen")
 	flag.Parse()
 
@@ -49,67 +46,20 @@ func run() error {
 		return err
 	}
 
-	options := simOptions{
-		config: cfg,
-		seed:   *seed,
-		rates:  parsedRates,
-		start:  start,
-		logDir: *logDir,
-	}
-
-	modes := []string{*mode}
-	if *mode == "vergleich" {
-		modes = []string{"festzeit", "adaptiv"}
-	}
-
-	var results []result
-	for _, name := range modes {
-		options.mode = name
-		r, err := simulate(options, *duration, *display)
-		if err != nil {
-			return err
-		}
-		results = append(results, r)
-	}
-	printResults(os.Stdout, results, *duration)
-	return nil
-}
-
-func simulate(options simOptions, duration time.Duration, display bool) (result, error) {
-	s, err := newSimulation(options)
+	s, err := newSimulation(simOptions{config: cfg, seed: *seed, rates: parsedRates, start: start})
 	if err != nil {
-		return result{}, err
+		return err
 	}
 	var show func(*simulation)
-	if display {
+	if *display {
 		show = func(s *simulation) { render(os.Stdout, s) }
 	}
-	s.walk(duration, show)
+	s.walk(*duration, show)
 	if err := s.close(); err != nil {
-		return result{}, err
+		return err
 	}
-	return s.result(), nil
-}
-
-func printResults(out io.Writer, results []result, duration time.Duration) {
-	fmt.Fprintf(out, "\nSimulierte Dauer %s\n", duration)
-	for _, r := range results {
-		fmt.Fprintln(out, r)
-	}
-	if len(results) != 2 {
-		return
-	}
-	first, second := results[0], results[1]
-	if first.truth == 0 || second.truth == 0 {
-		return
-	}
-	better, worse := first, second
-	if second.truth < first.truth {
-		better, worse = second, first
-	}
-	share := 100 * (1 - float64(better.truth)/float64(worse.truth))
-	fmt.Fprintf(out, "\n%s liegt %.1f Prozent unter %s (%s gegen %s).\n",
-		better.mode, share, worse.mode, round(better.truth), round(worse.truth))
+	fmt.Fprintf(os.Stdout, "\nSimulierte Dauer %s\n%s\n", *duration, s.result())
+	return nil
 }
 
 func loadConfig(path string) (*config.Config, error) {
@@ -127,11 +77,12 @@ func loadConfig(path string) (*config.Config, error) {
 	return &fallback, nil
 }
 
+// parseRates liest vier Ankunftsraten in der Reihenfolge Nord, Ost, Sued, West.
 func parseRates(text string) ([light.DirectionCount]float64, error) {
 	var rates [light.DirectionCount]float64
 	parts := strings.Split(text, ",")
 	if len(parts) != light.DirectionCount {
-		return rates, fmt.Errorf("raten brauchen vier Werte fuer Nord,Ost,Sued,West, nicht %d", len(parts))
+		return rates, fmt.Errorf("vier Raten erwartet, %d angegeben", len(parts))
 	}
 	for i, part := range parts {
 		value, err := strconv.ParseFloat(strings.TrimSpace(part), 64)
@@ -146,8 +97,7 @@ func parseRates(text string) ([light.DirectionCount]float64, error) {
 	return rates, nil
 }
 
-// parseStart legt den Startzeitpunkt der simulierten Zeit fest. Das Datum ist beliebig, nur
-// die Tageszeit zaehlt fuer den Tagesgang.
+// parseStart liest die Startzeit als Stunde und Minute.
 func parseStart(text string) (time.Time, error) {
 	parsed, err := time.Parse("15:04", text)
 	if err != nil {

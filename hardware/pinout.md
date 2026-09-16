@@ -84,11 +84,12 @@ Wichtig beim Kauf: es muss die SPI-Bauart sein, erkennbar an einer Stiftreihe mi
 `SCK`, `DC` und `RESET`. Die Arduino-Aufsteckplatine mit `D0` bis `D7` ist 8 Bit parallel und
 braucht dreizehn Leitungen, die hier nicht frei sind.
 
-## Hauptschalter
+## Schalter
 
 | Funktion | BCM | Pin der Leiste | Wirkung |
 |---|---|---|---|
 | Hauptschalter | 4 | 7 | geschlossen laeuft die Anlage, offen sind alle Lichter aus |
+| Notschalter | 18 | 12 | geschlossen blinken alle Lichter gelb, offen beginnt die Anlage bei Allrot |
 
 Er schaltet wie die Sensoren gegen Masse und wird zyklisch abgefragt, entprellt mit 100 ms,
 weil ein mechanischer Schalter laenger prellt als ein Reed-Kontakt.

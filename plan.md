@@ -10,11 +10,11 @@ Cyberphysisches System auf Raspberry Pi 2 B, Sprache Go, Zielplattform Linux (Ra
 
 
 
-Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet die ganze Anlage ein und aus. Der Betrieb ist immer adaptiv; die Festzeitsteuerung dient nur der Vergleichsmessung und wird auf der Kommandozeile angefordert. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
+Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet die ganze Anlage ein und aus, ein zweiter versetzt sie in den Notzustand mit gelbem Blinken. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
 
 
 
-Messgroesse fuer die Auswertung ist die durchschnittliche Wartezeit pro Fahrzeug, verglichen zwischen beiden Betriebsarten.
+Die Anlage misst nichts und beweist nichts: sie steuert, zeigt an und laesst sich schalten.
 
 
 
@@ -36,7 +36,7 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 - Pro Paket ein einzeiliger Doc-Kommentar in `doc.go` oder ueber dem Paketnamen. Exportierte Bezeichner nur dort kommentieren, wo die Semantik nicht offensichtlich ist.
 
-- Bezeichner in Englisch, damit der Code konsistent zu Standardbibliothek und Abhaengigkeiten bleibt. Nutzertexte, CSV-Kopfzeilen und Dokumentation in Deutsch.
+- Bezeichner in Englisch, damit der Code konsistent zu Standardbibliothek und Abhaengigkeiten bleibt. Nutzertexte und Dokumentation in Deutsch.
 
 - Keine Monolithdatei. Eine Datei pro Verantwortlichkeit, Richtwert unter 250 Zeilen. Wird eine Datei groesser, ist das ein Signal zum Aufteilen.
 
@@ -130,6 +130,8 @@ Der Plan liegt in der Konfigurationsdatei, nicht im Code. Startbelegung (BCM-Num
 
 | Hauptschalter | 4 | in, pull-up |
 
+| Notschalter | 18 | in, pull-up |
+
 
 
 Bitbelegung der Schieberegisterkette, erstes ausgeschobenes Bit landet am entferntesten Ausgang. Die Reihenfolge wird in der Konfiguration als Liste hinterlegt, damit Verdrahtungsfehler ohne Codeaenderung korrigierbar sind:
@@ -202,7 +204,7 @@ Vier Schichten, Abhaengigkeiten zeigen nur nach unten.
 
 3. **Anwendung**: der Regelkreis, der alles verdrahtet und den Zustand besitzt.
 
-4. **Adapter**: Konfiguration, CSV-Logging, Prozesssteuerung, Kommandozeile.
+4. **Adapter**: Konfiguration, Anzeige, Prozesssteuerung, Kommandozeile.
 
 
 
@@ -227,10 +229,6 @@ ampel/
     ampelsim/
 
       main.go              Lauf ohne Hardware, synthetischer Verkehr
-
-    ampeleval/
-
-      main.go              Auswertung der CSV-Dateien, Kennzahlen
 
   internal/
 
@@ -268,14 +266,6 @@ ampel/
 
       event.go             Ereignistypen
 
-    traffic/
-
-      approach.go          Zustand einer Zufahrt
-
-      vehicle.go           Fahrzeugverfolgung, Ankunft bis Abfahrt
-
-      metrics.go           Wartezeiten, gleitende Mittel
-
     controller/
 
       controller.go        Regelkreis, Ereignisschleife
@@ -308,14 +298,6 @@ ampel/
 
       switch.go            Entprellter Kippschalter
 
-    logging/
-
-      csv.go               Schreiber mit Puffer
-
-      schema.go            Spaltendefinitionen
-
-      run.go               Lauf-Kennung, Dateirotation
-
     clock/
 
       clock.go             Interface Real und Fake
@@ -341,8 +323,6 @@ ampel/
   docs/
 
     aufbau.md
-
-    auswertung.md
 
   testdata/
 
@@ -370,7 +350,7 @@ Ein einziger Goroutine besitzt den Steuerzustand. Alles andere kommuniziert uebe
 
 - Der Controller laeuft in `Run(ctx)` mit `select` ueber Ereigniskanal, Ticker (50 ms) und `ctx.Done()`.
 
-- Der CSV-Schreiber laeuft in eigener Goroutine hinter einem gepufferten Kanal, damit Dateizugriffe den Regelkreis nie blockieren. Ist der Puffer voll, wird verworfen und ein Zaehler erhoeht.
+- Die Anzeige haengt als Beobachter am Regelkreis und wird aus dessen Goroutine bedient. Ein Fehler der Anzeige haelt die Steuerung nie an.
 
 
 
@@ -452,22 +432,6 @@ Keine geglaettete Nachfrage, keine Aufteilung einer Umlaufzeit, kein Lueckenabbr
 
 
 
-### 6.3 Gemessen wird trotzdem
-
-
-
-Rueckstau und Wartezeiten werden in beiden Betriebsarten weiter erfasst, denn sie sind die Messgroesse des Projekts. Sie gehen nur nicht mehr in die Regelung ein.
-
-
-
-### 6.4 Ergebnis
-
-
-
-Im Simulator liegt die adaptive Steuerung bei gleicher Ankunftsfolge zwischen 23 und 27 Prozent unter der Festzeitsteuerung mit 15 s Gruen, bei vergleichbarer Hoechstwartezeit.
-
-
-
 ## 8. Betriebsarten und Bedienelemente
 
 
@@ -488,67 +452,23 @@ Einschalten: die Anlage beginnt mit Allrot und laeuft von dort die normale Folge
 
 
 
-### 8.2 Betriebsarten
+### 8.2 Notschalter
 
 
 
-Der Betrieb ist immer adaptiv. Die Festzeitsteuerung mit fester Gruenzeit aus der Konfiguration laeuft nur auf Anforderung ueber `-modus festzeit` und dient allein der Vergleichsmessung. Die Sensoren laufen in beiden Faellen weiter, denn die Wartezeiten sind die Messgroesse.
+Ein zweiter Kippschalter versetzt die Anlage in den Notzustand: alle Lichter blinken im Sekundentakt gelb, der Phasenautomat steht still. Zurueckgelegt beginnt die Anlage wieder bei Allrot und laeuft von dort die normale Folge. Derselbe Zustand entsteht automatisch, wenn die Sicherheitspruefung oder der Watchdog anschlagen.
 
 
 
-## 9. Logging und Auswertung
+## 9. Anzeige
 
 
 
-Drei Dateien pro Lauf unter `/var/log/ampel/`, Dateiname mit Zeitstempel und Lauf-Kennung. Trennzeichen ist das Semikolon, Dezimaltrenner der Punkt. Zeitstempel als Millisekunden seit Prozessstart plus ISO-8601-Wanduhrzeit.
+Ein 2,4-Zoll-TFT ueber SPI zeigt die vier Gruenzeiten im Kreuz, jede in der Farbe ihres Signalbildes. Die freigegebene Richtung zeigt ihre Restzeit, die bei jedem dicht folgenden Fahrzeug nach oben springt; die wartende zeigt ihre Grundzeit. Gezeichnet wird nur, was sich geaendert hat.
 
 
 
-**vehicles.csv**, eine Zeile pro Fahrzeug, das ist die Datei fuer die Kennzahl:
-
-
-
-```
-
-run_id;zeit_iso;t_ms;modus;zufahrt;wartezeit_ms;belegt_bei_ankunft;phase_bei_ankunft
-
-```
-
-
-
-**state.csv**, ein Abtastwert pro Sekunde:
-
-
-
-```
-
-run_id;zeit_iso;t_ms;modus;phase;phase_dauer_ms;gruen_ziel_ms;belegt_n;belegt_o;belegt_s;belegt_w;verlaengerungen
-
-```
-
-
-
-**events.csv**, jedes Ereignis:
-
-
-
-```
-
-run_id;zeit_iso;t_ms;typ;zufahrt;sensor;wert;phase;bemerkung
-
-```
-
-
-
-Ereignistypen: `sensor_an`, `sensor_aus`, `phase_start`, `phase_ende`, `modus_wechsel`, `reset`, `fehler`, `start`, `stop`.
-
-
-
-`ampeleval` liest `vehicles.csv` und gibt je Modus aus: Anzahl Fahrzeuge, mittlere Wartezeit, Median, 95. Perzentil, Maximum, sowie die Aufschluesselung nach Zufahrt. Ausgabe als Tabelle auf der Konsole und als CSV fuer die Ausarbeitung.
-
-
-
-Wichtig fuer die Ehrlichkeit der Auswertung: die ersten 60 Sekunden nach einem Moduswechsel werden als Einschwingphase markiert und in der Auswertung standardmaessig ausgeschlossen. Das Feld dafuer steht in der CSV, der Ausschluss ist per Flag abschaltbar.
+Die Anzeige ist Zubehoer: faellt sie aus, steuert die Kreuzung weiter.
 
 
 
@@ -658,7 +578,7 @@ Auch ein Modell soll nie zwei konfliktaere Gruensignale zeigen. Die Pruefung lie
 
 - Ein Watchdog prueft, ob der Regelkreis innerhalb von 500 ms getickt hat. Bei Ueberschreitung wird `PhaseFault` erzwungen.
 
-- `SIGINT` und `SIGTERM` fuehren ueber `context.Context` zu geordnetem Herunterfahren: alle Signale auf Rot, CSV leeren und schliessen, GPIO-Leitungen freigeben.
+- `SIGINT` und `SIGTERM` fuehren ueber `context.Context` zu geordnetem Herunterfahren: alle Signale auf Rot, GPIO-Leitungen freigeben.
 
 - Vor jedem `recover` in `main` steht der Versuch, alle Ausgaenge abzuschalten. Ein leuchtendes Gruen nach einem Absturz ist der schlechteste denkbare Endzustand.
 
@@ -710,11 +630,11 @@ Testumfang:
 
 
 
-`cmd/ampelsim` fuehrt den identischen Controller ohne Hardware aus. Fahrzeugankuenfte werden als Poisson-Prozess je Zufahrt erzeugt, mit einstellbarem Tagesgang, sodass zum Beispiel Nord und Sued morgens stark und abends schwach belastet sind. Ausgabe als ASCII-Darstellung der Kreuzung im Terminal plus dieselben CSV-Dateien wie im Echtbetrieb.
+`cmd/ampelsim` fuehrt den identischen Controller ohne Hardware aus. Fahrzeugankuenfte werden als Poisson-Prozess je Zufahrt erzeugt. Ausgabe als ASCII-Darstellung der Kreuzung im Terminal.
 
 
 
-Der Simulator ist kein Extra. Er ist das Werkzeug, mit dem Regelparameter gefunden werden, bevor irgendetwas geloetet ist, und er liefert im Notfall Auswertungsdaten, wenn die Hardware am Vorfuehrtag streikt.
+Der Simulator ist kein Extra. Er ist das Werkzeug, mit dem Regelparameter gefunden werden, bevor irgendetwas geloetet ist, und er zeigt die Anlage, wenn die Hardware am Vorfuehrtag streikt.
 
 
 
@@ -780,9 +700,9 @@ Fertig, wenn alle vier Koepfe korrekte Folgen zeigen und Konfliktzustaende abgew
 
 
 
-**AP4 Erkennung.** Entprellung, Belegung, Rueckstauschaetzung, Fahrzeugverfolgung von Ankunft bis Abfahrt, Wartezeitmessung.
+**AP4 Erkennung.** Zuordnung der Pins, Belegung ueber Zeit, Erkennung der Ueberfahrt an der Haltelinie.
 
-Fertig, wenn ein von Hand ueber die Sensoren geschobenes Modellauto eine plausible Wartezeit erzeugt.
+Fertig, wenn ein von Hand ueber die Sensoren geschobenes Modellauto genau eine Ueberfahrt erzeugt.
 
 
 
@@ -792,9 +712,9 @@ Fertig, wenn die Kreuzung dauerhaft und korrekt im Festzeitbetrieb laeuft. Das i
 
 
 
-**AP6 Logging und Auswertung.** CSV-Schreiber, Schemata, Lauf-Kennung, `ampeleval`.
+**AP6 Anzeige.** Displaytreiber ueber SPI, Darstellung der vier Gruenzeiten im Kreuz.
 
-Fertig, wenn ein Festzeitlauf eine mittlere Wartezeit ausgibt.
+Fertig, wenn die angezeigte Zeit steigt, sobald zwei Fahrzeuge dicht hintereinander fahren.
 
 
 
@@ -804,15 +724,15 @@ Fertig, wenn dichter Verkehr messbar laengeres Gruen fuer die belastete Richtung
 
 
 
-**AP8 Simulator.** Verkehrsgenerator, Terminalanzeige, Vergleichslauf beider Modi.
+**AP8 Simulator.** Verkehrsgenerator, Terminalanzeige.
 
-Fertig, wenn der Vergleich reproduzierbar einen Wartezeitvorteil zeigt.
+Fertig, wenn die Kreuzung ohne Hardware sichtbar arbeitet.
 
 
 
-**AP9 Anzeige.** Displaytreiber, Darstellung der vier Gruenzeiten im Kreuz, Farbe nach Signalbild.
+**AP9 Notzustand.** Notschalter, Watchdog, Gelbblinken, Neustart bei Allrot.
 
-Fertig, wenn die angezeigte Zeit der freigegebenen Richtung sichtbar steigt, sobald zwei Fahrzeuge dicht hintereinander ueber die Haltelinie fahren.
+Fertig, wenn der Notschalter die Anlage anhaelt und das Zuruecklegen sie bei Allrot neu beginnen laesst.
 
 
 
@@ -822,7 +742,7 @@ Fertig, wenn Aus- und Einschalten nie ein unzulaessiges Signalbild erzeugt und a
 
 
 
-**AP11 Inbetriebnahme.** Systemd, Deployment, Dokumentation in `docs/aufbau.md` und `docs/auswertung.md`, Vorfuehrablauf.
+**AP11 Inbetriebnahme.** Systemd, Deployment, Dokumentation in `docs/aufbau.md`, Vorfuehrablauf.
 
 Fertig, wenn der Pi nach Kaltstart ohne Tastatur selbstaendig steuert.
 

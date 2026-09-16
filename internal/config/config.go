@@ -6,8 +6,6 @@ import "time"
 type Config struct {
 	Hardware Hardware `yaml:"hardware"`
 	Timing   Timing   `yaml:"timing"`
-	Fixed    Fixed    `yaml:"fixed"`
-	Logging  Logging  `yaml:"logging"`
 	Display  Display  `yaml:"display"`
 }
 
@@ -16,6 +14,7 @@ type Hardware struct {
 	ShiftRegister ShiftRegister `yaml:"shift_register"`
 	Sensors       Sensors       `yaml:"sensors"`
 	PowerSwitch   int           `yaml:"power_switch"`
+	FaultSwitch   int           `yaml:"fault_switch"`
 	Debounce      Millis        `yaml:"debounce_ms"`
 }
 
@@ -46,10 +45,6 @@ type Timing struct {
 	Extension Millis `yaml:"extension_ms"`
 }
 
-type Fixed struct {
-	Green Millis `yaml:"green_ms"`
-}
-
 // Display ist die Anzeige der Gruenzeiten. Ohne sie laeuft die Kreuzung weiter, deshalb ist
 // sie abschaltbar.
 type Display struct {
@@ -59,12 +54,6 @@ type Display struct {
 	DC       int    `yaml:"dc"`
 	Reset    int    `yaml:"reset"`
 	Rotation string `yaml:"rotation"`
-}
-
-type Logging struct {
-	Dir           string `yaml:"dir"`
-	StateInterval Millis `yaml:"state_interval_ms"`
-	Buffer        int    `yaml:"buffer"`
 }
 
 // Approaches liefert die Sensorpins in der festen Reihenfolge Nord, Ost, Sued, West.

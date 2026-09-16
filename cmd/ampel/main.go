@@ -25,8 +25,6 @@ func run() error {
 	path := flag.String("config", "configs/config.yaml", "Pfad zur Konfigurationsdatei")
 	validate := flag.Bool("validate", false, "Konfiguration pruefen und beenden")
 	selftest := flag.Bool("selftest", false, "Lampen und Sensoren pruefen, Abbruch mit Strg-C")
-	logDir := flag.String("logdir", "", "Logverzeichnis, ueberschreibt die Konfiguration")
-	mode := flag.String("modus", "adaptiv", "Betriebsart adaptiv oder festzeit, festzeit nur fuer Vergleichsmessungen")
 	flag.Parse()
 
 	cfg, source, err := loadConfig(*path)
@@ -44,7 +42,7 @@ func run() error {
 	if *selftest {
 		return runSelftest(ctx, cfg, os.Stdout)
 	}
-	return runControl(ctx, cfg, *logDir, *mode, os.Stdout)
+	return runControl(ctx, cfg, os.Stdout)
 }
 
 // loadConfig liefert zusaetzlich die Herkunft der Werte, damit ein fehlender Pfad in der

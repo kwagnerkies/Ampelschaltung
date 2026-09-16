@@ -55,19 +55,3 @@ func TestParseEmptyYieldsDefaults(t *testing.T) {
 		t.Errorf("Konfiguration %+v, erwartet %+v", *cfg, want)
 	}
 }
-
-func TestParseOverridesSingleField(t *testing.T) {
-	cfg, err := Parse([]byte("fixed:\n  green_ms: 12000\n"), "test")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-	if got, want := cfg.Fixed.Green.Duration(), 12*time.Second; got != want {
-		t.Errorf("Festzeitgruen %s, erwartet %s", got, want)
-	}
-	if got, want := cfg.Timing.MaxGreen, Default().Timing.MaxGreen; got != want {
-		t.Errorf("max_green_ms %s, erwartet unveraenderten Default %s", got, want)
-	}
-}
-
-// Die Rueckstautabelle wird ersetzt und nicht mit dem Default zusammengefuehrt, sonst
-// bliebe bei zwei Sensoren der Eintrag fuer drei belegte Sensoren stehen.

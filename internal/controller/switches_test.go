@@ -7,18 +7,21 @@ import (
 	"ampel/internal/light"
 )
 
-const powerPin = 4
+const (
+	powerPin = 4
+	faultPin = 18
+)
 
 // newPowerHarness startet mit eingeschalteter Anlage.
 func newPowerHarness(t *testing.T) *harness {
 	t.Helper()
 	return newHarness(t, 15*time.Second, func(setup *Setup) {
-		setup.Power = &Power{Pin: powerPin, On: true}
+		setup.Switches = &Switches{PowerPin: powerPin, FaultPin: faultPin, PowerOn: true}
 	})
 }
 
-func (h *harness) flip(on bool) {
-	h.controller.Feed(Input{Pin: powerPin, Active: on, Time: h.clk.Now()})
+func (h *harness) flip(pin int, on bool) {
+	h.controller.Feed(Input{Pin: pin, Active: on, Time: h.clk.Now()})
 	h.run(300 * time.Millisecond)
 }
 
@@ -30,7 +33,7 @@ func TestSwitchingOffDarkensTheIntersection(t *testing.T) {
 		t.Fatal("die Anlage gilt als ausgeschaltet")
 	}
 
-	h.flip(false)
+	h.flip(powerPin, false)
 	if h.controller.On() {
 		t.Fatal("der Hauptschalter blieb ohne Wirkung")
 	}
@@ -54,10 +57,10 @@ func TestSwitchingOffDarkensTheIntersection(t *testing.T) {
 func TestSwitchingOnStartsFromAllRed(t *testing.T) {
 	h := newPowerHarness(t)
 	h.run(8 * time.Second)
-	h.flip(false)
+	h.flip(powerPin, false)
 
 	mark := len(h.mock.History())
-	h.flip(true)
+	h.flip(powerPin, true)
 	if !h.controller.On() {
 		t.Fatal("die Anlage blieb ausgeschaltet")
 	}
@@ -93,14 +96,14 @@ func TestSwitchingOnStartsANewMeasurement(t *testing.T) {
 	}
 	h.run(time.Second)
 
-	h.flip(false)
-	h.flip(true)
+	h.flip(powerPin, false)
+	h.flip(powerPin, true)
 
 	if got := h.controller.Snapshot(h.clk.Now()).Reach[light.East]; got != 0 {
 		t.Errorf("belegte Sensoren Ost nach dem Einschalten %d, erwartet null", got)
 	}
-	if h.controller.Metrics().Total() != 0 {
-		t.Errorf("%d Fahrzeuge in den Kennzahlen", h.controller.Metrics().Total())
+	if got := h.controller.Snapshot(h.clk.Now()).Following; got != 0 {
+		t.Errorf("%d Verlaengerungen nach dem Einschalten", got)
 	}
 	if h.observer.power != 2 {
 		t.Errorf("%d Schaltmarken im Log, erwartet zwei", h.observer.power)
@@ -137,13 +140,48 @@ func TestPowerCycleLeavesTheFaultState(t *testing.T) {
 		t.Fatal("der Watchdog loeste nicht aus")
 	}
 
-	h.flip(false)
-	h.flip(true)
+	h.flip(powerPin, false)
+	h.flip(powerPin, true)
 	if got := h.controller.State().Phase; got == PhaseFault {
 		t.Error("die Anlage blieb nach dem Aus- und Einschalten gestoert")
 	}
 	h.run(time.Minute)
 	if got := h.controller.State(); got.Phase == PhaseFault {
 		t.Errorf("die Anlage ging erneut in Stoerung: %v", h.observer.faults)
+	}
+}
+
+// Der Notschalter laesst alle Lichter gelb blinken und haelt den Automaten an. Zurueckgelegt
+// beginnt die Anlage wieder bei Allrot.
+func TestFaultSwitchBlinksAndRestarts(t *testing.T) {
+	h := newPowerHarness(t)
+	h.run(8 * time.Second)
+
+	h.flip(faultPin, true)
+	mark := len(h.mock.History())
+	h.run(10 * time.Second)
+
+	pulses := 0
+	for _, pattern := range h.mock.History()[mark:] {
+		switch aspects := aspectsOf(pattern); {
+		case allShow(aspects, light.AspectYellow):
+			pulses++
+		case allShow(aspects, light.AspectOff):
+		default:
+			t.Fatalf("im Notzustand geschriebenes Muster %v", aspects)
+		}
+	}
+	if pulses < 9 || pulses > 11 {
+		t.Errorf("%d Gelbimpulse in zehn Sekunden, erwartet etwa zehn", pulses)
+	}
+
+	h.flip(faultPin, false)
+	first := aspectsOf(h.mock.Pattern())
+	if !allShow(first, light.AspectRed) {
+		t.Errorf("nach dem Zuruecklegen zeigt die Kreuzung %v, erwartet Allrot", first)
+	}
+	h.run(time.Minute)
+	if got := h.controller.State(); got.Phase == PhaseFault {
+		t.Error("die Anlage blieb im Notzustand")
 	}
 }

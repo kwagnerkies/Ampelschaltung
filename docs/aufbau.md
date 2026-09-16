@@ -126,7 +126,6 @@ gehen alle Signale auf Rot und die CSV-Puffer werden geleert.
 |---|---|
 | `ampel` | Steuerung auf der Hardware, `-validate` und `-selftest` fuer die Inbetriebnahme |
 | `ampelsim` | derselbe Regelkreis ohne Hardware, erzeugter Verkehr, Vergleich beider Modi |
-| `ampeleval` | Auswertung der CSV-Dateien eines Laufs |
 
-Die Auswertung ist in `auswertung.md` beschrieben, der Ablauf der Vorfuehrung in
-`vorfuehrung.md`.
+Der Ablauf der Vorfuehrung steht in `vorfuehrung.md`, der Lesepfad durch den Code in
+`architektur.md`.

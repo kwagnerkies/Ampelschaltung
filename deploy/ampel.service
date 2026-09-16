@@ -15,7 +15,6 @@ RestartSec=2
 # CSV-Puffer leeren. Zehn Sekunden reichen dafuer weit.
 KillSignal=SIGTERM
 TimeoutStopSec=10
-ReadWritePaths=/var/log/ampel
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

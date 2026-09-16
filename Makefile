@@ -13,7 +13,6 @@ build:
 
 pi:
 	GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/$(BINARY)-armv7 ./cmd/ampel
-	GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/ampeleval-armv7 ./cmd/ampeleval
 
 test:
 	go test ./...
@@ -36,8 +35,8 @@ deploy: pi
 
 install-pi: pi
 	ssh $(PI_HOST) 'mkdir -p $(PI_STAGE)'
-	scp bin/$(BINARY)-armv7 bin/ampeleval-armv7 $(CONFIG) deploy/ampel.service deploy/install.sh \
-		docs/aufbau.md docs/auswertung.md docs/vorfuehrung.md $(PI_HOST):$(PI_STAGE)/
+	scp bin/$(BINARY)-armv7 $(CONFIG) deploy/ampel.service deploy/install.sh \
+		docs/aufbau.md docs/vorfuehrung.md $(PI_HOST):$(PI_STAGE)/
 	ssh $(PI_HOST) 'sudo sh $(PI_STAGE)/install.sh $(PI_STAGE)'
 
 clean:

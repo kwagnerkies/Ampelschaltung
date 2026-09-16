@@ -38,7 +38,6 @@ func Default() Config {
 			Follow:    millis(2000),
 			Extension: millis(3000),
 		},
-		Fixed: Fixed{Green: millis(15000)},
 		Display: Display{
 			Enabled:  true,
 			Device:   "/dev/spidev0.0",
@@ -46,11 +45,6 @@ func Default() Config {
 			DC:       7,
 			Reset:    2,
 			Rotation: "quer",
-		},
-		Logging: Logging{
-			Dir:           "/var/log/ampel",
-			StateInterval: millis(1000),
-			Buffer:        4096,
 		},
 	}
 }

@@ -11,6 +11,8 @@ import (
 	"ampel/internal/light"
 )
 
+var simStart = time.Date(2026, 1, 5, 7, 0, 0, 0, time.UTC)
+
 func TestLaneQueueMovesAndReportsEdges(t *testing.T) {
 	l := newLane(light.North, []int{5, 6, 13}, simStart)
 	now := simStart

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -44,6 +45,10 @@ func (c *Controller) enterFault(now time.Time, err error) {
 	c.flashOn = false
 	c.flash(now)
 }
+
+// errWarning ist der Notzustand, den der Notschalter von Hand ausloest. Er sieht aus wie eine
+// Stoerung, ist aber gewollt.
+var errWarning = errors.New("notzustand ueber den schalter")
 
 // flash laesst alle Lichter mit 1 Hz gelb blinken. Geschrieben wird nur beim Wechsel.
 func (c *Controller) flash(now time.Time) {

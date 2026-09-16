@@ -74,8 +74,8 @@ func TestUnitStartsInstalledProgram(t *testing.T) {
 	}
 }
 
-// Schreibrechte, Geraetefreigabe und Verzeichnisse muessen zu der Konfiguration passen, die
-// installiert wird. Sonst startet der Dienst und scheitert erst beim ersten Schreibversuch.
+// Die Geraetefreigabe der Unit muss zu der Konfiguration passen, sonst startet der Dienst und
+// scheitert erst beim ersten Zugriff.
 func TestUnitMatchesConfig(t *testing.T) {
 	cfg, err := config.Load(configPath)
 	if err != nil {
@@ -83,16 +83,9 @@ func TestUnitMatchesConfig(t *testing.T) {
 	}
 	unit := read(t, unitPath)
 
-	writable := strings.Fields(directive(unit, "ReadWritePaths"))
-	for _, path := range []string{cfg.Logging.Dir} {
-		if !contains(writable, path) {
-			t.Errorf("ReadWritePaths %v enthaelt %s nicht", writable, path)
-		}
-	}
 	allowed := directives(unit, "DeviceAllow")
 	wanted := []string{"/dev/" + cfg.Hardware.Chip + " rw"}
 	if cfg.Display.Enabled {
-		// Ohne Freigabe des SPI-Geraets bleibt die Anzeige dunkel, obwohl die Steuerung laeuft.
 		wanted = append(wanted, cfg.Display.Device+" rw")
 	}
 	for _, want := range wanted {
@@ -100,26 +93,16 @@ func TestUnitMatchesConfig(t *testing.T) {
 			t.Errorf("DeviceAllow %v enthaelt %q nicht", allowed, want)
 		}
 	}
-	if got := directive(unit, "ProtectSystem"); got == "strict" && len(writable) == 0 {
-		t.Error("ProtectSystem=strict ohne ReadWritePaths macht das Logverzeichnis unbeschreibbar")
-	}
 }
 
 // Das Installationsskript muss genau die Pfade anlegen, die Dienst und Konfiguration
 // erwarten.
 func TestInstallScriptCreatesRequiredPaths(t *testing.T) {
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		t.Fatalf("Konfiguration laden: %v", err)
-	}
 	script := read(t, installPath)
 
 	for _, path := range []string{
-		cfg.Logging.Dir,
 		filepath.Dir(installedConf),
 		installedBin,
-		// Die Auswertung muss mitkommen, die Vorfuehrung zeigt die Kennzahlen auf dem Pi.
-		"/usr/local/bin/ampeleval",
 	} {
 		if !strings.Contains(script, path) {
 			t.Errorf("install.sh legt %s nicht an", path)

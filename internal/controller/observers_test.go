@@ -12,7 +12,7 @@ type counter struct {
 }
 
 func (c *counter) PhaseChanged(time.Time, State, string) { c.calls++ }
-func (c *counter) Reset(time.Time)                       { c.calls++ }
+func (c *counter) PowerChanged(time.Time, bool)          { c.calls++ }
 func (c *counter) Fault(time.Time, error)                { c.calls++ }
 func (c *counter) Sample(time.Time, Snapshot)            { c.calls++ }
 
@@ -22,7 +22,7 @@ func TestObserversReachEveryone(t *testing.T) {
 	list := Observers{first, second}
 
 	list.PhaseChanged(time.Time{}, State{}, "adaptiv")
-	list.Reset(time.Time{})
+	list.PowerChanged(time.Time{}, true)
 	list.Fault(time.Time{}, errors.New("test"))
 	list.Sample(time.Time{}, Snapshot{})
 

@@ -10,7 +10,6 @@ import (
 	"ampel/internal/detector"
 	"ampel/internal/light"
 	"ampel/internal/strategy"
-	"ampel/internal/traffic"
 )
 
 // Input ist eine Flanke an einem Eingang. Der Typ steht hier, damit der Regelkreis die
@@ -23,21 +22,21 @@ type Input struct {
 
 // Options buendelt, was der Regelkreis zum Laufen braucht.
 type Options struct {
-	Timing     Timing
-	Tick       time.Duration
-	Sample     time.Duration
-	Detector   *detector.Detector
-	Approaches [light.DirectionCount]*traffic.Approach
-	Output     *Output
-	Strategy   strategy.Strategy
-	Clock      clock.Clock
-	Inputs     <-chan Input
-	Observer   Observer
+	Timing    Timing
+	Tick      time.Duration
+	Sample    time.Duration
+	Detector  *detector.Detector
+	Occupancy [light.DirectionCount]*detector.Occupancy
+	Output    *Output
+	Strategy  strategy.Strategy
+	Clock     clock.Clock
+	Inputs    <-chan Input
+	Observer  Observer
 	// FlashHalf ist die halbe Periode des Gelbblinkens im Notzustand.
 	FlashHalf time.Duration
-	// Power ist der Hauptschalter. Ohne ihn laeuft die Anlage immer, wie es der Simulator
-	// braucht.
-	Power *Power
+	// Switches sind Haupt- und Notschalter. Ohne sie laeuft die Anlage immer, wie es der
+	// Simulator braucht.
+	Switches *Switches
 	// Watchdog ist die groesste erlaubte Pause zwischen zwei Takten.
 	Watchdog time.Duration
 	// Follow ist der groesste Abstand, in dem ein Fahrzeug noch als dicht folgend gilt.
@@ -47,21 +46,20 @@ type Options struct {
 // Controller ist der Regelkreis. Ein einziger Goroutine besitzt diesen Zustand; alles andere
 // kommuniziert ueber Kanaele.
 type Controller struct {
-	timing     Timing
-	tick       time.Duration
-	sample     time.Duration
-	flashHalf  time.Duration
-	machine    *Machine
-	detect     *detector.Detector
-	approaches [light.DirectionCount]*traffic.Approach
-	output     *Output
-	strategy   strategy.Strategy
-	clk        clock.Clock
-	inputs     <-chan Input
-	observer   Observer
-	metrics    traffic.Metrics
-	power      *power
-	watchdog   *Watchdog
+	timing    Timing
+	tick      time.Duration
+	sample    time.Duration
+	flashHalf time.Duration
+	machine   *Machine
+	detect    *detector.Detector
+	occupancy [light.DirectionCount]*detector.Occupancy
+	output    *Output
+	strategy  strategy.Strategy
+	clk       clock.Clock
+	inputs    <-chan Input
+	observer  Observer
+	switches  *switches
+	watchdog  *Watchdog
 
 	follow time.Duration
 
@@ -79,11 +77,6 @@ type Controller struct {
 func New(options Options) (*Controller, error) {
 	if options.Detector == nil || options.Output == nil || options.Strategy == nil || options.Clock == nil {
 		return nil, errors.New("regelkreis: detektor, ausgabe, strategie und uhr sind pflicht")
-	}
-	for direction, approach := range options.Approaches {
-		if approach == nil {
-			return nil, fmt.Errorf("regelkreis: zufahrt %s fehlt", light.Direction(direction))
-		}
 	}
 	if options.Tick <= 0 {
 		return nil, fmt.Errorf("regelkreis: takt %s", options.Tick)
@@ -105,7 +98,7 @@ func New(options Options) (*Controller, error) {
 		flashHalf:  options.FlashHalf,
 		machine:    NewMachine(options.Timing, now),
 		detect:     options.Detector,
-		approaches: options.Approaches,
+		occupancy:  options.Occupancy,
 		output:     options.Output,
 		strategy:   options.Strategy,
 		follow:     options.Follow,
@@ -116,15 +109,13 @@ func New(options Options) (*Controller, error) {
 		lastSample: now,
 		watchdog:   NewWatchdog(options.Watchdog, now),
 	}
-	if options.Power != nil {
-		c.power = newPower(*options.Power, now)
+	if options.Switches != nil {
+		c.switches = newSwitches(*options.Switches, now)
 	}
 	return c, nil
 }
 
 func (c *Controller) State() State { return c.machine.State() }
-
-func (c *Controller) Metrics() *traffic.Metrics { return &c.metrics }
 
 func (c *Controller) Mode() string { return c.strategy.Name() }
 
@@ -172,7 +163,7 @@ func (c *Controller) Step(now time.Time) {
 	}
 	// Der Hauptschalter wird vor dem Notzustand abgefragt: aus und wieder an ist der
 	// Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
-	if c.powerStep(now) {
+	if c.switchStep(now) {
 		return
 	}
 	if c.machine.State().Phase == PhaseFault {
@@ -208,14 +199,12 @@ func (c *Controller) Step(now time.Time) {
 	c.emitSample(now)
 }
 
-// Reset verwirft Belegung, wartende Fahrzeuge und Kennzahlen und beginnt damit eine neue
-// Messung. Der Reset-Taster loest das aus.
+// Reset vergisst alle Pegel und beginnt die Zaehlung der Verlaengerungen neu.
 func (c *Controller) Reset(now time.Time) {
 	c.detect.Reset()
-	for _, approach := range c.approaches {
-		approach.Reset()
+	for _, occupancy := range c.occupancy {
+		occupancy.Reset()
 	}
-	c.metrics.Reset()
 	c.following = 0
 	c.lastCrossing = [light.DirectionCount]time.Time{}
 }

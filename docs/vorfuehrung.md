@@ -58,16 +58,18 @@ Das ist die ganze Regel, und sie ist in einem Satz erklaert: zwei Fahrzeuge kurz
 bedeuten, dass noch mehr kommt, also bekommt diese Richtung mehr Zeit. Bei der Hoechstgruenzeit
 ist Schluss, sonst wartet die andere Richtung zu lange.
 
-## Abschnitt 4, Zahlen, etwa zwei Minuten
+## Abschnitt 4, Notzustand, etwa zwei Minuten
 
-```
-ampeleval /var/log/ampel
-```
+Notschalter umlegen. Alle zwoelf Lichter blinken im Sekundentakt gelb, der Phasenablauf steht.
+Das ist das Bild, das jeder von einer gestoerten Ampel kennt: Anlage ausser Betrieb, jeder
+faehrt auf Sicht.
 
-Die Tabelle nennt Anzahl, Mittel, Median, 95. Perzentil und Maximum je Betriebsart und den
-Unterschied in Prozent. Auf die Einschwingphase hinweisen: die erste Minute nach jedem
-Moduswechsel ist markiert und ausgeschlossen, weil dort noch Rueckstau der vorigen Betriebsart
-steht.
+Derselbe Zustand entsteht von allein, wenn die Sicherheitspruefung zwei kreuzende Freigaben
+abweist oder der Watchdog merkt, dass der Regelkreis laenger als eine halbe Sekunde nicht
+getaktet hat.
+
+Notschalter zuruecklegen: die Anlage beginnt wieder bei Allrot und laeuft von dort die normale
+Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
 
 ## Fragen, die kommen
 
@@ -76,7 +78,8 @@ steht.
 - Warum sind die Zwischenzeiten fest? Gelb, Allrot und RotGelb sind Sicherheit, keine
   Stellgroesse. Keine Strategie darf sie anfassen.
 - Was passiert bei einem Fehler? Die Sicherheitspruefung sitzt unmittelbar vor der Ausgabe.
-  Schlaegt sie an, blinkt alles gelb und die Anlage bleibt bis zum Neustart dort.
+  Schlaegt sie an, blinkt alles gelb, bis jemand den Notschalter zuruecklegt oder die Anlage
+  aus und wieder an schaltet.
 - Warum Schieberegister? Zwoelf LEDs direkt am Pi verletzen das Strombudget von 50 mA.
 
 ## Wenn die Hardware streikt

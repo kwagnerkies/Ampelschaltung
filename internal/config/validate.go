@@ -10,8 +10,6 @@ func (c *Config) Validate() error {
 	var errs []error
 	errs = append(errs, c.Hardware.validate()...)
 	errs = append(errs, c.Timing.validate()...)
-	errs = append(errs, c.Fixed.validate(c.Timing)...)
-	errs = append(errs, c.Logging.validate()...)
 	errs = append(errs, c.Display.validate()...)
 	return errors.Join(errs...)
 }
@@ -44,16 +42,6 @@ func (t Timing) validate() []error {
 	return errs
 }
 
-func (f Fixed) validate(t Timing) []error {
-	if f.Green <= 0 {
-		return []error{errors.New("fixed.green_ms muss groesser als null sein")}
-	}
-	if f.Green > t.MaxGreen {
-		return []error{fmt.Errorf("fixed.green_ms (%s) ueberschreitet timing.max_green_ms (%s)", f.Green, t.MaxGreen)}
-	}
-	return nil
-}
-
 func (d Display) validate() []error {
 	if !d.Enabled {
 		return nil
@@ -67,20 +55,6 @@ func (d Display) validate() []error {
 	}
 	if d.Rotation != "quer" && d.Rotation != "hoch" {
 		errs = append(errs, fmt.Errorf("display.rotation ist %q, erlaubt sind quer und hoch", d.Rotation))
-	}
-	return errs
-}
-
-func (l Logging) validate() []error {
-	var errs []error
-	if l.Dir == "" {
-		errs = append(errs, errors.New("logging.dir darf nicht leer sein"))
-	}
-	if l.StateInterval <= 0 {
-		errs = append(errs, errors.New("logging.state_interval_ms muss groesser als null sein"))
-	}
-	if l.Buffer <= 0 {
-		errs = append(errs, errors.New("logging.buffer muss groesser als null sein"))
 	}
 	return errs
 }

@@ -52,16 +52,6 @@ func TestParseRejectsInvalid(t *testing.T) {
 			want: "hardware.sensors.west hat 2 Sensoren",
 		},
 		{
-			name: "festzeitgruen ueber hoechstgruen",
-			yaml: "fixed:\n  green_ms: 45000\n",
-			want: "ueberschreitet timing.max_green_ms",
-		},
-		{
-			name: "puffer null",
-			yaml: "logging:\n  buffer: 0\n",
-			want: "logging.buffer muss groesser als null sein",
-		},
-		{
 			name: "unbekanntes feld",
 			yaml: "timing:\n  gruen_ms: 5000\n",
 			want: "field gruen_ms not found",
@@ -90,12 +80,12 @@ func TestParseRejectsInvalid(t *testing.T) {
 func TestValidateCollectsAllErrors(t *testing.T) {
 	cfg := Default()
 	cfg.Hardware.Chip = ""
-	cfg.Logging.Dir = ""
+	cfg.Hardware.ShiftRegister.Data = 99
 	err := cfg.Validate()
 	if err == nil {
 		t.Fatal("zwei Verstoesse wurden nicht gemeldet")
 	}
-	for _, want := range []string{"hardware.chip", "logging.dir"} {
+	for _, want := range []string{"hardware.chip", "hardware.shift_register.data"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("Fehler %q enthaelt nicht %q", err, want)
 		}

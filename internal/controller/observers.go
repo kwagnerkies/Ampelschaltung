@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"ampel/internal/detector"
-	"ampel/internal/traffic"
 )
 
 // Observers verteilt jedes Ereignis an mehrere Beobachter, damit Logging und Anzeige
@@ -23,18 +22,6 @@ func (o Observers) PhaseChanged(at time.Time, state State, mode string) {
 func (o Observers) SensorChanged(event detector.SensorEvent) {
 	for _, observer := range o {
 		observer.SensorChanged(event)
-	}
-}
-
-func (o Observers) VehicleLeft(departure traffic.Departure, mode, phase string) {
-	for _, observer := range o {
-		observer.VehicleLeft(departure, mode, phase)
-	}
-}
-
-func (o Observers) Reset(at time.Time) {
-	for _, observer := range o {
-		observer.Reset(at)
 	}
 }
 

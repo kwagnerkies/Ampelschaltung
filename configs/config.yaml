@@ -27,6 +27,7 @@ hardware:
     south: [16, 20, 21]
     west: [23, 24, 25]
   power_switch: 4
+  fault_switch: 18
   debounce_ms: 15
 
 timing:
@@ -38,9 +39,6 @@ timing:
   follow_ms: 2000
   extension_ms: 3000
 
-fixed:
-  green_ms: 15000
-
 
 display:
   enabled: true
@@ -49,8 +47,3 @@ display:
   dc: 7
   reset: 2
   rotation: quer
-
-logging:
-  dir: /var/log/ampel
-  state_interval_ms: 1000
-  buffer: 4096

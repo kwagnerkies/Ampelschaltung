@@ -9,7 +9,6 @@ import (
 	"ampel/internal/hal"
 	"ampel/internal/light"
 	"ampel/internal/strategy"
-	"ampel/internal/traffic"
 )
 
 var sensorPins = [light.DirectionCount][]int{
@@ -26,26 +25,18 @@ type record struct {
 
 type recorder struct {
 	NopObserver
-	phases   []record
-	vehicles []traffic.Departure
-	faults   []error
-	modes    []string
-	resets   int
-	power    int
-	samples  int
+	phases  []record
+	faults  []error
+	modes   []string
+	power   int
+	samples int
 }
 
 func (r *recorder) PhaseChanged(at time.Time, state State, _ string) {
 	r.phases = append(r.phases, record{at: at, state: state})
 }
 
-func (r *recorder) VehicleLeft(d traffic.Departure, _, _ string) {
-	r.vehicles = append(r.vehicles, d)
-}
-
 func (r *recorder) ModeChanged(_ time.Time, mode string) { r.modes = append(r.modes, mode) }
-
-func (r *recorder) Reset(time.Time) { r.resets++ }
 
 func (r *recorder) PowerChanged(time.Time, bool) { r.power++ }
 
@@ -181,47 +172,27 @@ func TestWrittenPatternsNeverViolateSignalRules(t *testing.T) {
 	}
 }
 
-// Ein Fahrzeug rollt waehrend der Rotphase ueber die drei Kontakte, haelt an der Linie und
-// faehrt bei Gruen ab. Wartezeit und Kennzahlen muessen das abbilden.
-func TestVehicleWaitIsMeasured(t *testing.T) {
+// Ein Fahrzeug, das die Haltelinie wieder freigibt, hat die Kreuzung ueberfahren. Das ist
+// das Ereignis, auf dem die Verlaengerung beruht.
+func TestCrossingIsCountedWhenTheStopLineIsReleased(t *testing.T) {
 	h := newHarness(t, 10*time.Second)
-	h.run(time.Second)
+	h.run(5 * time.Second)
 
-	arrival := h.clk.Now()
-	// Ost: Pin 12 ist der hinterste Sensor, 26 der mittlere, 19 die Haltelinie.
-	for _, pin := range []int{12, 26} {
-		h.controller.Feed(Input{Pin: pin, Active: true, Time: h.clk.Now()})
-		h.run(200 * time.Millisecond)
-		h.controller.Feed(Input{Pin: pin, Active: false, Time: h.clk.Now()})
-		h.run(200 * time.Millisecond)
+	// Nord ist freigegeben: Pin 5 ist die Haltelinie.
+	if got := h.controller.State(); got.Phase != PhaseNS || got.Stage != StageGreen {
+		t.Fatalf("Zustand %s, erwartet die Freigabe fuer Nord und Sued", got.Name())
 	}
-	h.controller.Feed(Input{Pin: 19, Active: true, Time: h.clk.Now()})
+	h.controller.Feed(Input{Pin: 5, Active: true, Time: h.clk.Now()})
+	h.run(300 * time.Millisecond)
+	h.controller.Feed(Input{Pin: 5, Active: false, Time: h.clk.Now()})
+	h.run(100 * time.Millisecond)
+	h.controller.Feed(Input{Pin: 5, Active: true, Time: h.clk.Now()})
+	h.run(100 * time.Millisecond)
+	h.controller.Feed(Input{Pin: 5, Active: false, Time: h.clk.Now()})
+	h.run(100 * time.Millisecond)
 
-	// Warten, bis Ost und West freigegeben sind.
-	h.run(25 * time.Second)
-	if got := h.controller.State(); got.Phase != PhaseEW || got.Stage != StageGreen {
-		t.Fatalf("Zustand %s, erwartet Freigabe fuer Ost und West", got.Name())
-	}
-
-	h.controller.Feed(Input{Pin: 19, Active: false, Time: h.clk.Now()})
-	expected := h.clk.Now().Sub(arrival)
-	h.run(time.Second)
-
-	if len(h.observer.vehicles) != 1 {
-		t.Fatalf("%d Fahrzeuge gemeldet, erwartet eines", len(h.observer.vehicles))
-	}
-	got := h.observer.vehicles[0]
-	if got.Direction != light.East {
-		t.Errorf("Zufahrt %s, erwartet Ost", got.Direction)
-	}
-	if delta := got.Wait - expected; delta < -100*time.Millisecond || delta > 100*time.Millisecond {
-		t.Errorf("Wartezeit %s, erwartet etwa %s", got.Wait, expected)
-	}
-	if got.Arrival.Phase != int(PhaseNS) && got.Arrival.Phase != int(PhaseStartup) {
-		t.Errorf("Phase bei Ankunft %d, erwartet Start oder NS", got.Arrival.Phase)
-	}
-	if h.controller.Metrics().Total() != 1 {
-		t.Errorf("Kennzahlen enthalten %d Fahrzeuge", h.controller.Metrics().Total())
+	if got := h.controller.Snapshot(h.clk.Now()).Following; got != 1 {
+		t.Errorf("%d Verlaengerungen nach zwei Ueberfahrten, erwartet eine", got)
 	}
 }
 
