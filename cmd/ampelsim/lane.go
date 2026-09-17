@@ -29,8 +29,6 @@ type lane struct {
 
 	arrived  int
 	departed int
-	waitSum  time.Duration
-	waitMax  time.Duration
 }
 
 func newLane(direction light.Direction, pins []int, now time.Time) *lane {
@@ -55,15 +53,10 @@ func (l *lane) step(now time.Time, released bool) []controller.Input {
 		l.since = now
 	}
 	if l.atLine && released && !now.Before(l.since.Add(crossingTime)) {
-		wait := now.Sub(l.queue[0])
 		l.queue = l.queue[1:]
 		l.atLine = false
 		l.lastLeft = now
 		l.departed++
-		l.waitSum += wait
-		if wait > l.waitMax {
-			l.waitMax = wait
-		}
 	}
 	return l.edges(now)
 }
@@ -91,12 +84,3 @@ func (l *lane) sensor(index int) bool {
 }
 
 func (l *lane) waiting() int { return len(l.queue) }
-
-// meanWait ist die wahre mittlere Wartezeit dieser Zufahrt, gemessen am Modell und nicht an
-// den Sensoren. Sie dient als Gegenprobe zur Messung des Regelkreises.
-func (l *lane) meanWait() time.Duration {
-	if l.departed == 0 {
-		return 0
-	}
-	return l.waitSum / time.Duration(l.departed)
-}

@@ -41,10 +41,6 @@ Fahrzeuge nur auf Nord und Sued schieben, Ost und West leer lassen. Sichtbar wir
 - Die leere Richtung behaelt ihre Grundzeit von fuenf Sekunden.
 - Die Hoechstgruenzeit von zwanzig Sekunden begrenzt, wie lange die andere Richtung wartet.
 
-Den Vergleich zur Festzeitsteuerung zeigst du nicht an der Kreuzung, sondern mit den Zahlen
-aus Abschnitt 4. Er entsteht aus zwei Laeufen: einer mit `-modus adaptiv`, einer mit
-`-modus festzeit`.
-
 ## Abschnitt 3, die Regel am Display, etwa zwei Minuten
 
 Jetzt auf das Display zeigen. Dort stehen die vier Gruenzeiten im Kreuz, in der Farbe des
@@ -87,8 +83,8 @@ Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
 Nicht reparieren, umschalten. Der Simulator fuehrt denselben Regelkreis:
 
 ```
-ampelsim -modus vergleich -dauer 30m -anzeige
+ampelsim -dauer 30m -anzeige
 ```
 
-Die Terminalanzeige zeigt Signalbilder und Rueckstau, am Ende steht derselbe Vergleich beider
-Betriebsarten. Damit ist die Vorfuehrung auch ohne Kreuzung vollstaendig.
+Die Terminalanzeige zeigt Signalbilder, Belegung und die laufende Zielgruenzeit. Damit ist die
+Vorfuehrung auch ohne Kreuzung vollstaendig.

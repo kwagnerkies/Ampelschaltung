@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"ampel/internal/light"
 )
@@ -37,7 +38,7 @@ func render(out io.Writer, s *simulation) {
 	var b strings.Builder
 	b.WriteString(clearScreen)
 	fmt.Fprintf(&b, "Zeit %s   Phase %-11s Ziel %6s   Modus %s\n\n",
-		now.Format("15:04:05"), snapshot.State.Name(), round(snapshot.State.Target), snapshot.Mode)
+		now.Format("15:04:05"), snapshot.State.Name(), snapshot.State.Target.Round(100*time.Millisecond), snapshot.Mode)
 
 	fmt.Fprintf(&b, "%18s%-4s belegt %d\n", "Nord ", aspectLetter(aspects[light.North]), snapshot.Reach[light.North])
 	fmt.Fprintf(&b, "%18s\n", "|")

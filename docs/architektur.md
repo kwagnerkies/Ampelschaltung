@@ -10,9 +10,8 @@ Reed-Kontakte unter der Fahrbahn melden, wo Fahrzeuge stehen und wann sie abfahr
 ein Fahrzeug dicht hinter seinem Vorgaenger ueber dieselbe Haltelinie, verlaengert das die
 laufende Freigabe um eine feste Stufe, begrenzt durch die Hoechstgruenzeit. Ein Phasenautomat
 setzt die Freigaben in Signalbilder um, die unmittelbar vor der Hardware gegen eine
-Konfliktmatrix geprueft werden. Ein Display zeigt die vier Gruenzeiten im Kreuz. Gemessen
-wird die Wartezeit je Fahrzeug, und genau die vergleicht die Auswertung zwischen adaptivem
-und festem Betrieb.
+Konfliktmatrix geprueft werden. Ein Display zeigt die vier Gruenzeiten im Kreuz, und zwei
+Kippschalter schalten die Anlage und den Notzustand.
 
 ## Die zehn Entscheidungen
 
@@ -77,7 +76,7 @@ Sensoren je Zufahrt ist frei waehlbar.
 | 5 | `internal/strategy/strategy.go` | was eine Strategie sehen darf, und mehr nicht |
 | 6 | `internal/strategy/following.go` | die ganze adaptive Regel, vierzig Zeilen |
 | 7 | `internal/controller/controller.go` | `Step` verbindet alles, ein Bildschirm voll |
-| 8 | `internal/traffic/vehicle.go` | Ankunft, Abfahrt, Wartezeit |
+| 8 | `internal/controller/switches.go` | Hauptschalter, Notschalter, Neustart bei Allrot |
 | 9 | `internal/display/screen.go` | die vier Zahlen im Kreuz |
 
 Wer nur fuenf Minuten hat, liest `Controller.Step` und `Following.TargetGreen`. Diese beiden
@@ -90,9 +89,9 @@ Funktionen sind die Regelung.
 | Koennen zwei kreuzende Richtungen gleichzeitig gruen werden? | `safety.go:Check`, geprueft in `safety_test.go` und am geschriebenen Bitmuster in `controller_test.go` |
 | Was passiert bei einem Softwarefehler? | `signals.go:enterFault`, alles blinkt gelb, zurueck nur ueber Neustart |
 | Was, wenn der Regelkreis haengt? | `watchdog.go`, 500 ms, erzwingt denselben Notzustand |
-| Wie wird die Wartezeit gemessen? | `traffic/approach.go:Apply` und `traffic/vehicle.go:Tracker` |
+| Wann gilt ein Fahrzeug als ueberfahren? | `controller/events.go`, die Haltelinie wird wieder frei |
 | Verhungert eine Richtung? | `following.go`, die Hoechstgruenzeit begrenzt jede Freigabe |
-| Woher kommt der Beweis, dass adaptiv besser ist? | `cmd/ampelsim`, Vergleichslauf mit identischem Ankunftsmuster |
+| Wie prueft ihr ohne Hardware? | `cmd/ampelsim` faehrt denselben Regelkreis mit erzeugtem Verkehr |
 | Warum Schieberegister? | Strombudget des Pi, `hardware/pinout.md` |
 
 ## Wo die Tests liegen
@@ -100,5 +99,5 @@ Funktionen sind die Regelung.
 Zu jeder Datei liegt der Test daneben. Die wichtigsten drei: `controller_test.go` faehrt
 komplette Laeufe und prueft jedes geschriebene Bitmuster gegen Konfliktmatrix und
 Signalfolge, `adaptive_test.go` erzeugt dichten Verkehr auf einer Achse und erwartet dort laengere
-Gruenzeiten, `cmd/ampelsim/sim_test.go` vergleicht beide Betriebsarten bei identischem
-Verkehr und schlaegt fehl, wenn adaptiv nicht besser ist.
+Gruenzeiten, `cmd/ampelsim/sim_test.go` laesst zwanzig simulierte
+Minuten Verkehr abfliessen und prueft, dass keine Richtung stehenbleibt.

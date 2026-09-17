@@ -42,9 +42,6 @@ func TestLaneQueueMovesAndReportsEdges(t *testing.T) {
 	if l.departed != 1 {
 		t.Fatalf("%d Abfahrten, erwartet eine", l.departed)
 	}
-	if want := 5*time.Second + crossingTime; l.waitSum != want {
-		t.Errorf("Wartezeit %s, erwartet %s", l.waitSum, want)
-	}
 }
 
 // Drei stehende Fahrzeuge belegen alle drei Sensoren, ein viertes bleibt unsichtbar.

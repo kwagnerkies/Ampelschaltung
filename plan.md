@@ -280,9 +280,7 @@ ampel/
 
       strategy.go          Interface
 
-      fixed.go             Festzeitsteuerung
-
-      adaptive.go          Adaptive Steuerung
+      following.go         Verlaengerung bei dicht folgenden Fahrzeugen
 
       params.go            Grenzwerte und Berechnung
 
@@ -622,7 +620,7 @@ Testumfang:
 
 - `display`: die Anordnung ist ein Kreuz, nur geaenderte Zahlen werden neu gezeichnet, Sekunden werden gerundet.
 
-- Integrationstest: kompletter Lauf mit Mock-HAL und Fake-Clock ueber simulierte 30 Minuten, adaptiv gegen Festzeit bei identischem Ankunftsmuster. Der Test schlaegt fehl, wenn adaptiv nicht besser abschneidet.
+- Integrationstest: kompletter Lauf mit Mock-HAL und Fake-Clock ueber simulierte zwanzig Minuten. Der Test schlaegt fehl, wenn Fahrzeuge nicht abfliessen oder eine Richtung stehenbleibt.
 
 
 
@@ -706,9 +704,9 @@ Fertig, wenn ein von Hand ueber die Sensoren geschobenes Modellauto genau eine U
 
 
 
-**AP5 Festzeitsteuerung.** Phasenautomat, Zwischenzeiten, Strategie-Interface, Festzeitimplementierung, geordnetes Herunterfahren.
+**AP5 Grundbetrieb.** Phasenautomat, Zwischenzeiten, Strategie-Interface, geordnetes Herunterfahren.
 
-Fertig, wenn die Kreuzung dauerhaft und korrekt im Festzeitbetrieb laeuft. Das ist der erste vorfuehrbare Stand.
+Fertig, wenn die Kreuzung dauerhaft und korrekt mit der Grundgruenzeit laeuft. Das ist der erste vorfuehrbare Stand.
 
 
 

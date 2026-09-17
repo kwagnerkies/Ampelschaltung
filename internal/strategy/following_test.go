@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var start = time.Date(2026, 4, 1, 7, 0, 0, 0, time.UTC)
+
 func following(t *testing.T) *Following {
 	t.Helper()
 	f, err := NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)

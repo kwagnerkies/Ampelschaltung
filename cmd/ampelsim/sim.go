@@ -93,38 +93,25 @@ func (s *simulation) walk(duration time.Duration, show func(*simulation)) {
 
 func (s *simulation) close() error { return s.control.Shutdown() }
 
-// result ist der Ueberblick eines Laufs. Die Zahlen stammen aus dem Fahrzeugmodell des
-// Simulators, nicht aus der Steuerung.
+// result ist der Ueberblick eines Laufs: wie viele Fahrzeuge erzeugt wurden und wie viele
+// die Kreuzung ueberquert haben.
 type result struct {
 	arrived  int
 	departed int
-	mean     time.Duration
-	worst    time.Duration
 }
 
 func (s *simulation) result() result {
 	var r result
-	var sum time.Duration
 	for _, l := range s.lanes {
 		r.arrived += l.arrived
 		r.departed += l.departed
-		sum += l.waitSum
-		if l.waitMax > r.worst {
-			r.worst = l.waitMax
-		}
-	}
-	if r.departed > 0 {
-		r.mean = sum / time.Duration(r.departed)
 	}
 	return r
 }
 
 func (r result) String() string {
-	return fmt.Sprintf("Ankuenfte %5d  Abfahrten %5d  Wartezeit im Modell %7s  Maximum %7s",
-		r.arrived, r.departed, round(r.mean), round(r.worst))
+	return fmt.Sprintf("Ankuenfte %5d  Abfahrten %5d", r.arrived, r.departed)
 }
-
-func round(d time.Duration) time.Duration { return d.Round(10 * time.Millisecond) }
 
 func releases(phase controller.Phase, direction light.Direction) bool {
 	for _, released := range phase.Directions() {

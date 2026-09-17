@@ -127,7 +127,7 @@ gehen alle Signale auf Rot und die CSV-Puffer werden geleert.
 | Programm | Zweck |
 |---|---|
 | `ampel` | Steuerung auf der Hardware, `-validate` und `-selftest` fuer die Inbetriebnahme |
-| `ampelsim` | derselbe Regelkreis ohne Hardware, erzeugter Verkehr, Vergleich beider Modi |
+| `ampelsim` | derselbe Regelkreis ohne Hardware, erzeugter Verkehr, Anzeige im Terminal |
 
 Der Ablauf der Vorfuehrung steht in `vorfuehrung.md`, der Lesepfad durch den Code in
 `architektur.md`.

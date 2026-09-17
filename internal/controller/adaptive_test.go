@@ -83,21 +83,23 @@ func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 	}
 }
 
-// Im Festzeitbetrieb bleiben die Gruenzeiten bei identischer Last gleich lang. Das ist die
-// Gegenprobe zur Adaption.
-func TestFixedIgnoresAsymmetricLoad(t *testing.T) {
-	h := newHarness(t, 15*time.Second)
+// Gegenprobe: liegen die Fahrzeuge weiter auseinander als die Folgezeit, bleibt es bei der
+// Grundzeit, egal wie viele kommen.
+func TestScatteredLoadKeepsBaseGreen(t *testing.T) {
+	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 700 * time.Millisecond},
-		{direction: light.South, stopLine: 16, upstream: []int{20, 21}, interval: 700 * time.Millisecond},
-		{direction: light.East, stopLine: 19, upstream: []int{26}, interval: 6 * time.Second},
-		{direction: light.West, stopLine: 23, upstream: []int{24}, interval: 6 * time.Second},
+		{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 5 * time.Second},
+		{direction: light.South, stopLine: 16, upstream: []int{20, 21}, interval: 5 * time.Second},
+		{direction: light.East, stopLine: 19, upstream: []int{26}, interval: 5 * time.Second},
+		{direction: light.West, stopLine: 23, upstream: []int{24}, interval: 5 * time.Second},
 	}
-	h.drive(loads, 10*time.Minute)
+	h.drive(loads, 5*time.Minute)
 
 	ns, ew := h.meanGreen("NS_Gruen"), h.meanGreen("OW_Gruen")
-	if delta := ns - ew; delta > time.Second || delta < -time.Second {
-		t.Errorf("Festzeitbetrieb ergibt NS %s und OW %s", ns, ew)
+	for name, green := range map[string]time.Duration{"NS": ns, "OW": ew} {
+		if green > 9*time.Second {
+			t.Errorf("%s bekommt %s Gruen, erwartet die Grundzeit von 8s", name, green)
+		}
 	}
 }
 

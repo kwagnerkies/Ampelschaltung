@@ -51,8 +51,13 @@ type harness struct {
 	observer   *recorder
 }
 
+// newHarness baut eine Kreuzung, deren Freigaben ohne Verkehr genau green dauern.
 func newHarness(t *testing.T, green time.Duration, tune ...func(*Setup)) *harness {
 	t.Helper()
+	following, err := strategy.NewFollowing(green, 3*time.Second, green+15*time.Second)
+	if err != nil {
+		t.Fatalf("NewFollowing: %v", err)
+	}
 	clk := clock.NewFake(start)
 	mock := hal.NewMock(16, 64)
 	observer := &recorder{}
@@ -69,7 +74,7 @@ func newHarness(t *testing.T, green time.Duration, tune ...func(*Setup)) *harnes
 		Timing:   timing,
 		Tick:     50 * time.Millisecond,
 		Sample:   time.Second,
-		Strategy: strategy.NewFixed(green),
+		Strategy: following,
 		Clock:    clk,
 		Writer:   mock,
 		Observer: observer,
@@ -94,8 +99,8 @@ func (h *harness) run(d time.Duration) {
 	}
 }
 
-// Ein Festzeitlauf muss die Phasen dauerhaft und in der richtigen Reihenfolge wechseln.
-func TestFixedModeCyclesForever(t *testing.T) {
+// Die Phasen muessen dauerhaft und in der richtigen Reihenfolge wechseln.
+func TestPhasesCycleForever(t *testing.T) {
 	h := newHarness(t, 15*time.Second)
 	h.run(10 * time.Minute)
 
@@ -117,8 +122,8 @@ func TestFixedModeCyclesForever(t *testing.T) {
 	}
 }
 
-// Die Zwischenzeiten sind fest, die Gruenzeit kommt im Festzeitbetrieb aus der Konfiguration.
-func TestFixedModeHoldsDurations(t *testing.T) {
+// Die Zwischenzeiten sind fest, und ohne Verkehr dauert die Freigabe genau die Grundzeit.
+func TestPhaseDurationsHold(t *testing.T) {
 	h := newHarness(t, 15*time.Second)
 	h.run(2 * time.Minute)
 
