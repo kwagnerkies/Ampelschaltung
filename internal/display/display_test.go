@@ -178,5 +178,5 @@ func TestSecondsAreRounded(t *testing.T) {
 func TestObserverWithoutSourceIsSilent(t *testing.T) {
 	observer := NewObserver(New(newFake()), nil, nil)
 	observer.SensorChanged(detector.SensorEvent{Direction: light.North})
-	observer.PhaseChanged(time.Time{}, controller.State{}, "adaptiv")
+	observer.PhaseChanged(time.Time{}, controller.State{})
 }

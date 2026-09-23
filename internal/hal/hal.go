@@ -55,8 +55,6 @@ func (c *Chip) Output(pin int) (OutputLine, error) {
 	return gpioOutput{line: line}, nil
 }
 
-func (c *Chip) Name() string { return c.chip.Name }
-
 func (c *Chip) Close() error {
 	if err := c.chip.Close(); err != nil {
 		return fmt.Errorf("gpio-chip schliessen: %w", err)

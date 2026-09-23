@@ -101,8 +101,6 @@ func New(options Options) (*Controller, error) {
 
 func (c *Controller) State() State { return c.machine.State() }
 
-func (c *Controller) Mode() string { return c.strategy.Name() }
-
 func (c *Controller) Begin(now time.Time) error {
 	if c.begun {
 		return nil
@@ -111,7 +109,7 @@ func (c *Controller) Begin(now time.Time) error {
 	if err := c.show(); err != nil {
 		return err
 	}
-	c.observer.PhaseChanged(now, c.machine.State(), c.strategy.Name())
+	c.observer.PhaseChanged(now, c.machine.State())
 	return nil
 }
 
@@ -166,7 +164,7 @@ func (c *Controller) Step(now time.Time) {
 			c.enterFault(now, err)
 			return
 		}
-		c.observer.PhaseChanged(now, state, c.strategy.Name())
+		c.observer.PhaseChanged(now, state)
 	}
 	if c.machine.State().Stage == StageGreen {
 		c.machine.SetTarget(c.strategy.TargetGreen(c.view(now)))
@@ -272,7 +270,6 @@ func (c *Controller) Snapshot(now time.Time) Snapshot {
 	snapshot := Snapshot{
 		State:     state,
 		Elapsed:   now.Sub(state.Since),
-		Mode:      c.strategy.Name(),
 		Following: c.following,
 		Aspects:   state.Aspects(),
 	}

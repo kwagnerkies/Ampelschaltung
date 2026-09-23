@@ -14,7 +14,6 @@ type View struct {
 func (v View) Green() time.Duration { return v.Now.Sub(v.GreenSince) }
 
 type Strategy interface {
-	Name() string
 	TargetGreen(view View) time.Duration
 	EndGreen(view View) bool
 }
@@ -39,8 +38,6 @@ func NewFollowing(base, step, max time.Duration) (*Following, error) {
 	}
 	return &Following{base: base, step: step, max: max}, nil
 }
-
-func (f *Following) Name() string { return "adaptiv" }
 
 func (f *Following) TargetGreen(view View) time.Duration {
 	target := f.base + time.Duration(view.Following)*f.step

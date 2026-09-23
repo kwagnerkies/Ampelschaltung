@@ -12,7 +12,6 @@ type Ticker interface {
 
 type Clock interface {
 	Now() time.Time
-	After(d time.Duration) <-chan time.Time
 	Ticker(d time.Duration) Ticker
 }
 
@@ -23,8 +22,6 @@ var _ Clock = Real{}
 func NewReal() Real { return Real{} }
 
 func (Real) Now() time.Time { return time.Now() }
-
-func (Real) After(d time.Duration) <-chan time.Time { return time.After(d) }
 
 func (Real) Ticker(d time.Duration) Ticker { return realTicker{ticker: time.NewTicker(d)} }
 
@@ -57,12 +54,6 @@ func (f *Fake) Now() time.Time {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.now
-}
-
-func (f *Fake) After(d time.Duration) <-chan time.Time {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.add(d, 0).ch
 }
 
 func (f *Fake) Ticker(d time.Duration) Ticker {

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"ampel/internal/light"
-	"ampel/internal/mode"
 )
 
 const DefaultSwitchDebounce = 100 * time.Millisecond
@@ -19,8 +18,8 @@ type Switches struct {
 
 type switches struct {
 	config Switches
-	power  *mode.Switch
-	fault  *mode.Switch
+	power  *toggle
+	fault  *toggle
 	levels map[int]bool
 	on     bool
 	warn   bool
@@ -32,8 +31,8 @@ func newSwitches(config Switches, now time.Time) *switches {
 	}
 	return &switches{
 		config: config,
-		power:  mode.NewSwitch(config.PowerOn, config.Debounce, now),
-		fault:  mode.NewSwitch(config.FaultOn, config.Debounce, now),
+		power:  newToggle(config.PowerOn, config.Debounce, now),
+		fault:  newToggle(config.FaultOn, config.Debounce, now),
 		levels: map[int]bool{config.PowerPin: config.PowerOn, config.FaultPin: config.FaultOn},
 		on:     config.PowerOn,
 		warn:   config.FaultOn,
@@ -98,5 +97,31 @@ func (c *Controller) restart(now time.Time) {
 		c.enterFault(now, err)
 		return
 	}
-	c.observer.PhaseChanged(now, c.machine.State(), "adaptiv")
+	c.observer.PhaseChanged(now, c.machine.State())
 }
+
+type toggle struct {
+	debounce time.Duration
+	level    bool
+	raw      bool
+	rawAt    time.Time
+}
+
+func newToggle(initial bool, debounce time.Duration, now time.Time) *toggle {
+	return &toggle{debounce: debounce, level: initial, raw: initial, rawAt: now}
+}
+
+func (s *toggle) Poll(level bool, now time.Time) bool {
+	if level != s.raw {
+		s.raw = level
+		s.rawAt = now
+		return false
+	}
+	if s.raw == s.level || now.Sub(s.rawAt) < s.debounce {
+		return false
+	}
+	s.level = s.raw
+	return true
+}
+
+func (s *toggle) Level() bool { return s.level }

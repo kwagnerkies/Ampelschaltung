@@ -27,16 +27,13 @@ type recorder struct {
 	NopObserver
 	phases  []record
 	faults  []error
-	modes   []string
 	power   int
 	samples int
 }
 
-func (r *recorder) PhaseChanged(at time.Time, state State, _ string) {
+func (r *recorder) PhaseChanged(at time.Time, state State) {
 	r.phases = append(r.phases, record{at: at, state: state})
 }
-
-func (r *recorder) ModeChanged(_ time.Time, mode string) { r.modes = append(r.modes, mode) }
 
 func (r *recorder) PowerChanged(time.Time, bool) { r.power++ }
 
@@ -438,32 +435,10 @@ type counter struct {
 	calls int
 }
 
-func (c *counter) PhaseChanged(time.Time, State, string) { c.calls++ }
-func (c *counter) PowerChanged(time.Time, bool)          { c.calls++ }
-func (c *counter) Fault(time.Time, error)                { c.calls++ }
-func (c *counter) Sample(time.Time, Snapshot)            { c.calls++ }
-
-func TestObserversReachEveryone(t *testing.T) {
-	first, second := &counter{}, &counter{}
-	list := Observers{first, second}
-
-	list.PhaseChanged(time.Time{}, State{}, "adaptiv")
-	list.PowerChanged(time.Time{}, true)
-	list.Fault(time.Time{}, errors.New("test"))
-	list.Sample(time.Time{}, Snapshot{})
-
-	for i, observer := range []*counter{first, second} {
-		if observer.calls != 4 {
-			t.Errorf("Beobachter %d sah %d von vier Ereignissen", i, observer.calls)
-		}
-	}
-}
-
-func TestEmptyObserversAreHarmless(t *testing.T) {
-	var list Observers
-	list.PhaseChanged(time.Time{}, State{}, "festzeit")
-	list.Sample(time.Time{}, Snapshot{})
-}
+func (c *counter) PhaseChanged(time.Time, State) { c.calls++ }
+func (c *counter) PowerChanged(time.Time, bool)  { c.calls++ }
+func (c *counter) Fault(time.Time, error)        { c.calls++ }
+func (c *counter) Sample(time.Time, Snapshot)    { c.calls++ }
 
 func newOutput(t *testing.T) (*Output, *hal.Mock) {
 	t.Helper()

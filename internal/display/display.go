@@ -168,7 +168,7 @@ func (o *Observer) Source(source func(time.Time) controller.Snapshot) { o.source
 
 func (o *Observer) SensorChanged(event detector.SensorEvent) { o.refresh(event.At) }
 
-func (o *Observer) PhaseChanged(at time.Time, _ controller.State, _ string) { o.refresh(at) }
+func (o *Observer) PhaseChanged(at time.Time, _ controller.State) { o.refresh(at) }
 
 func (o *Observer) PowerChanged(at time.Time, on bool) {
 	if on {
