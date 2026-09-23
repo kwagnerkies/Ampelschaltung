@@ -183,8 +183,8 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 	fmt.Fprintf(w, "  Verlaengerung      %s je Fahrzeug, das binnen %s folgt\n",
 		cfg.Timing.Extension, cfg.Timing.Follow)
 	if cfg.Display.Enabled {
-		fmt.Fprintf(w, "  Anzeige            %s, %d Hz, DC %d, Reset %d, %s\n",
-			cfg.Display.Device, cfg.Display.SpeedHz, cfg.Display.DC, cfg.Display.Reset, cfg.Display.Rotation)
+		fmt.Fprintf(w, "  Anzeige            %s, %d Hz, DC %d, %s\n",
+			cfg.Display.Device, cfg.Display.SpeedHz, cfg.Display.DC, cfg.Display.Rotation)
 	} else {
 		fmt.Fprintln(w, "  Anzeige            abgeschaltet")
 	}

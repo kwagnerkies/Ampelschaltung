@@ -29,12 +29,12 @@ Ein Reed-Kontakt je Zufahrt, unmittelbar an der Haltelinie. Alle Eingaenge liege
 Pull-up und schalten gegen Masse; geschlossener Kontakt ist der Low-Pegel. Entprellt wird im
 Kernel mit 15 ms.
 
-| Zufahrt | BCM |
-|---|---|
-| Nord | 23 |
-| Ost | 24 |
-| Sued | 25 |
-| West | 8 |
+| Zufahrt | BCM | Pin der Leiste |
+|---|---|---|
+| Nord | 23 | 16 |
+| Ost | 24 | 18 |
+| Sued | 25 | 22 |
+| West | 3 | 5 |
 
 Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt: ein stehendes Fahrzeug haelt ihn
 geschlossen. Das Freiwerden der Linie ist deshalb das Ereignis, an dem die Steuerung eine
@@ -42,23 +42,25 @@ Ueberfahrt erkennt.
 
 ## Anzeige
 
-Ein 2,4-Zoll-TFT mit ILI9341 an SPI0. Gezeigt werden die vier Gruenzeiten im Kreuz, in der
-Farbe des jeweiligen Signalbildes.
+Ein 2,4-Zoll-TFT mit ILI9341 an SPI0.
 
 | Signal des Moduls | BCM | Pin der Leiste |
 |---|---|---|
 | SCK | 11 | 23 |
 | MOSI (SDI) | 10 | 19 |
 | CS | 8 | 24 |
-| DC (RS) | 7 | 26 |
-| RESET | 2 | 3 |
+| DC (RS) | 2 | 3 |
+| RESET | fest auf 3,3 V | 1 oder 17 |
 | LED | fest auf 3,3 V | 1 oder 17 |
 | VCC | 3,3 V | 1 oder 17 |
 | GND | Masse | 6 |
 
-MISO bleibt frei, gelesen wird nichts. SPI muss eingeschaltet sein: `dtparam=spi=on` in
-`/boot/config.txt`, danach Neustart. Das Installationsskript traegt die Zeile ein, falls sie
-fehlt.
+MISO bleibt frei, gelesen wird nichts. RESET wird nicht geschaltet: der Treiber setzt den
+Controller per Befehl zurueck, das genuegt. SPI muss eingeschaltet sein, `dtparam=spi=on` in
+`/boot/config.txt`, danach Neustart; das Installationsskript traegt die Zeile ein.
+
+Die Pins 7, 8, 9, 10 und 11 gehoeren dem SPI-Treiber, sobald SPI aktiv ist. Sie duerfen nicht
+anderweitig belegt werden; die Konfigurationspruefung weist das ab.
 
 Wichtig beim Kauf: es muss die SPI-Bauart sein, erkennbar an einer Stiftreihe mit `SDI`,
 `SCK`, `DC` und `RESET`. Die Arduino-Aufsteckplatine mit `D0` bis `D7` ist 8 Bit parallel und

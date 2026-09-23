@@ -90,6 +90,14 @@ var approachNames = [4]string{"north", "east", "south", "west"}
 
 var lampNames = [3]string{"rot", "gelb", "gruen"}
 
+var spiPins = map[int]string{
+	7:  "spi ce1",
+	8:  "spi ce0",
+	9:  "spi miso",
+	10: "spi mosi",
+	11: "spi sclk",
+}
+
 func (h Hardware) validate(display Display) []error {
 	var errs []error
 	if h.Chip == "" {
@@ -128,7 +136,12 @@ func (h Hardware) validatePins(display Display) []error {
 	claim(h.FaultSwitch, "hardware.fault_switch")
 	if display.Enabled {
 		claim(display.DC, "display.dc")
-		claim(display.Reset, "display.reset")
+		if display.Reset >= 0 {
+			claim(display.Reset, "display.reset")
+		}
+		for pin, name := range spiPins {
+			claim(pin, name)
+		}
 	}
 	return errs
 }
