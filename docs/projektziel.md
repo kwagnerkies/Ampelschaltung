@@ -36,8 +36,8 @@ Anlage wieder bei Allrot.
 
 **Sicherheit.** Eine Konfliktmatrix prueft jedes Signalbild unmittelbar vor der Ausgabe an die
 Hardware; kein Weg fuehrt daran vorbei. Zusaetzlich wird die Signalfolge geprueft, sodass von
-Gruen nur Gelb folgen kann. Ein Watchdog erzwingt den Notzustand, wenn der Regelkreis laenger
-als 500 ms nicht getaktet hat.
+Gruen nur Gelb folgen kann. Schlaegt die Pruefung an, geht die Anlage in den Notzustand mit
+gelbem Blinken und bleibt dort, bis jemand sie aus und wieder an schaltet.
 
 ## Abgrenzung
 

@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	powerPin = 4
+	faultPin = 18
+)
+
 var sensorPins = [light.DirectionCount]int{
 	light.North: 23,
 	light.East:  24,
@@ -737,67 +742,6 @@ func allShow(aspects [light.DirectionCount]light.Aspect, want light.Aspect) bool
 	return true
 }
 
-func TestWatchdogAcceptsRegularTicks(t *testing.T) {
-	w := NewWatchdog(500*time.Millisecond, start)
-	now := start
-	for i := 0; i < 100; i++ {
-		now = now.Add(50 * time.Millisecond)
-		if gap, late := w.Kick(now); late {
-			t.Fatalf("Takt %d nach %s als Ueberschreitung gemeldet", i, gap)
-		}
-	}
-	now = now.Add(501 * time.Millisecond)
-	if _, late := w.Kick(now); !late {
-		t.Error("die Ueberschreitung blieb unbemerkt")
-	}
-}
-
-func TestWatchdogForcesFault(t *testing.T) {
-	h := newHarness(t, 15*time.Second)
-	h.run(4 * time.Second)
-	if h.controller.State().Stage != StageGreen {
-		t.Fatalf("Zustand %s, erwartet eine laufende Freigabe", h.controller.State().Name())
-	}
-
-	h.clk.Advance(DefaultWatchdog + 100*time.Millisecond)
-	h.controller.Step(h.clk.Now())
-
-	if got := h.controller.State().Phase; got != PhaseFault {
-		t.Fatalf("Phase %s, erwartet Stoerung", got)
-	}
-	if len(h.observer.faults) != 1 {
-		t.Fatalf("%d Stoerungen gemeldet, erwartet eine", len(h.observer.faults))
-	}
-	if !allShow(aspectsOf(h.mock.Pattern()), light.AspectYellow) {
-		t.Error("der Notzustand zeigt kein Gelb auf allen Koepfen")
-	}
-
-	mark := len(h.mock.History())
-	h.run(10 * time.Second)
-	pulses := 0
-	for _, pattern := range h.mock.History()[mark:] {
-		aspects := aspectsOf(pattern)
-		switch {
-		case allShow(aspects, light.AspectYellow):
-			pulses++
-		case allShow(aspects, light.AspectOff):
-		default:
-			t.Fatalf("im Notzustand geschriebenes Muster %v", aspects)
-		}
-	}
-	if pulses < 9 || pulses > 11 {
-		t.Errorf("%d Gelbimpulse in zehn Sekunden, erwartet etwa zehn", pulses)
-	}
-	if got := h.controller.State().Phase; got != PhaseFault {
-		t.Errorf("Phase %s, aus der Stoerung fuehrt nur ein Neustart", got)
-	}
-}
-
-const (
-	powerPin = 4
-	faultPin = 18
-)
-
 func newPowerHarness(t *testing.T) *harness {
 	t.Helper()
 	return newHarness(t, 15*time.Second, func(setup *Setup) {
@@ -901,26 +845,6 @@ func TestBouncingSwitchIsIgnored(t *testing.T) {
 	}
 	if h.observer.power != 0 {
 		t.Errorf("%d Schaltmarken durch Prellen", h.observer.power)
-	}
-}
-
-func TestPowerCycleLeavesTheFaultState(t *testing.T) {
-	h := newPowerHarness(t)
-	h.run(4 * time.Second)
-	h.clk.Advance(DefaultWatchdog + 100*time.Millisecond)
-	h.controller.Step(h.clk.Now())
-	if h.controller.State().Phase != PhaseFault {
-		t.Fatal("der Watchdog loeste nicht aus")
-	}
-
-	h.flip(powerPin, false)
-	h.flip(powerPin, true)
-	if got := h.controller.State().Phase; got == PhaseFault {
-		t.Error("die Anlage blieb nach dem Aus- und Einschalten gestoert")
-	}
-	h.run(time.Minute)
-	if got := h.controller.State(); got.Phase == PhaseFault {
-		t.Errorf("die Anlage ging erneut in Stoerung: %v", h.observer.faults)
 	}
 }
 

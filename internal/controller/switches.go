@@ -91,7 +91,6 @@ func (c *Controller) restart(now time.Time) {
 	c.flashOn = false
 	c.machine.Restart(now)
 	c.Reset(now)
-	c.watchdog.Kick(now)
 	c.observer.PowerChanged(now, true)
 	if err := c.show(); err != nil {
 		c.enterFault(now, err)

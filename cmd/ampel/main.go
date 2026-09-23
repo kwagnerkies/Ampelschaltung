@@ -95,7 +95,6 @@ func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 		return err
 	}
 	setup.Switches = readSwitches(cfg, inputs)
-	setup.Watchdog = controller.DefaultWatchdog
 	setup.Clock = clock.NewReal()
 	setup.Writer = driver
 	setup.Inputs = pump(ctx, inputs.Events())

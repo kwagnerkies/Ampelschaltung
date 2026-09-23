@@ -61,8 +61,7 @@ Das ist das Bild, das jeder von einer gestoerten Ampel kennt: Anlage ausser Betr
 faehrt auf Sicht.
 
 Derselbe Zustand entsteht von allein, wenn die Sicherheitspruefung zwei kreuzende Freigaben
-abweist oder der Watchdog merkt, dass der Regelkreis laenger als eine halbe Sekunde nicht
-getaktet hat.
+abweisen muesste.
 
 Notschalter zuruecklegen: die Anlage beginnt wieder bei Allrot und laeuft von dort die normale
 Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.

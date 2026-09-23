@@ -29,7 +29,6 @@ type Options struct {
 	Observer  Observer
 	FlashHalf time.Duration
 	Switches  *Switches
-	Watchdog  time.Duration
 	Follow    time.Duration
 }
 
@@ -46,7 +45,6 @@ type Controller struct {
 	inputs    <-chan Input
 	observer  Observer
 	switches  *switches
-	watchdog  *Watchdog
 
 	follow time.Duration
 
@@ -91,7 +89,6 @@ func New(options Options) (*Controller, error) {
 		observer:   options.Observer,
 		started:    now,
 		lastSample: now,
-		watchdog:   NewWatchdog(options.Watchdog, now),
 	}
 	if options.Switches != nil {
 		c.switches = newSwitches(*options.Switches, now)
@@ -145,11 +142,6 @@ func (c *Controller) Step(now time.Time) {
 		c.flash(now)
 		return
 	}
-	if gap, late := c.watchdog.Kick(now); late {
-		c.enterFault(now, fmt.Errorf("regelkreis hat %s nicht getaktet, erlaubt sind %s",
-			gap.Round(time.Millisecond), c.watchdog.Limit()))
-		return
-	}
 
 	state := c.machine.State()
 	endGreen := state.Stage == StageGreen && c.strategy.EndGreen(c.view(now))
@@ -195,7 +187,6 @@ type Setup struct {
 	Inputs   <-chan Input
 	Observer Observer
 	Switches *Switches
-	Watchdog time.Duration
 }
 
 func Build(setup Setup) (*Controller, error) {
@@ -218,7 +209,6 @@ func Build(setup Setup) (*Controller, error) {
 		Inputs:   setup.Inputs,
 		Observer: setup.Observer,
 		Switches: setup.Switches,
-		Watchdog: setup.Watchdog,
 	})
 }
 
@@ -283,26 +273,4 @@ func (c *Controller) Snapshot(now time.Time) Snapshot {
 		}
 	}
 	return snapshot
-}
-
-const DefaultWatchdog = 500 * time.Millisecond
-
-type Watchdog struct {
-	limit time.Duration
-	last  time.Time
-}
-
-func NewWatchdog(limit time.Duration, now time.Time) *Watchdog {
-	if limit <= 0 {
-		limit = DefaultWatchdog
-	}
-	return &Watchdog{limit: limit, last: now}
-}
-
-func (w *Watchdog) Limit() time.Duration { return w.limit }
-
-func (w *Watchdog) Kick(now time.Time) (time.Duration, bool) {
-	gap := now.Sub(w.last)
-	w.last = now
-	return gap, gap > w.limit
 }

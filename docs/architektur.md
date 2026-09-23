@@ -24,7 +24,6 @@ steht ein Import von `gpiocdev`.
 **2. Ein Besitzer des Zustands.** Der Regelkreis laeuft in einer einzigen Goroutine,
 `Controller.Run` in `internal/controller/controller.go`. Flanken kommen ueber einen Kanal
 herein, Logzeilen gehen ueber einen Kanal hinaus. Keine geteilte Struktur mit Mutex, keine
-Zustandsaenderung aus einem Interrupt-Callback. Das ist der Grund, warum der Watchdog im
 Takt selbst sitzt und nicht in einem zweiten Waechter.
 
 **3. Zeit hinter einem Interface.** `internal/clock` hat eine echte und eine gefaelschte
@@ -88,7 +87,6 @@ Funktionen sind die Regelung.
 |---|---|
 | Koennen zwei kreuzende Richtungen gleichzeitig gruen werden? | `safety.go:Check`, geprueft in `safety_test.go` und am geschriebenen Bitmuster in `controller_test.go` |
 | Was passiert bei einem Softwarefehler? | `signals.go:enterFault`, alles blinkt gelb, zurueck nur ueber Neustart |
-| Was, wenn der Regelkreis haengt? | `watchdog.go`, 500 ms, erzwingt denselben Notzustand |
 | Wann gilt ein Fahrzeug als ueberfahren? | `controller/events.go`, die Haltelinie wird wieder frei |
 | Verhungert eine Richtung? | `following.go`, die Hoechstgruenzeit begrenzt jede Freigabe |
 | Wie prueft ihr ohne Hardware? | Die Tests fahren den Regelkreis mit Mock-Lampen und gefaelschter Uhr |
