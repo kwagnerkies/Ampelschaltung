@@ -1,15 +1,11 @@
-// Paket detector ordnet die Haltelinien-Kontakte den Zufahrten zu.
 package detector
 
 import (
+	"ampel/internal/light"
 	"fmt"
 	"time"
-
-	"ampel/internal/light"
 )
 
-// Detector ordnet GPIO-Pins den Zufahrten zu. Entprellt wird im Kernel, nicht hier: der
-// Treiber kann das zuverlaessiger.
 type Detector struct {
 	sensors map[int]*sensor
 }
@@ -19,7 +15,6 @@ type sensor struct {
 	occupied  bool
 }
 
-// New erwartet je Zufahrt den Pin des Kontakts an der Haltelinie.
 func New(pins [light.DirectionCount]int) (*Detector, error) {
 	d := &Detector{sensors: make(map[int]*sensor, light.DirectionCount)}
 	for direction, pin := range pins {
@@ -31,7 +26,6 @@ func New(pins [light.DirectionCount]int) (*Detector, error) {
 	return d, nil
 }
 
-// Feed nimmt eine Flanke auf. Ein wiederholter Pegel erzeugt kein Ereignis.
 func (d *Detector) Feed(pin int, occupied bool, at time.Time) ([]SensorEvent, error) {
 	s, ok := d.sensors[pin]
 	if !ok {
@@ -44,15 +38,19 @@ func (d *Detector) Feed(pin int, occupied bool, at time.Time) ([]SensorEvent, er
 	return []SensorEvent{{Direction: s.direction, Occupied: occupied, At: at}}, nil
 }
 
-// Reset vergisst alle Pegel. Danach gilt jede Haltelinie als frei.
 func (d *Detector) Reset() {
 	for _, s := range d.sensors {
 		s.occupied = false
 	}
 }
 
-// Knows sagt, ob dieser Pin zu einer Zufahrt gehoert. Die Schalter gehoeren nicht dazu.
 func (d *Detector) Knows(pin int) bool {
 	_, ok := d.sensors[pin]
 	return ok
+}
+
+type SensorEvent struct {
+	Direction light.Direction
+	Occupied  bool
+	At        time.Time
 }

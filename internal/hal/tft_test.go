@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-// tape protokolliert, was der Treiber schreibt, getrennt nach Befehl und Daten.
 type tape struct {
 	commands []byte
 	data     []byte
@@ -24,7 +23,6 @@ func (t *tape) Write(data []byte) error {
 
 func (t *tape) Close() error { return nil }
 
-// line ist die DC- oder Reset-Leitung.
 type line struct {
 	tape *tape
 	dc   bool
@@ -49,7 +47,6 @@ func newTFT(t *testing.T, rotation int) (*TFT, *tape) {
 	return tft, tp
 }
 
-// Die Startfolge muss den Controller aufwecken und die Anzeige einschalten.
 func TestInitWakesAndSwitchesOn(t *testing.T) {
 	_, tp := newTFT(t, RotationLandscape)
 	for _, want := range []byte{tftSoftReset, tftSleepOut, tftDisplayOn, tftPixelFormat, tftMemoryAcces} {
@@ -57,7 +54,6 @@ func TestInitWakesAndSwitchesOn(t *testing.T) {
 			t.Errorf("Befehl %#x fehlt in der Startfolge", want)
 		}
 	}
-	// Das Pixelformat muss 16 Bit sein, sonst stimmt die Zahl der geschriebenen Bytes nicht.
 	if !contains(tp.data, 0x55) {
 		t.Error("das Pixelformat wurde nicht auf 16 Bit gesetzt")
 	}
@@ -74,7 +70,6 @@ func TestRotationDecidesSize(t *testing.T) {
 	}
 }
 
-// Ein gefuelltes Rechteck setzt erst den Bereich und schreibt dann genau zwei Bytes je Punkt.
 func TestFillSetsWindowAndWritesEveryPixel(t *testing.T) {
 	tft, tp := newTFT(t, RotationLandscape)
 	tp.commands, tp.data = nil, nil
@@ -85,7 +80,6 @@ func TestFillSetsWindowAndWritesEveryPixel(t *testing.T) {
 	if got, want := string(tp.commands), string([]byte{tftColumnAddr, tftPageAddr, tftMemoryWrite}); got != want {
 		t.Errorf("Befehlsfolge %#x, erwartet Spalte, Seite, Schreiben", tp.commands)
 	}
-	// Vier Bytes Spaltenbereich, vier Bytes Seitenbereich, danach die Bildpunkte.
 	pixels := tp.data[8:]
 	if got, want := len(pixels), 2*30*40; got != want {
 		t.Fatalf("%d Bytes Bilddaten, erwartet %d", got, want)
@@ -101,7 +95,6 @@ func TestFillSetsWindowAndWritesEveryPixel(t *testing.T) {
 	}
 }
 
-// Ein Rechteck ausserhalb der Flaeche ist ein Fehler und darf nicht blind geschrieben werden.
 func TestFillRejectsRectangleOutsideScreen(t *testing.T) {
 	tft, _ := newTFT(t, RotationLandscape)
 	for _, box := range [][4]int{{300, 0, 30, 10}, {0, 230, 10, 30}, {-1, 0, 10, 10}} {

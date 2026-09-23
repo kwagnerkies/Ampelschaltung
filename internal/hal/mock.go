@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// Mock ersetzt Lampentreiber und Eingaenge in Tests und im Simulator.
 type Mock struct {
 	mu      sync.Mutex
 	pattern []bool
@@ -60,15 +59,12 @@ func (m *Mock) Read(pin int) (bool, error) {
 	return m.levels[pin], nil
 }
 
-// Pattern liefert eine Kopie des zuletzt geschriebenen Musters.
 func (m *Mock) Pattern() []bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return slices.Clone(m.pattern)
 }
 
-// History liefert alle geschriebenen Muster in ihrer Reihenfolge. Damit pruefen Tests
-// vollstaendige Signalfolgen und nicht nur den Endzustand.
 func (m *Mock) History() [][]bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -91,15 +87,12 @@ func (m *Mock) Closed() bool {
 	return m.closed
 }
 
-// SetLevel legt den Pegel fuer Read fest, ohne eine Flanke zu melden. Fuer den Kippschalter.
 func (m *Mock) SetLevel(pin int, active bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.levels[pin] = active
 }
 
-// Emit meldet eine Flanke und setzt den Pegel passend nach. Blockiert nie: ist der Kanal
-// voll, laeuft der Test in einen Fehler statt in einen Deadlock.
 func (m *Mock) Emit(pin int, active bool, at time.Time) error {
 	m.SetLevel(pin, active)
 	select {

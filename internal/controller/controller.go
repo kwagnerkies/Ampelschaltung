@@ -1,49 +1,38 @@
 package controller
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"time"
-
 	"ampel/internal/clock"
 	"ampel/internal/detector"
 	"ampel/internal/light"
 	"ampel/internal/strategy"
+	"context"
+	"errors"
+	"fmt"
+	"time"
 )
 
-// Input ist eine Flanke an einem Eingang. Der Typ steht hier, damit der Regelkreis die
-// Hardwareschicht nicht kennt.
 type Input struct {
 	Pin    int
 	Active bool
 	Time   time.Time
 }
 
-// Options buendelt, was der Regelkreis zum Laufen braucht.
 type Options struct {
-	Timing   Timing
-	Tick     time.Duration
-	Sample   time.Duration
-	Detector *detector.Detector
-	Output   *Output
-	Strategy strategy.Strategy
-	Clock    clock.Clock
-	Inputs   <-chan Input
-	Observer Observer
-	// FlashHalf ist die halbe Periode des Gelbblinkens im Notzustand.
+	Timing    Timing
+	Tick      time.Duration
+	Sample    time.Duration
+	Detector  *detector.Detector
+	Output    *Output
+	Strategy  strategy.Strategy
+	Clock     clock.Clock
+	Inputs    <-chan Input
+	Observer  Observer
 	FlashHalf time.Duration
-	// Switches sind Haupt- und Notschalter. Ohne sie laeuft die Anlage immer, wie es der
-	// Simulator braucht.
-	Switches *Switches
-	// Watchdog ist die groesste erlaubte Pause zwischen zwei Takten.
-	Watchdog time.Duration
-	// Follow ist der groesste Abstand, in dem ein Fahrzeug noch als dicht folgend gilt.
-	Follow time.Duration
+	Switches  *Switches
+	Watchdog  time.Duration
+	Follow    time.Duration
 }
 
-// Controller ist der Regelkreis. Ein einziger Goroutine besitzt diesen Zustand; alles andere
-// kommuniziert ueber Kanaele.
 type Controller struct {
 	timing    Timing
 	tick      time.Duration
@@ -61,9 +50,7 @@ type Controller struct {
 
 	follow time.Duration
 
-	started time.Time
-	// lastCrossing ist je Zufahrt die letzte Ueberfahrt der Haltelinie in dieser Freigabe,
-	// following die Zahl der dicht darauf folgenden Fahrzeuge.
+	started      time.Time
 	lastCrossing [light.DirectionCount]time.Time
 	following    int
 	lastSample   time.Time
@@ -116,8 +103,6 @@ func (c *Controller) State() State { return c.machine.State() }
 
 func (c *Controller) Mode() string { return c.strategy.Name() }
 
-// Begin zeigt das Startbild. Der Aufruf ist mehrfach moeglich und wirkt nur einmal; Step
-// holt ihn nach, damit kein Aufrufer ohne Signalbild losfaehrt.
 func (c *Controller) Begin(now time.Time) error {
 	if c.begun {
 		return nil
@@ -130,7 +115,6 @@ func (c *Controller) Begin(now time.Time) error {
 	return nil
 }
 
-// Run haelt die Kreuzung in Betrieb, bis der Kontext endet. Danach steht alles auf Rot.
 func (c *Controller) Run(ctx context.Context) error {
 	now := c.clk.Now()
 	if err := c.Begin(now); err != nil {
@@ -151,15 +135,11 @@ func (c *Controller) Run(ctx context.Context) error {
 	}
 }
 
-// Step fuehrt einen Schritt des Regelkreises aus. Der Simulator ruft das direkt auf, damit
-// er ohne Ticker und ohne echte Zeit laufen kann.
 func (c *Controller) Step(now time.Time) {
 	if err := c.Begin(now); err != nil {
 		c.enterFault(now, err)
 		return
 	}
-	// Der Hauptschalter wird vor dem Notzustand abgefragt: aus und wieder an ist der
-	// Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
 	if c.switchStep(now) {
 		return
 	}
@@ -188,17 +168,144 @@ func (c *Controller) Step(now time.Time) {
 		}
 		c.observer.PhaseChanged(now, state, c.strategy.Name())
 	}
-	// Die Zielzeit waechst mit jedem dicht folgenden Fahrzeug, deshalb wird sie in jedem Takt
-	// nachgefuehrt. Anzeige und Log zeigen damit immer den geltenden Wert.
 	if c.machine.State().Stage == StageGreen {
 		c.machine.SetTarget(c.strategy.TargetGreen(c.view(now)))
 	}
 	c.emitSample(now)
 }
 
-// Reset vergisst alle Pegel und beginnt die Zaehlung der Verlaengerungen neu.
 func (c *Controller) Reset(now time.Time) {
 	c.detect.Reset()
 	c.following = 0
 	c.lastCrossing = [light.DirectionCount]time.Time{}
+}
+
+const DefaultTick = 50 * time.Millisecond
+
+const DefaultFollow = 2 * time.Second
+
+type Setup struct {
+	Sensors [light.DirectionCount]int
+	Follow  time.Duration
+	Timing  Timing
+	Tick    time.Duration
+	Sample  time.Duration
+
+	Strategy strategy.Strategy
+	Clock    clock.Clock
+	Writer   LampWriter
+	Inputs   <-chan Input
+	Observer Observer
+	Switches *Switches
+	Watchdog time.Duration
+}
+
+func Build(setup Setup) (*Controller, error) {
+	detect, err := detector.New(setup.Sensors)
+	if err != nil {
+		return nil, err
+	}
+	if setup.Tick <= 0 {
+		setup.Tick = DefaultTick
+	}
+	return New(Options{
+		Timing:   setup.Timing,
+		Tick:     setup.Tick,
+		Sample:   setup.Sample,
+		Detector: detect,
+		Output:   NewOutput(setup.Writer),
+		Strategy: setup.Strategy,
+		Follow:   setup.Follow,
+		Clock:    setup.Clock,
+		Inputs:   setup.Inputs,
+		Observer: setup.Observer,
+		Switches: setup.Switches,
+		Watchdog: setup.Watchdog,
+	})
+}
+
+func (c *Controller) Feed(input Input) {
+	if c.switches != nil && c.switches.knows(input.Pin) {
+		c.switches.level(input.Pin, input.Active)
+		return
+	}
+	if !c.On() || !c.detect.Knows(input.Pin) {
+		return
+	}
+	events, err := c.detect.Feed(input.Pin, input.Active, input.Time)
+	if err != nil {
+		return
+	}
+	c.applyEvents(events)
+}
+
+func (c *Controller) applyEvents(events []detector.SensorEvent) {
+	for _, event := range events {
+		c.observer.SensorChanged(event)
+		if !event.Occupied {
+			c.countCrossing(event.At, event.Direction)
+		}
+	}
+}
+
+func (c *Controller) view(now time.Time) strategy.View {
+	return strategy.View{
+		Now:        now,
+		GreenSince: c.machine.State().Since,
+		Following:  c.following,
+	}
+}
+
+func (c *Controller) countCrossing(at time.Time, direction light.Direction) {
+	state := c.machine.State()
+	if state.Stage != StageGreen || PhaseOf(direction) != state.Phase {
+		return
+	}
+	if last := c.lastCrossing[direction]; !last.IsZero() && at.Sub(last) <= c.follow {
+		c.following++
+	}
+	c.lastCrossing[direction] = at
+}
+
+func (c *Controller) Snapshot(now time.Time) Snapshot {
+	state := c.machine.State()
+	snapshot := Snapshot{
+		State:     state,
+		Elapsed:   now.Sub(state.Since),
+		Mode:      c.strategy.Name(),
+		Following: c.following,
+		Aspects:   state.Aspects(),
+	}
+	for _, direction := range light.Directions() {
+		if PhaseOf(direction) == state.Phase && state.Stage == StageGreen {
+			if remaining := state.Target - snapshot.Elapsed; remaining > 0 {
+				snapshot.Green[direction] = remaining
+			}
+		} else {
+			snapshot.Green[direction] = c.strategy.TargetGreen(strategy.View{Now: now, GreenSince: now})
+		}
+	}
+	return snapshot
+}
+
+const DefaultWatchdog = 500 * time.Millisecond
+
+type Watchdog struct {
+	limit time.Duration
+	last  time.Time
+}
+
+func NewWatchdog(limit time.Duration, now time.Time) *Watchdog {
+	if limit <= 0 {
+		limit = DefaultWatchdog
+	}
+	return &Watchdog{limit: limit, last: now}
+}
+
+func (w *Watchdog) Limit() time.Duration { return w.limit }
+
+func (w *Watchdog) Kick(now time.Time) (time.Duration, bool) {
+	gap := now.Sub(w.last)
+	w.last = now
+	return gap, gap > w.limit
 }

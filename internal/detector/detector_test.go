@@ -25,7 +25,6 @@ func newDetector(t *testing.T) *Detector {
 	return d
 }
 
-// Jede Flanke wird unmittelbar zum Ereignis. Entprellt hat der Kernel schon.
 func TestFeedEmitsImmediately(t *testing.T) {
 	d := newDetector(t)
 	events, err := d.Feed(24, true, base)
@@ -41,7 +40,6 @@ func TestFeedEmitsImmediately(t *testing.T) {
 	}
 }
 
-// Derselbe Pegel zweimal ist keine Flanke.
 func TestFeedIgnoresRepeatedLevel(t *testing.T) {
 	d := newDetector(t)
 	if _, err := d.Feed(23, true, base); err != nil {
@@ -77,7 +75,6 @@ func TestNewRejectsDuplicatePin(t *testing.T) {
 	}
 }
 
-// Nach dem Reset gilt jede Zufahrt als frei, die naechste Belegung ist wieder eine Flanke.
 func TestResetForgetsLevels(t *testing.T) {
 	d := newDetector(t)
 	if _, err := d.Feed(25, true, base); err != nil {

@@ -32,13 +32,11 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 - Keine Emojis, weder im Code noch in Logs, Commit-Messages, Dateinamen oder Dokumentation.
 
-- Wenige Kommentare. Kommentiert wird ausschliesslich, was aus dem Code nicht hervorgeht: Sicherheitsmatrix, Zeitkonstanten mit physikalischer Bedeutung, Regelungsformeln, Hardware-Eigenheiten. Keine Kommentare, die Code paraphrasieren. Keine Trennbanner, keine auskommentierten Codeblocks, keine TODO-Halden.
-
-- Pro Paket ein einzeiliger Doc-Kommentar in `doc.go` oder ueber dem Paketnamen. Exportierte Bezeichner nur dort kommentieren, wo die Semantik nicht offensichtlich ist.
+- Keine Kommentare im Code. Was erklaert werden muss, steht in der Dokumentation unter docs/.
 
 - Bezeichner in Englisch, damit der Code konsistent zu Standardbibliothek und Abhaengigkeiten bleibt. Nutzertexte und Dokumentation in Deutsch.
 
-- Keine Monolithdatei. Eine Datei pro Verantwortlichkeit, Richtwert unter 250 Zeilen. Wird eine Datei groesser, ist das ein Signal zum Aufteilen.
+- Eine Datei je Paket, solange sie unter etwa 350 Zeilen bleibt. Erst darueber wird aufgeteilt.
 
 - Fehler werden mit `fmt.Errorf` und `%w` umschlossen und nach oben gereicht. `panic` nur in `main` beim Startfehler.
 

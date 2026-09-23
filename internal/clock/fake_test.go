@@ -26,8 +26,6 @@ func TestFakeAfterFiresAtDeadline(t *testing.T) {
 	}
 }
 
-// Ein einzelner Sprung muss mehrere Timer in zeitlicher Reihenfolge feuern, sonst laufen
-// Regelungstests mit ueberlappenden Zeiten falsch.
 func TestFakeAdvanceFiresInOrder(t *testing.T) {
 	f := NewFake(start)
 	late := f.After(10 * time.Millisecond)

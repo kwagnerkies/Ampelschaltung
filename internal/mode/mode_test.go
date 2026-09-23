@@ -7,7 +7,6 @@ import (
 
 var start = time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 
-// Ein prellender Kippschalter darf keinen Moduswechsel erzeugen.
 func TestSwitchIgnoresBouncing(t *testing.T) {
 	s := NewSwitch(false, 100*time.Millisecond, start)
 
@@ -21,7 +20,6 @@ func TestSwitchIgnoresBouncing(t *testing.T) {
 		now = now.Add(20 * time.Millisecond)
 	}
 
-	// Danach liegt der Pegel ruhig an.
 	now = now.Add(20 * time.Millisecond)
 	if s.Poll(true, now) {
 		t.Fatal("Wechsel schon beim ersten ruhigen Abfragen")

@@ -1,9 +1,11 @@
 package display
 
 import (
-	"testing"
-
+	"ampel/internal/controller"
+	"ampel/internal/detector"
 	"ampel/internal/light"
+	"testing"
+	"time"
 )
 
 type fill struct {
@@ -11,7 +13,6 @@ type fill struct {
 	color      Color
 }
 
-// fake protokolliert die Zeichenbefehle, statt sie auszufuehren.
 type fake struct {
 	width, height int
 	fills         []fill
@@ -35,14 +36,12 @@ func fields(north, east, south, west int) [light.DirectionCount]Field {
 	}
 }
 
-// Der erste Aufbau zeichnet den Hintergrund und alle vier Zufahrten.
 func TestFirstUpdateDrawsEverything(t *testing.T) {
 	canvas := newFake()
 	screen := New(canvas)
 	if err := screen.Update(fields(18, 7, 18, 7)); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
-	// Hintergrund plus vier Zufahrten zu je zwei Ziffern zu je sieben Segmenten.
 	if got, want := len(canvas.fills), 1+4*2*7; got != want {
 		t.Errorf("%d Zeichenbefehle, erwartet %d", got, want)
 	}
@@ -51,8 +50,6 @@ func TestFirstUpdateDrawsEverything(t *testing.T) {
 	}
 }
 
-// Faehrt ein Auto ueber einen Sensor, aendert sich genau eine Zahl. Dann darf auch nur diese
-// eine Zahl neu gezeichnet werden, sonst flackert die Anzeige.
 func TestOnlyChangedFieldsAreRedrawn(t *testing.T) {
 	canvas := newFake()
 	screen := New(canvas)
@@ -78,7 +75,6 @@ func TestOnlyChangedFieldsAreRedrawn(t *testing.T) {
 	}
 }
 
-// Ohne Aenderung wird gar nicht gezeichnet.
 func TestUnchangedScreenDrawsNothing(t *testing.T) {
 	canvas := newFake()
 	screen := New(canvas)
@@ -94,7 +90,6 @@ func TestUnchangedScreenDrawsNothing(t *testing.T) {
 	}
 }
 
-// Die Zufahrten liegen im Kreuz: Nord oben, Sued unten, West links, Ost rechts.
 func TestLayoutIsACross(t *testing.T) {
 	screen := New(newFake())
 	north, east, south, west := screen.boxes[light.North], screen.boxes[light.East],
@@ -125,7 +120,6 @@ func TestAspectColors(t *testing.T) {
 	}
 }
 
-// Die Ziffern muessen sich unterscheiden, sonst zeigt die Anzeige Unsinn.
 func TestDigitsDiffer(t *testing.T) {
 	seen := make(map[[7]bool]int)
 	for value, pattern := range segments {
@@ -134,4 +128,55 @@ func TestDigitsDiffer(t *testing.T) {
 		}
 		seen[pattern] = value
 	}
+}
+
+func snapshot(east time.Duration) controller.Snapshot {
+	s := controller.Snapshot{}
+	s.Aspects = [light.DirectionCount]light.Aspect{
+		light.North: light.AspectGreen,
+		light.East:  light.AspectRed,
+		light.South: light.AspectGreen,
+		light.West:  light.AspectRed,
+	}
+	s.Green = [light.DirectionCount]time.Duration{
+		light.North: 18 * time.Second,
+		light.East:  east,
+		light.South: 18 * time.Second,
+		light.West:  east,
+	}
+	return s
+}
+
+func TestSensorEventRedrawsImmediately(t *testing.T) {
+	canvas := newFake()
+	current := snapshot(7 * time.Second)
+	observer := NewObserver(New(canvas), func(time.Time) controller.Snapshot { return current }, nil)
+
+	observer.Sample(time.Time{}, current)
+	canvas.fills = nil
+
+	current = snapshot(12 * time.Second)
+	observer.SensorChanged(detector.SensorEvent{Direction: light.East, Occupied: true})
+	if len(canvas.fills) == 0 {
+		t.Fatal("das Sensorereignis zeichnete nichts neu")
+	}
+	if got, want := len(canvas.fills), 2*2*7; got != want {
+		t.Errorf("%d Zeichenbefehle, erwartet %d fuer Ost und West", got, want)
+	}
+}
+
+func TestSecondsAreRounded(t *testing.T) {
+	canvas := newFake()
+	screen := New(canvas)
+	observer := NewObserver(screen, nil, nil)
+	observer.Sample(time.Time{}, snapshot(7600*time.Millisecond))
+	if got := screen.last[light.East].Seconds; got != 8 {
+		t.Errorf("7,6 Sekunden werden als %d angezeigt", got)
+	}
+}
+
+func TestObserverWithoutSourceIsSilent(t *testing.T) {
+	observer := NewObserver(New(newFake()), nil, nil)
+	observer.SensorChanged(detector.SensorEvent{Direction: light.North})
+	observer.PhaseChanged(time.Time{}, controller.State{}, "adaptiv")
 }

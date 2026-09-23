@@ -1,29 +1,53 @@
-// Paket strategy entscheidet ueber die Dauer der Freigabephasen.
 package strategy
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
-// View ist der Blick der Strategie auf die Kreuzung. Sie kennt keine Richtungen und keine
-// Phasen, nur die laufende Freigabe: das haelt die Strategien einfach und ohne Regelkreis
-// testbar.
 type View struct {
 	Now        time.Time
 	GreenSince time.Time
-	// Following ist die Zahl der Fahrzeuge, die in dieser Freigabe dicht auf ihren Vorgaenger
-	// ueber die Haltelinie gefolgt sind. Jedes davon verlaengert die Freigabe.
-	Following int
+	Following  int
 }
 
-// Green ist die bisher verstrichene Freigabezeit.
 func (v View) Green() time.Duration { return v.Now.Sub(v.GreenSince) }
 
-// Strategy entscheidet, wie lange eine Freigabe dauert. Die Zwischenzeiten sind fest und
-// werden von keiner Strategie veraendert.
 type Strategy interface {
-	// Name erscheint im Log und in der Auswertung.
 	Name() string
-	// TargetGreen ist die Gruenzeit, die diese Freigabe nach dem aktuellen Stand bekommt.
 	TargetGreen(view View) time.Duration
-	// EndGreen sagt, ob die laufende Freigabe jetzt endet.
 	EndGreen(view View) bool
 }
+
+type Following struct {
+	base time.Duration
+	step time.Duration
+	max  time.Duration
+}
+
+var _ Strategy = (*Following)(nil)
+
+func NewFollowing(base, step, max time.Duration) (*Following, error) {
+	if base <= 0 {
+		return nil, fmt.Errorf("grundgruenzeit %s", base)
+	}
+	if step <= 0 {
+		return nil, fmt.Errorf("verlaengerung %s", step)
+	}
+	if max < base {
+		return nil, fmt.Errorf("hoechstgruenzeit %s liegt unter der grundzeit %s", max, base)
+	}
+	return &Following{base: base, step: step, max: max}, nil
+}
+
+func (f *Following) Name() string { return "adaptiv" }
+
+func (f *Following) TargetGreen(view View) time.Duration {
+	target := f.base + time.Duration(view.Following)*f.step
+	if target > f.max {
+		return f.max
+	}
+	return target
+}
+
+func (f *Following) EndGreen(view View) bool { return view.Green() >= f.TargetGreen(view) }

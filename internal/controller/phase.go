@@ -1,13 +1,10 @@
 package controller
 
 import (
-	"time"
-
 	"ampel/internal/light"
+	"time"
 )
 
-// Phase ist eine Freigabephase der Kreuzung. Nord und Sued sind gemeinsam gruen, danach Ost
-// und West. PhaseStartup ist der Nullwert, damit ein frischer Automat nicht freigibt.
 type Phase int
 
 const (
@@ -17,8 +14,6 @@ const (
 	PhaseFault
 )
 
-// Stage ist der Abschnitt innerhalb einer Phase. Die deutsche Signalfolge braucht neben der
-// Freigabe drei Zwischenabschnitte.
 type Stage int
 
 const (
@@ -56,7 +51,6 @@ func (s Stage) String() string {
 	return "unbekannt"
 }
 
-// Directions sind die Zufahrten, die diese Phase freigibt.
 func (p Phase) Directions() []light.Direction {
 	switch p {
 	case PhaseNS:
@@ -67,7 +61,6 @@ func (p Phase) Directions() []light.Direction {
 	return nil
 }
 
-// PhaseOf ist die Freigabephase, zu der eine Zufahrt gehoert.
 func PhaseOf(direction light.Direction) Phase {
 	switch direction {
 	case light.North, light.South:
@@ -76,8 +69,6 @@ func PhaseOf(direction light.Direction) Phase {
 	return PhaseEW
 }
 
-// Other ist die jeweils andere Freigabephase. Aus dem Start und aus der Stoerung heraus
-// beginnt Nord und Sued.
 func (p Phase) Other() Phase {
 	switch p {
 	case PhaseNS:
@@ -88,7 +79,6 @@ func (p Phase) Other() Phase {
 	return PhaseNS
 }
 
-// State ist der Zustand des Phasenautomaten.
 type State struct {
 	Phase  Phase
 	Stage  Stage
@@ -96,7 +86,6 @@ type State struct {
 	Target time.Duration
 }
 
-// Name ist die Bezeichnung des Zustands fuer das Log.
 func (s State) Name() string {
 	if s.Stage == StageAllRed {
 		return "Allrot"
@@ -104,7 +93,6 @@ func (s State) Name() string {
 	return s.Phase.String() + "_" + s.Stage.String()
 }
 
-// Aspects ist das Signalbild dieses Zustands. Alles, was nicht freigegeben ist, zeigt Rot.
 func (s State) Aspects() [light.DirectionCount]light.Aspect {
 	aspects := [light.DirectionCount]light.Aspect{
 		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed,
@@ -124,4 +112,71 @@ func (s State) Aspects() [light.DirectionCount]light.Aspect {
 		aspects[direction] = aspect
 	}
 	return aspects
+}
+
+type Timing struct {
+	Yellow    time.Duration
+	AllRed    time.Duration
+	RedYellow time.Duration
+}
+
+func (t Timing) Intergreen() time.Duration { return t.Yellow + t.AllRed + t.RedYellow }
+
+type Machine struct {
+	timing Timing
+	state  State
+}
+
+func NewMachine(timing Timing, now time.Time) *Machine {
+	return &Machine{
+		timing: timing,
+		state:  State{Phase: PhaseStartup, Stage: StageAllRed, Since: now},
+	}
+}
+
+func (m *Machine) State() State { return m.state }
+
+func (m *Machine) SetTarget(target time.Duration) { m.state.Target = target }
+
+func (m *Machine) Advance(now time.Time, endGreen bool) bool {
+	elapsed := now.Sub(m.state.Since)
+	switch m.state.Stage {
+	case StageGreen:
+		if !endGreen {
+			return false
+		}
+		m.enter(now, m.state.Phase, StageYellow)
+	case StageYellow:
+		if elapsed < m.timing.Yellow {
+			return false
+		}
+		m.enter(now, m.state.Phase, StageAllRed)
+	case StageAllRed:
+		if elapsed < m.timing.AllRed {
+			return false
+		}
+		m.enter(now, m.state.Phase.Other(), StageRedYellow)
+	case StageRedYellow:
+		if elapsed < m.timing.RedYellow {
+			return false
+		}
+		m.enter(now, m.state.Phase, StageGreen)
+	}
+	return true
+}
+
+func (m *Machine) Restart(now time.Time) {
+	m.state = State{Phase: PhaseStartup, Stage: StageAllRed, Since: now}
+}
+
+func (m *Machine) Fault(now time.Time) {
+	m.state = State{Phase: PhaseFault, Stage: StageAllRed, Since: now}
+}
+
+func (m *Machine) enter(now time.Time, phase Phase, stage Stage) {
+	target := m.state.Target
+	if stage != StageGreen {
+		target = 0
+	}
+	m.state = State{Phase: phase, Stage: stage, Since: now, Target: target}
 }

@@ -37,7 +37,6 @@ func TestMockEmitDeliversEventAndLevel(t *testing.T) {
 	}
 }
 
-// Ein voller Kanal darf den Test nicht blockieren, sondern muss auffallen.
 func TestMockEmitReportsFullChannel(t *testing.T) {
 	m := NewMock(4, 1)
 	at := time.Now()

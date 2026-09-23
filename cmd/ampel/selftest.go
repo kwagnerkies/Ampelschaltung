@@ -1,26 +1,23 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"io"
-	"time"
-
 	"ampel/internal/clock"
 	"ampel/internal/config"
 	"ampel/internal/controller"
 	"ampel/internal/hal"
+	"ampel/internal/light"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+	"time"
 )
 
-// lampDwell ist die Leuchtdauer je Lampe, lang genug um sie mit dem Auge zu pruefen.
 const lampDwell = 400 * time.Millisecond
 
-// selftestBuffer fasst die Flanken, die zwischen zwei Ausgaben anfallen.
 const selftestBuffer = 256
 
-// runSelftest prueft die Verdrahtung: erst leuchtet jede Lampe einzeln, danach werden
-// Sensorflanken bis zum Abbruch ausgegeben.
 func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	chip, err := hal.OpenChip(cfg.Hardware.Chip)
 	if err != nil {
@@ -72,8 +69,6 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	return nil
 }
 
-// openLamps fordert die zwoelf LED-Leitungen an, in der Reihenfolge Nord Rot, Nord Gelb,
-// Nord Gruen, dann Ost und so weiter.
 func openLamps(chip *hal.Chip, cfg *config.Config) (hal.LampDriver, error) {
 	var lines []hal.OutputLine
 	for i, head := range cfg.Hardware.Lamps.Heads() {
@@ -145,3 +140,61 @@ func printEvents(ctx context.Context, out io.Writer, events <-chan hal.InputEven
 var approachNames = [4]string{"Nord", "Ost", "Sued", "West"}
 
 var lampNames = [3]string{"Rot", "Gelb", "Gruen"}
+
+type step struct {
+	aspects [light.DirectionCount]light.Aspect
+	hold    time.Duration
+}
+
+func showSequence(ctx context.Context, out io.Writer, output *controller.Output, timing config.Timing) error {
+	for _, s := range sequenceSteps(timing) {
+		if err := output.Show(s.aspects); err != nil {
+			return fmt.Errorf("signalbild schalten: %w", err)
+		}
+		fmt.Fprintf(out, "  %5s  %s\n", s.hold, describe(s.aspects))
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(s.hold):
+		}
+	}
+	return nil
+}
+
+func sequenceSteps(timing config.Timing) []step {
+	const (
+		ns = 0
+		ew = 1
+	)
+	phase := func(free int, aspect light.Aspect) [light.DirectionCount]light.Aspect {
+		aspects := [light.DirectionCount]light.Aspect{
+			light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed,
+		}
+		if free == ns {
+			aspects[light.North], aspects[light.South] = aspect, aspect
+		} else {
+			aspects[light.East], aspects[light.West] = aspect, aspect
+		}
+		return aspects
+	}
+	allRed := phase(ns, light.AspectRed)
+
+	steps := []step{{aspects: allRed, hold: timing.AllRed.Duration()}}
+	for _, free := range []int{ns, ew} {
+		steps = append(steps,
+			step{phase(free, light.AspectRedYellow), timing.RedYellow.Duration()},
+			step{phase(free, light.AspectGreen), timing.BaseGreen.Duration()},
+			step{phase(free, light.AspectYellow), timing.Yellow.Duration()},
+			step{allRed, timing.AllRed.Duration()},
+		)
+	}
+	return steps
+}
+
+func describe(aspects [light.DirectionCount]light.Aspect) string {
+	parts := make([]string, 0, light.DirectionCount)
+	for i, aspect := range aspects {
+		parts = append(parts, fmt.Sprintf("%s %s", light.Direction(i), aspect))
+	}
+	return strings.Join(parts, ", ")
+}

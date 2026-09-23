@@ -16,8 +16,6 @@ func following(t *testing.T) *Following {
 	return f
 }
 
-// Zwei dicht aufeinander folgende Fahrzeuge verlaengern um drei Sekunden, jedes weitere um
-// drei weitere.
 func TestEachFollowingVehicleExtends(t *testing.T) {
 	f := following(t)
 	cases := map[int]time.Duration{
@@ -33,7 +31,6 @@ func TestEachFollowingVehicleExtends(t *testing.T) {
 	}
 }
 
-// Die Hoechstgruenzeit ist die Grenze, sonst verhungert die andere Richtung.
 func TestExtensionStopsAtMaximum(t *testing.T) {
 	f := following(t)
 	if got := f.TargetGreen(View{Following: 100}); got != 30*time.Second {
@@ -41,7 +38,6 @@ func TestExtensionStopsAtMaximum(t *testing.T) {
 	}
 }
 
-// Die Freigabe endet, sobald die Zielzeit erreicht ist, und keine Sekunde frueher.
 func TestGreenEndsAtTarget(t *testing.T) {
 	f := following(t)
 	cases := []struct {

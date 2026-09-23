@@ -11,9 +11,9 @@ Der vollstaendige Plan steht in docs/Plan.md. Vor jedem Arbeitspaket lesen.
 
 - Keine Emojis, nirgendwo.
 
-- Wenige Kommentare. Nur erklaeren, was aus dem Code nicht hervorgeht.
+- Keine Kommentare. Namen erklaeren den Code.
 
-- Keine Datei ueber 250 Zeilen. Eine Verantwortlichkeit pro Datei.
+- Eine Datei je Paket, solange sie unter etwa 350 Zeilen bleibt.
 
 - Bezeichner Englisch, Nutzertexte und CSV-Kopf Deutsch.
 

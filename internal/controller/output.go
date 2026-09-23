@@ -1,23 +1,18 @@
 package controller
 
 import (
-	"fmt"
-
 	"ampel/internal/light"
+	"errors"
+	"fmt"
+	"time"
 )
 
-// LampCount ist die Zahl der Lampen: drei je Ampelkopf, in der Reihenfolge Rot, Gelb, Gruen.
 const LampCount = light.DirectionCount * 3
 
-// LampWriter nimmt den Zustand aller Lampen. Index 0 ist Nord Rot, Index 1 Nord Gelb, und so
-// weiter in der Reihenfolge der Zufahrten. Die Schnittstelle steht hier und nicht in der
-// Hardwareschicht, damit der Regelkreis nicht von ihr abhaengt.
 type LampWriter interface {
 	Write(lamps []bool) error
 }
 
-// Output ist der einzige Weg zur Lampenhardware. Jedes Muster passiert zuerst die
-// Sicherheitspruefung, danach die deutsche Signalfolge der Koepfe.
 type Output struct {
 	heads  light.Heads
 	writer LampWriter
@@ -29,8 +24,6 @@ func NewOutput(writer LampWriter) *Output {
 
 func (o *Output) Aspects() [light.DirectionCount]light.Aspect { return o.heads.Aspects() }
 
-// Show uebernimmt neue Signalbilder. Bei einem Konflikt oder einem Verstoss gegen die
-// Signalfolge bleibt der bisherige Zustand stehen und die Hardware wird nicht beschrieben.
 func (o *Output) Show(aspects [light.DirectionCount]light.Aspect) error {
 	if err := Check(aspects); err != nil {
 		return err
@@ -44,7 +37,6 @@ func (o *Output) Show(aspects [light.DirectionCount]light.Aspect) error {
 	return nil
 }
 
-// Dark schaltet alle Koepfe ab. Fuer das geordnete Beenden, wenn kein Signalbild mehr gilt.
 func (o *Output) Dark() error {
 	var off [light.DirectionCount]light.Aspect
 	for i := range off {
@@ -53,7 +45,6 @@ func (o *Output) Dark() error {
 	return o.Show(off)
 }
 
-// pattern uebersetzt die Signalbilder in den Zustand der zwoelf Lampen.
 func pattern(aspects [light.DirectionCount]light.Aspect) []bool {
 	lamps := make([]bool, LampCount)
 	for i, aspect := range aspects {
@@ -63,4 +54,93 @@ func pattern(aspects [light.DirectionCount]light.Aspect) []bool {
 		lamps[i*3+2] = on.Green
 	}
 	return lamps
+}
+
+var conflicts = [light.DirectionCount][light.DirectionCount]bool{
+	light.North: {light.East: true, light.West: true},
+	light.East:  {light.North: true, light.South: true},
+	light.South: {light.East: true, light.West: true},
+	light.West:  {light.North: true, light.South: true},
+}
+
+var ErrConflict = errors.New("unzulaessiger signalzustand")
+
+func Check(aspects [light.DirectionCount]light.Aspect) error {
+	for i, own := range aspects {
+		if !own.Releasing() {
+			continue
+		}
+		for j, other := range aspects {
+			if i == j {
+				continue
+			}
+			if conflicts[i][j] && other.Releasing() {
+				return fmt.Errorf("%w: %s zeigt %s, %s zeigt %s",
+					ErrConflict, light.Direction(i), own, light.Direction(j), other)
+			}
+			if other == light.AspectOff {
+				return fmt.Errorf("%w: %s zeigt %s, %s ist dunkel",
+					ErrConflict, light.Direction(i), own, light.Direction(j))
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Controller) Shutdown() error {
+	state := c.machine.State()
+	if state.Stage == StageGreen {
+		yellow := State{Phase: state.Phase, Stage: StageYellow}
+		if err := c.output.Show(yellow.Aspects()); err != nil {
+			return err
+		}
+	}
+	allRed := State{Phase: state.Phase, Stage: StageAllRed}
+	if err := c.output.Show(allRed.Aspects()); err != nil {
+		return fmt.Errorf("kreuzung auf rot schalten: %w", err)
+	}
+	return nil
+}
+
+func (c *Controller) show() error {
+	return c.output.Show(c.machine.State().Aspects())
+}
+
+func (c *Controller) emitSample(now time.Time) {
+	if c.sample <= 0 || now.Sub(c.lastSample) < c.sample {
+		return
+	}
+	c.lastSample = now
+	c.observer.Sample(now, c.Snapshot(now))
+}
+
+func (c *Controller) enterFault(now time.Time, err error) {
+	c.fault = err
+	c.machine.Fault(now)
+	c.observer.Fault(now, err)
+	c.flashOn = false
+	c.flash(now)
+}
+
+var errWarning = errors.New("notzustand ueber den schalter")
+
+func (c *Controller) flash(now time.Time) {
+	on := (now.Sub(c.machine.State().Since)/c.flashHalf)%2 == 0
+	if on == c.flashOn {
+		return
+	}
+	c.flashOn = on
+	aspect := light.AspectOff
+	if on {
+		aspect = light.AspectYellowFlash
+	}
+	_ = c.showAll(aspect)
+}
+
+func (c *Controller) showAll(aspect light.Aspect) error {
+	var aspects [light.DirectionCount]light.Aspect
+	for direction := range aspects {
+		aspects[direction] = aspect
+	}
+	return c.output.Show(aspects)
 }

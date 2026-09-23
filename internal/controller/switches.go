@@ -7,16 +7,11 @@ import (
 	"ampel/internal/mode"
 )
 
-// DefaultSwitchDebounce ist die Ruhezeit der Schalter. Ein mechanischer Kippschalter prellt
-// laenger als ein Reed-Kontakt, deshalb 100 ms statt der 15 ms der Fahrbahnsensoren.
 const DefaultSwitchDebounce = 100 * time.Millisecond
 
-// Switches sind die beiden Kippschalter der Anlage: der Hauptschalter und der Notschalter.
-// Geschlossener Kontakt bedeutet jeweils eingeschaltet.
 type Switches struct {
 	PowerPin int
 	FaultPin int
-	// PowerOn und FaultOn sind die beim Start gelesenen Pegel.
 	PowerOn  bool
 	FaultOn  bool
 	Debounce time.Duration
@@ -52,12 +47,8 @@ func (s *switches) knows(pin int) bool {
 
 func (s *switches) level(pin int, active bool) { s.levels[pin] = active }
 
-// On sagt, ob die Anlage eingeschaltet ist. Ohne Schalter laeuft sie immer.
 func (c *Controller) On() bool { return c.switches == nil || c.switches.on }
 
-// switchStep fragt beide Schalter ab und meldet, ob der Regelkreis diesen Takt aussetzt.
-// Ausgeschaltet ist die Kreuzung dunkel, im Notzustand blinkt sie gelb; in beiden Faellen
-// steht der Phasenautomat still.
 func (c *Controller) switchStep(now time.Time) bool {
 	s := c.switches
 	if s == nil {
@@ -79,8 +70,6 @@ func (c *Controller) switchStep(now time.Time) bool {
 		if s.warn {
 			c.enterFault(now, errWarning)
 		} else {
-			// Der Zustand ist beendet, also beginnt die Anlage von vorn: Allrot, dann die
-			// normale Folge.
 			c.restart(now)
 		}
 	}
@@ -98,15 +87,11 @@ func (c *Controller) switchOff(now time.Time) {
 	}
 }
 
-// restart beginnt bei Allrot. Aus dem dunklen Zustand und aus dem Gelbblinken darf nie
-// unmittelbar eine Freigabe folgen.
 func (c *Controller) restart(now time.Time) {
 	c.fault = nil
 	c.flashOn = false
 	c.machine.Restart(now)
 	c.Reset(now)
-	// Waehrend die Anlage stand, hat der Regelkreis nichts getan. Ohne diesen Takt hielte der
-	// Watchdog die Pause fuer eine Stoerung.
 	c.watchdog.Kick(now)
 	c.observer.PowerChanged(now, true)
 	if err := c.show(); err != nil {

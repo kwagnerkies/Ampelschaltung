@@ -1,17 +1,20 @@
-// Programm ampel steuert die Modellkreuzung.
 package main
 
 import (
+	"ampel/internal/clock"
+	"ampel/internal/config"
+	"ampel/internal/controller"
+	"ampel/internal/display"
+	"ampel/internal/hal"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"ampel/internal/config"
 )
 
 func main() {
@@ -45,8 +48,6 @@ func run() error {
 	return runControl(ctx, cfg, os.Stdout)
 }
 
-// loadConfig liefert zusaetzlich die Herkunft der Werte, damit ein fehlender Pfad in der
-// Ausgabe sichtbar wird und nicht als geprueft durchgeht.
 func loadConfig(path string) (*config.Config, string, error) {
 	cfg, err := config.Load(path)
 	switch {
@@ -61,4 +62,193 @@ func loadConfig(path string) (*config.Config, string, error) {
 	default:
 		return nil, "", err
 	}
+}
+
+const inputBuffer = 256
+
+func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
+	chip, err := hal.OpenChip(cfg.Hardware.Chip)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = chip.Close() }()
+
+	driver, err := openLamps(chip, cfg)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = driver.Close() }()
+
+	pins, _ := inputPins(cfg)
+	inputs, err := hal.NewGPIOInput(cfg.Hardware.Chip, pins, cfg.Hardware.Debounce.Duration(), inputBuffer, clock.NewReal())
+	if err != nil {
+		return err
+	}
+	defer func() { _ = inputs.Close() }()
+
+	setup, err := cfg.Setup()
+	if err != nil {
+		return err
+	}
+	setup.Strategy, err = cfg.Following()
+	if err != nil {
+		return err
+	}
+	setup.Switches = readSwitches(cfg, inputs)
+	setup.Watchdog = controller.DefaultWatchdog
+	setup.Clock = clock.NewReal()
+	setup.Writer = driver
+	setup.Inputs = pump(ctx, inputs.Events())
+
+	screen, closeDisplay, err := openDisplay(chip, cfg, out)
+	if err != nil {
+		fmt.Fprintln(out, "Hinweis: Anzeige nicht verfuegbar:", err)
+	} else {
+		defer closeDisplay()
+	}
+	var panel *display.Observer
+	if screen != nil {
+		panel = display.NewObserver(screen, nil, func(err error) { fmt.Fprintln(out, "Anzeige:", err) })
+		setup.Observer = panel
+	}
+
+	control, err := controller.Build(setup)
+	if err != nil {
+		return err
+	}
+	if panel != nil {
+		panel.Source(control.Snapshot)
+	}
+
+	fmt.Fprintln(out, "Betrieb gestartet, Verlaengerung bei dicht folgenden Fahrzeugen")
+	err = control.Run(ctx)
+	fmt.Fprintf(out, "Beendet. %d Flanken verworfen\n", inputs.Dropped())
+	if errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return err
+}
+
+func readSwitches(cfg *config.Config, source hal.InputSource) *controller.Switches {
+	s := &controller.Switches{
+		PowerPin: cfg.Hardware.PowerSwitch,
+		FaultPin: cfg.Hardware.FaultSwitch,
+		PowerOn:  true,
+	}
+	if closed, err := source.Read(s.PowerPin); err == nil {
+		s.PowerOn = closed
+	}
+	if closed, err := source.Read(s.FaultPin); err == nil {
+		s.FaultOn = closed
+	}
+	return s
+}
+
+func pump(ctx context.Context, events <-chan hal.InputEvent) <-chan controller.Input {
+	inputs := make(chan controller.Input, inputBuffer)
+	go func() {
+		defer close(inputs)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event := <-events:
+				select {
+				case inputs <- controller.Input{Pin: event.Pin, Active: event.Active, Time: event.Time}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+	return inputs
+}
+
+func printSummary(w io.Writer, cfg *config.Config, source string) {
+	fmt.Fprintf(w, "Konfiguration in Ordnung (%s)\n", source)
+	fmt.Fprintf(w, "  GPIO-Chip          %s\n", cfg.Hardware.Chip)
+	for i, head := range cfg.Hardware.Lamps.Heads() {
+		fmt.Fprintf(w, "  Lampen %-5s       Rot %d, Gelb %d, Gruen %d\n",
+			approachNames[i], head[0], head[1], head[2])
+	}
+	for i, pin := range cfg.Hardware.Sensors.Approaches() {
+		fmt.Fprintf(w, "  Haltelinie %-5s   BCM %d\n", approachNames[i], pin)
+	}
+	fmt.Fprintf(w, "  Schalter           Hauptschalter BCM %d, Notschalter BCM %d, Entprellung %s\n",
+		cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, cfg.Hardware.Debounce)
+	fmt.Fprintf(w, "  Zwischenzeiten     Gelb %s, Allrot %s, RotGelb %s, Summe %s\n",
+		cfg.Timing.Yellow, cfg.Timing.AllRed, cfg.Timing.RedYellow, cfg.Timing.Intergreen())
+	fmt.Fprintf(w, "  Gruenzeiten        Grundzeit %s, hoechstens %s\n",
+		cfg.Timing.BaseGreen, cfg.Timing.MaxGreen)
+	fmt.Fprintf(w, "  Verlaengerung      %s je Fahrzeug, das binnen %s folgt\n",
+		cfg.Timing.Extension, cfg.Timing.Follow)
+	if cfg.Display.Enabled {
+		fmt.Fprintf(w, "  Anzeige            %s, %d Hz, DC %d, Reset %d, %s\n",
+			cfg.Display.Device, cfg.Display.SpeedHz, cfg.Display.DC, cfg.Display.Reset, cfg.Display.Rotation)
+	} else {
+		fmt.Fprintln(w, "  Anzeige            abgeschaltet")
+	}
+}
+
+type canvas struct {
+	tft *hal.TFT
+}
+
+func (c canvas) Size() (int, int) { return c.tft.Size() }
+
+func (c canvas) Fill(x, y, width, height int, color display.Color) error {
+	return c.tft.Fill(x, y, width, height, uint16(color))
+}
+
+func openDisplay(chip *hal.Chip, cfg *config.Config, out io.Writer) (*display.Screen, func(), error) {
+	if !cfg.Display.Enabled {
+		return nil, func() {}, nil
+	}
+	bus, err := hal.OpenSPI(cfg.Display.Device, cfg.Display.SpeedHz)
+	if err != nil {
+		return nil, nil, err
+	}
+	dc, err := chip.Output(cfg.Display.DC)
+	if err != nil {
+		_ = bus.Close()
+		return nil, nil, fmt.Errorf("anzeige, dc-leitung: %w", err)
+	}
+	var reset hal.OutputLine
+	if cfg.Display.Reset >= 0 {
+		reset, err = chip.Output(cfg.Display.Reset)
+		if err != nil {
+			_ = dc.Close()
+			_ = bus.Close()
+			return nil, nil, fmt.Errorf("anzeige, reset-leitung: %w", err)
+		}
+	}
+	tft, err := hal.NewTFT(bus, dc, reset, cfg.Display.TFTRotation())
+	if err != nil {
+		_ = dc.Close()
+		_ = bus.Close()
+		return nil, nil, err
+	}
+	closer := func() {
+		_ = tft.Close()
+		_ = dc.Close()
+		if reset != nil {
+			_ = reset.Close()
+		}
+	}
+	fmt.Fprintf(out, "Anzeige an %s, Aufloesung %s\n", cfg.Display.Device, size(tft))
+	return display.New(canvas{tft: tft}), closer, nil
+}
+
+func showTestPattern(screen *display.Screen) error {
+	return screen.Update([4]display.Field{
+		{Seconds: 88, Color: display.Green},
+		{Seconds: 88, Color: display.Red},
+		{Seconds: 88, Color: display.Yellow},
+		{Seconds: 88, Color: display.White},
+	})
+}
+
+func size(tft *hal.TFT) string {
+	width, height := tft.Size()
+	return fmt.Sprintf("%dx%d", width, height)
 }
