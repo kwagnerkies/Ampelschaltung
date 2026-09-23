@@ -9,7 +9,7 @@ PI_STAGE ?= /tmp/ampel-install
 all: fmt vet test build
 
 build:
-	go build -o bin/ ./cmd/...
+	go build -o bin/$(BINARY) ./cmd/ampel
 
 # pi baut fuer Raspberry Pi OS 32 Bit, das auf Pi 2 und Pi 3 laeuft. pi64 baut fuer die
 # 64-Bit-Variante, die es erst ab Pi 3 gibt.

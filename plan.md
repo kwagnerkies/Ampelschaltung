@@ -226,10 +226,6 @@ ampel/
 
       main.go              Prozessstart, Flags, Signalbehandlung, Verdrahtung
 
-    ampelsim/
-
-      main.go              Lauf ohne Hardware, synthetischer Verkehr
-
   internal/
 
     config/
@@ -620,23 +616,11 @@ Testumfang:
 
 - `display`: die Anordnung ist ein Kreuz, nur geaenderte Zahlen werden neu gezeichnet, Sekunden werden gerundet.
 
-- Integrationstest: kompletter Lauf mit Mock-HAL und Fake-Clock ueber simulierte zwanzig Minuten. Der Test schlaegt fehl, wenn Fahrzeuge nicht abfliessen oder eine Richtung stehenbleibt.
+- Integrationstest: kompletter Lauf mit Mock-HAL und Fake-Clock ueber simulierte Minuten, mit erzeugtem Verkehr auf den Sensoren. Geprueft werden Signalfolge, Konfliktfreiheit und die Verlaengerung.
 
 
 
-## 13. Simulator
-
-
-
-`cmd/ampelsim` fuehrt den identischen Controller ohne Hardware aus. Fahrzeugankuenfte werden als Poisson-Prozess je Zufahrt erzeugt. Ausgabe als ASCII-Darstellung der Kreuzung im Terminal.
-
-
-
-Der Simulator ist kein Extra. Er ist das Werkzeug, mit dem Regelparameter gefunden werden, bevor irgendetwas geloetet ist, und er zeigt die Anlage, wenn die Hardware am Vorfuehrtag streikt.
-
-
-
-## 14. Build und Deployment
+## 13. Build und Deployment
 
 
 
@@ -672,7 +656,7 @@ Systemd-Unit `deploy/ampel.service`:
 
 
 
-## 15. Arbeitspakete
+## 14. Arbeitspakete
 
 
 
@@ -722,10 +706,6 @@ Fertig, wenn dichter Verkehr messbar laengeres Gruen fuer die belastete Richtung
 
 
 
-**AP8 Simulator.** Verkehrsgenerator, Terminalanzeige.
-
-Fertig, wenn die Kreuzung ohne Hardware sichtbar arbeitet.
-
 
 
 **AP9 Notzustand.** Notschalter, Watchdog, Gelbblinken, Neustart bei Allrot.
@@ -746,7 +726,7 @@ Fertig, wenn der Pi nach Kaltstart ohne Tastatur selbstaendig steuert.
 
 
 
-## 16. Mechanik und 3D-Druck
+## 15. Mechanik und 3D-Druck
 
 
 
@@ -770,7 +750,7 @@ Nicht Teil der Software, aber terminbestimmend, deshalb hier festgehalten.
 
 
 
-## 17. Offene Entscheidungen
+## 16. Offene Entscheidungen
 
 
 

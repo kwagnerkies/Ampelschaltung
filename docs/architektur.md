@@ -91,7 +91,7 @@ Funktionen sind die Regelung.
 | Was, wenn der Regelkreis haengt? | `watchdog.go`, 500 ms, erzwingt denselben Notzustand |
 | Wann gilt ein Fahrzeug als ueberfahren? | `controller/events.go`, die Haltelinie wird wieder frei |
 | Verhungert eine Richtung? | `following.go`, die Hoechstgruenzeit begrenzt jede Freigabe |
-| Wie prueft ihr ohne Hardware? | `cmd/ampelsim` faehrt denselben Regelkreis mit erzeugtem Verkehr |
+| Wie prueft ihr ohne Hardware? | Die Tests fahren den Regelkreis mit Mock-Lampen und gefaelschter Uhr |
 | Warum Schieberegister? | Strombudget des Pi, `hardware/pinout.md` |
 
 ## Wo die Tests liegen
@@ -99,5 +99,5 @@ Funktionen sind die Regelung.
 Zu jeder Datei liegt der Test daneben. Die wichtigsten drei: `controller_test.go` faehrt
 komplette Laeufe und prueft jedes geschriebene Bitmuster gegen Konfliktmatrix und
 Signalfolge, `adaptive_test.go` erzeugt dichten Verkehr auf einer Achse und erwartet dort laengere
-Gruenzeiten, `cmd/ampelsim/sim_test.go` laesst zwanzig simulierte
-Minuten Verkehr abfliessen und prueft, dass keine Richtung stehenbleibt.
+Gruenzeiten, `switches_test.go` prueft Hauptschalter,
+Notzustand und den Neustart bei Allrot.

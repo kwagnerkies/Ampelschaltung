@@ -9,7 +9,7 @@ Steuerung.
   Kreuzung ohne Tastatur wieder steuert.
 - Selbsttest fahren, alle zwoelf Lampen und alle zwoelf Sensoren einmal ausloesen.
 - Mindestens zwoelf Modellautos bereitlegen, alle mit gleich gepoltem Magneten.
-- Ersatz mitnehmen: geladenes Netzteil, zweite SD-Karte, Laptop mit `ampelsim`.
+- Ersatz mitnehmen: geladenes Netzteil, zweite SD-Karte, Ersatz-LEDs und ein zweites Modellauto.
 
 ## Vorbereitung am Tag selbst
 
@@ -80,11 +80,9 @@ Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
 
 ## Wenn die Hardware streikt
 
-Nicht reparieren, umschalten. Der Simulator fuehrt denselben Regelkreis:
+Ohne Sensoren laeuft die Anlage weiter: jede Richtung bekommt dann die Grundzeit von fuenf
+Sekunden, die Signalfolge bleibt korrekt. Faellt eine einzelne Zufahrt aus, faellt nur deren
+Verlaengerung weg.
 
-```
-ampelsim -dauer 30m -anzeige
-```
-
-Die Terminalanzeige zeigt Signalbilder, Belegung und die laufende Zielgruenzeit. Damit ist die
-Vorfuehrung auch ohne Kreuzung vollstaendig.
+Bleibt gar nichts uebrig, bleibt der Notschalter: die Anlage blinkt gelb, und du erklaerst die
+Regelung am Code und am Pinplan.
