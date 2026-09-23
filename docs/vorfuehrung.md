@@ -76,7 +76,7 @@ Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
 - Was passiert bei einem Fehler? Die Sicherheitspruefung sitzt unmittelbar vor der Ausgabe.
   Schlaegt sie an, blinkt alles gelb, bis jemand den Notschalter zuruecklegt oder die Anlage
   aus und wieder an schaltet.
-- Warum Schieberegister? Zwoelf LEDs direkt am Pi verletzen das Strombudget von 50 mA.
+- Reicht der Strom fuer zwoelf LEDs? Es leuchten nie mehr als sechs gleichzeitig, bei 5 mA je LED sind das 30 mA.
 
 ## Wenn die Hardware streikt
 

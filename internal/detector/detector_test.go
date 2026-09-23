@@ -9,11 +9,11 @@ import (
 
 var base = time.Date(2026, 4, 1, 7, 0, 0, 0, time.UTC)
 
-var pins = [light.DirectionCount][]int{
-	light.North: {5, 6, 13},
-	light.East:  {19, 26, 12},
-	light.South: {16, 20, 21},
-	light.West:  {23, 24, 25},
+var pins = [light.DirectionCount]int{
+	light.North: 23,
+	light.East:  24,
+	light.South: 25,
+	light.West:  8,
 }
 
 func newDetector(t *testing.T) *Detector {
@@ -28,7 +28,7 @@ func newDetector(t *testing.T) *Detector {
 // Jede Flanke wird unmittelbar zum Ereignis. Entprellt hat der Kernel schon.
 func TestFeedEmitsImmediately(t *testing.T) {
 	d := newDetector(t)
-	events, err := d.Feed(6, true, base)
+	events, err := d.Feed(24, true, base)
 	if err != nil {
 		t.Fatalf("Feed: %v", err)
 	}
@@ -36,7 +36,7 @@ func TestFeedEmitsImmediately(t *testing.T) {
 		t.Fatalf("%d Ereignisse, erwartet eines", len(events))
 	}
 	got := events[0]
-	if got.Direction != light.North || got.Index != 1 || !got.Occupied || !got.At.Equal(base) {
+	if got.Direction != light.East || !got.Occupied || !got.At.Equal(base) {
 		t.Errorf("Ereignis %+v", got)
 	}
 }
@@ -44,10 +44,10 @@ func TestFeedEmitsImmediately(t *testing.T) {
 // Derselbe Pegel zweimal ist keine Flanke.
 func TestFeedIgnoresRepeatedLevel(t *testing.T) {
 	d := newDetector(t)
-	if _, err := d.Feed(19, true, base); err != nil {
+	if _, err := d.Feed(23, true, base); err != nil {
 		t.Fatalf("Feed: %v", err)
 	}
-	events, err := d.Feed(19, true, base.Add(time.Second))
+	events, err := d.Feed(23, true, base.Add(time.Second))
 	if err != nil {
 		t.Fatalf("Feed: %v", err)
 	}
@@ -64,14 +64,14 @@ func TestFeedRejectsUnknownPin(t *testing.T) {
 	if d.Knows(4) {
 		t.Error("der Hauptschalter gilt als Sensor")
 	}
-	if !d.Knows(21) {
+	if !d.Knows(25) {
 		t.Error("ein Sensorpin gilt als unbekannt")
 	}
 }
 
 func TestNewRejectsDuplicatePin(t *testing.T) {
 	doubled := pins
-	doubled[light.West] = []int{23, 24, 5}
+	doubled[light.West] = doubled[light.North]
 	if _, err := New(doubled); err == nil {
 		t.Error("ein doppelt vergebener Pin wurde angenommen")
 	}
@@ -80,11 +80,11 @@ func TestNewRejectsDuplicatePin(t *testing.T) {
 // Nach dem Reset gilt jede Zufahrt als frei, die naechste Belegung ist wieder eine Flanke.
 func TestResetForgetsLevels(t *testing.T) {
 	d := newDetector(t)
-	if _, err := d.Feed(16, true, base); err != nil {
+	if _, err := d.Feed(25, true, base); err != nil {
 		t.Fatalf("Feed: %v", err)
 	}
 	d.Reset()
-	events, err := d.Feed(16, true, base.Add(time.Second))
+	events, err := d.Feed(25, true, base.Add(time.Second))
 	if err != nil {
 		t.Fatalf("Feed: %v", err)
 	}

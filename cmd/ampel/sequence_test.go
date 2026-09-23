@@ -5,19 +5,17 @@ import (
 	"time"
 
 	"ampel/internal/config"
+	"ampel/internal/controller"
 	"ampel/internal/hal"
 	"ampel/internal/light"
 )
 
 // Die vorgefuehrte Folge muss den vollstaendigen Ausgabepfad ueberstehen: Konfliktmatrix,
-// deutsche Signalfolge und Bitabbildung. Ein Fehler hier waere auf der Hardware sichtbar.
+// deutsche Signalfolge und Lampenabbildung. Ein Fehler hier waere auf der Hardware sichtbar.
 func TestSequencePassesGuardedOutput(t *testing.T) {
 	cfg := config.Default()
-	mock := hal.NewMock(len(cfg.Hardware.ShiftRegister.BitOrder), 1)
-	output, err := newOutput(mock, &cfg)
-	if err != nil {
-		t.Fatalf("newOutput: %v", err)
-	}
+	mock := hal.NewMock(controller.LampCount, 1)
+	output := controller.NewOutput(mock)
 
 	greens := map[light.Direction]int{}
 	for i, s := range sequenceSteps(cfg.Timing) {

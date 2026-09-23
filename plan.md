@@ -66,23 +66,15 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 
 
-### 3.1 Problem GPIO- und Strombudget
+### 3.1 Strombudget
 
 
 
-Vier Ampelkoepfe zu drei LEDs sind zwoelf Ausgaenge. Vier Zufahrten zu drei Reed-Kontakten sind zwoelf Eingaenge. Dazu der Hauptschalter und fuenf Leitungen fuer die Anzeige. Das sind 30 Leitungen und damit praktisch jeder nutzbare GPIO des Pi 2.
+Zwoelf LEDs haengen unmittelbar an je einer GPIO-Leitung. Das traegt das Budget des Pi, weil nie alle gleichzeitig leuchten: im ungeguenstigsten Fall zeigen zwei Koepfe Rot mit Gelb und zwei Koepfe Rot, also sechs Lampen. Bei etwa 5 mA je LED sind das 30 mA und damit unter der Empfehlung von 50 mA ueber alle Pins.
 
 
 
-Zusaetzlich gilt fuer den Pi: pro Pin maximal 16 mA, in Summe ueber alle Pins sollten 50 mA nicht ueberschritten werden. Zwoelf direkt getriebene LEDs verletzen das.
-
-
-
-Loesung: Die LEDs haengen an zwei kaskadierten Schieberegistern 74HC595, die ueber drei GPIO-Leitungen angesteuert werden. Damit sinkt der LED-Aufwand von zwoelf auf drei GPIOs, und der Strom kommt nicht mehr aus dem Pi. Vorwiderstaende auf etwa 4 bis 6 mA pro LED auslegen, das ist fuer ein Modell mehr als hell genug. Betrieb der Register an 5 V, Datenleitungen vom Pi mit 3,3 V liegen sicher ueber der Schaltschwelle des HC-Typs bei 5 V Versorgung; falls es zickt, HCT-Typ oder 3,3-V-Versorgung der Register verwenden.
-
-
-
-Die Sensoren bleiben direkt am GPIO mit internem Pull-up, ein Reed-Kontakt schaltet gegen Masse. Aktiv ist also der Low-Pegel.
+Die Sensoren liegen am internen Pull-up, ein Reed-Kontakt schaltet gegen Masse. Aktiv ist der Low-Pegel.
 
 
 
@@ -98,51 +90,25 @@ Der Plan liegt in der Konfigurationsdatei, nicht im Code. Startbelegung (BCM-Num
 
 |---|---|---|
 
-| 595 Data (SER) | 17 | out |
+| Nord Rot, Gelb, Gruen | 17, 27, 22 | out |
 
-| 595 Clock (SRCLK) | 27 | out |
+| Ost Rot, Gelb, Gruen | 5, 6, 13 | out |
 
-| 595 Latch (RCLK) | 22 | out |
+| Sued Rot, Gelb, Gruen | 19, 26, 12 | out |
 
-| Nord Sensor 0 (Haltelinie) | 5 | in, pull-up |
+| West Rot, Gelb, Gruen | 16, 20, 21 | out |
 
-| Nord Sensor 1 | 6 | in, pull-up |
-
-| Nord Sensor 2 | 13 | in, pull-up |
-
-| Ost Sensor 0 | 19 | in, pull-up |
-
-| Ost Sensor 1 | 26 | in, pull-up |
-
-| Ost Sensor 2 | 12 | in, pull-up |
-
-| Sued Sensor 0 | 16 | in, pull-up |
-
-| Sued Sensor 1 | 20 | in, pull-up |
-
-| Sued Sensor 2 | 21 | in, pull-up |
-
-| West Sensor 0 | 23 | in, pull-up |
-
-| West Sensor 1 | 24 | in, pull-up |
-
-| West Sensor 2 | 25 | in, pull-up |
+| Haltelinie Nord, Ost, Sued, West | 23, 24, 25, 8 | in, pull-up |
 
 | Hauptschalter | 4 | in, pull-up |
 
 | Notschalter | 18 | in, pull-up |
 
-
-
-Bitbelegung der Schieberegisterkette, erstes ausgeschobenes Bit landet am entferntesten Ausgang. Die Reihenfolge wird in der Konfiguration als Liste hinterlegt, damit Verdrahtungsfehler ohne Codeaenderung korrigierbar sind:
-
-
-
-`[N_rot, N_gelb, N_gruen, O_rot, O_gelb, O_gruen, S_rot, S_gelb, S_gruen, W_rot, W_gelb, W_gruen, frei, frei, frei, frei]`
+| Anzeige SCK, MOSI, CS, DC, Reset | 11, 10, 8, 7, 2 | out |
 
 
 
-### 3.3 Sensorlayout je Zufahrt
+### 3.3 Sensor je Zufahrt
 
 
 
@@ -238,7 +204,7 @@ ampel/
 
       hal.go               Interfaces LampDriver, InputSource
 
-      shiftreg.go          74HC595 Treiber
+      lamps.go             Zwoelf LED-Leitungen
 
       gpioin.go            Eingaenge mit Edge-Events
 
@@ -252,13 +218,9 @@ ampel/
 
       aspect.go            Signalbilder und deutsche Folge
 
-      bus.go               Abbildung aller Koepfe auf Registerbits
-
     detector/
 
       detector.go          Reed-Auswertung, Zuordnung der Pins
-
-      occupancy.go         Belegung je Sensor
 
       event.go             Ereignistypen
 
@@ -670,7 +632,7 @@ Fertig, wenn `ampel -config configs/config.yaml -validate` die Konfiguration pru
 
 
 
-**AP2 HAL.** Interfaces, 74HC595-Treiber, Eingaenge mit Edge-Events, Mock. Ein Testprogramm laesst alle zwoelf LEDs nacheinander leuchten und gibt Sensorflanken auf der Konsole aus.
+**AP2 HAL.** Interfaces, LED-Leitungen, Eingaenge mit Edge-Events, Mock. Ein Testprogramm laesst alle zwoelf LEDs nacheinander leuchten und gibt Sensorflanken auf der Konsole aus.
 
 Fertig, wenn die Hardware sichtbar reagiert.
 
@@ -761,7 +723,5 @@ Diese Punkte vor AP2 klaeren, sie beeinflussen die Verdrahtung.
 - Fahrzeuglaenge und damit die Sensorabstaende.
 
 - Ob wirklich drei Sensoren pro Zufahrt verbaut werden oder zwei genuegen. Die Software behandelt die Anzahl bereits als konfigurierbar, damit die Entscheidung spaeter fallen kann.
-
-- Versorgung der Schieberegister mit 5 V oder 3,3 V, abhaengig davon, ob HC- oder HCT-Typen beschafft werden.
 
 - Ob eine Fussgaengeranforderung ergaenzt wird. Fuer den ersten Ausbau bewusst nicht vorgesehen, das Phasenmodell laesst sich aber ohne Umbau erweitern.

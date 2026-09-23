@@ -10,12 +10,11 @@ import (
 	"ampel/internal/strategy"
 )
 
-// load erzeugt Verkehr auf einer Zufahrt: ein Dauerstau hinter der Haltelinie und ein
-// Fahrzeug, das im Abstand interval ueber die Linie faehrt, solange freigegeben ist.
+// load erzeugt Verkehr auf einer Zufahrt: ein Fahrzeug faehrt im Abstand interval ueber die
+// Haltelinie, solange freigegeben ist.
 type load struct {
 	direction light.Direction
 	stopLine  int
-	upstream  []int
 	interval  time.Duration
 	next      time.Duration
 }
@@ -23,7 +22,7 @@ type load struct {
 func newAdaptiveHarness(t *testing.T) *harness {
 	t.Helper()
 	clk := clock.NewFake(start)
-	mock := hal.NewMock(16, 4096)
+	mock := hal.NewMock(LampCount, 4096)
 	observer := &recorder{}
 	adaptive, err := strategy.NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)
 	if err != nil {
@@ -31,14 +30,6 @@ func newAdaptiveHarness(t *testing.T) *harness {
 	}
 	c, err := Build(Setup{
 		Sensors:  sensorPins,
-		Debounce: 15 * time.Millisecond,
-		LampMatrix: [light.DirectionCount][3]int{
-			light.North: {0, 1, 2},
-			light.East:  {3, 4, 5},
-			light.South: {6, 7, 8},
-			light.West:  {9, 10, 11},
-		},
-		Bits:     16,
 		Timing:   timing,
 		Tick:     50 * time.Millisecond,
 		Strategy: adaptive,
@@ -60,10 +51,10 @@ func newAdaptiveHarness(t *testing.T) *harness {
 func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 700 * time.Millisecond},
-		{direction: light.South, stopLine: 16, upstream: []int{20, 21}, interval: 700 * time.Millisecond},
-		{direction: light.East, stopLine: 19, upstream: []int{26}, interval: 6 * time.Second},
-		{direction: light.West, stopLine: 23, upstream: []int{24}, interval: 6 * time.Second},
+		{direction: light.North, stopLine: 23, interval: 700 * time.Millisecond},
+		{direction: light.South, stopLine: 25, interval: 700 * time.Millisecond},
+		{direction: light.East, stopLine: 24, interval: 6 * time.Second},
+		{direction: light.West, stopLine: 8, interval: 6 * time.Second},
 	}
 	h.drive(loads, 15*time.Minute)
 
@@ -88,10 +79,10 @@ func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 func TestScatteredLoadKeepsBaseGreen(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 5 * time.Second},
-		{direction: light.South, stopLine: 16, upstream: []int{20, 21}, interval: 5 * time.Second},
-		{direction: light.East, stopLine: 19, upstream: []int{26}, interval: 5 * time.Second},
-		{direction: light.West, stopLine: 23, upstream: []int{24}, interval: 5 * time.Second},
+		{direction: light.North, stopLine: 23, interval: 5 * time.Second},
+		{direction: light.South, stopLine: 25, interval: 5 * time.Second},
+		{direction: light.East, stopLine: 24, interval: 5 * time.Second},
+		{direction: light.West, stopLine: 8, interval: 5 * time.Second},
 	}
 	h.drive(loads, 5*time.Minute)
 
@@ -107,9 +98,6 @@ func TestScatteredLoadKeepsBaseGreen(t *testing.T) {
 func (h *harness) drive(loads []*load, duration time.Duration) {
 	const step = 50 * time.Millisecond
 	for _, l := range loads {
-		for _, pin := range l.upstream {
-			h.controller.Feed(Input{Pin: pin, Active: true, Time: h.clk.Now()})
-		}
 		h.controller.Feed(Input{Pin: l.stopLine, Active: true, Time: h.clk.Now()})
 	}
 

@@ -22,16 +22,15 @@ type Input struct {
 
 // Options buendelt, was der Regelkreis zum Laufen braucht.
 type Options struct {
-	Timing    Timing
-	Tick      time.Duration
-	Sample    time.Duration
-	Detector  *detector.Detector
-	Occupancy [light.DirectionCount]*detector.Occupancy
-	Output    *Output
-	Strategy  strategy.Strategy
-	Clock     clock.Clock
-	Inputs    <-chan Input
-	Observer  Observer
+	Timing   Timing
+	Tick     time.Duration
+	Sample   time.Duration
+	Detector *detector.Detector
+	Output   *Output
+	Strategy strategy.Strategy
+	Clock    clock.Clock
+	Inputs   <-chan Input
+	Observer Observer
 	// FlashHalf ist die halbe Periode des Gelbblinkens im Notzustand.
 	FlashHalf time.Duration
 	// Switches sind Haupt- und Notschalter. Ohne sie laeuft die Anlage immer, wie es der
@@ -52,7 +51,6 @@ type Controller struct {
 	flashHalf time.Duration
 	machine   *Machine
 	detect    *detector.Detector
-	occupancy [light.DirectionCount]*detector.Occupancy
 	output    *Output
 	strategy  strategy.Strategy
 	clk       clock.Clock
@@ -98,7 +96,6 @@ func New(options Options) (*Controller, error) {
 		flashHalf:  options.FlashHalf,
 		machine:    NewMachine(options.Timing, now),
 		detect:     options.Detector,
-		occupancy:  options.Occupancy,
 		output:     options.Output,
 		strategy:   options.Strategy,
 		follow:     options.Follow,
@@ -202,9 +199,6 @@ func (c *Controller) Step(now time.Time) {
 // Reset vergisst alle Pegel und beginnt die Zaehlung der Verlaengerungen neu.
 func (c *Controller) Reset(now time.Time) {
 	c.detect.Reset()
-	for _, occupancy := range c.occupancy {
-		occupancy.Reset()
-	}
 	c.following = 0
 	c.lastCrossing = [light.DirectionCount]time.Time{}
 }

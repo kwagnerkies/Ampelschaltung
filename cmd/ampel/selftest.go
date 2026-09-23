@@ -11,7 +11,6 @@ import (
 	"ampel/internal/config"
 	"ampel/internal/controller"
 	"ampel/internal/hal"
-	"ampel/internal/light"
 )
 
 // lampDwell ist die Leuchtdauer je Lampe, lang genug um sie mit dem Auge zu pruefen.
@@ -63,11 +62,7 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	}
 
 	fmt.Fprintln(out, "Signalfolge, beide Freigabephasen einmal:")
-	output, err := newOutput(driver, cfg)
-	if err != nil {
-		return err
-	}
-	if err := showSequence(ctx, out, output, cfg.Timing); err != nil {
+	if err := showSequence(ctx, out, controller.NewOutput(driver), cfg.Timing); err != nil {
 		return err
 	}
 
@@ -77,44 +72,34 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	return nil
 }
 
-func newOutput(writer controller.LampWriter, cfg *config.Config) (*controller.Output, error) {
-	matrix, err := cfg.Hardware.ShiftRegister.LampMatrix()
-	if err != nil {
-		return nil, err
-	}
-	bus, err := light.NewBus(matrix, len(cfg.Hardware.ShiftRegister.BitOrder))
-	if err != nil {
-		return nil, err
-	}
-	return controller.NewOutput(bus, writer), nil
-}
-
+// openLamps fordert die zwoelf LED-Leitungen an, in der Reihenfolge Nord Rot, Nord Gelb,
+// Nord Gruen, dann Ost und so weiter.
 func openLamps(chip *hal.Chip, cfg *config.Config) (hal.LampDriver, error) {
-	register := cfg.Hardware.ShiftRegister
-	names := [3]string{"data", "clock", "latch"}
 	var lines []hal.OutputLine
-	for i, pin := range [3]int{register.Data, register.Clock, register.Latch} {
-		line, err := chip.Output(pin)
-		if err != nil {
-			for _, opened := range lines {
-				_ = opened.Close()
+	for i, head := range cfg.Hardware.Lamps.Heads() {
+		for j, pin := range head {
+			line, err := chip.Output(pin)
+			if err != nil {
+				for _, opened := range lines {
+					_ = opened.Close()
+				}
+				return nil, fmt.Errorf("lampe %s %s: %w", approachNames[i], lampNames[j], err)
 			}
-			return nil, fmt.Errorf("leitung %s: %w", names[i], err)
+			lines = append(lines, line)
 		}
-		lines = append(lines, line)
 	}
-	return hal.NewShiftRegister(lines[0], lines[1], lines[2], len(register.BitOrder)), nil
+	return hal.NewLamps(lines), nil
 }
 
 func walkLamps(ctx context.Context, out io.Writer, driver hal.LampDriver, cfg *config.Config, dwell time.Duration) error {
-	positions := cfg.Hardware.ShiftRegister.LampPositions()
-	for _, lamp := range config.LampNames() {
-		pattern := make([]bool, len(cfg.Hardware.ShiftRegister.BitOrder))
-		pattern[positions[lamp]] = true
+	for index := 0; index < controller.LampCount; index++ {
+		pattern := make([]bool, controller.LampCount)
+		pattern[index] = true
 		if err := driver.Write(pattern); err != nil {
-			return fmt.Errorf("lampe %s schalten: %w", lamp, err)
+			return fmt.Errorf("lampe %d schalten: %w", index, err)
 		}
-		fmt.Fprintf(out, "  Position %2d  %s\n", positions[lamp], lamp)
+		pin := cfg.Hardware.Lamps.Heads()[index/3][index%3]
+		fmt.Fprintf(out, "  BCM %2d  %s %s\n", pin, approachNames[index/3], lampNames[index%3])
 		select {
 		case <-ctx.Done():
 			return driver.Clear()
@@ -129,16 +114,15 @@ func walkLamps(ctx context.Context, out io.Writer, driver hal.LampDriver, cfg *c
 
 func inputPins(cfg *config.Config) ([]int, map[int]string) {
 	names := [4]string{"Nord", "Ost", "Sued", "West"}
-	pins := make([]int, 0, 14)
-	labels := make(map[int]string, 14)
-	for i, approach := range cfg.Hardware.Sensors.Approaches() {
-		for j, pin := range approach {
-			pins = append(pins, pin)
-			labels[pin] = fmt.Sprintf("%s Sensor %d", names[i], j)
-		}
+	pins := make([]int, 0, 6)
+	labels := make(map[int]string, 6)
+	for i, pin := range cfg.Hardware.Sensors.Approaches() {
+		pins = append(pins, pin)
+		labels[pin] = names[i] + " Haltelinie"
 	}
-	pins = append(pins, cfg.Hardware.PowerSwitch)
+	pins = append(pins, cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch)
 	labels[cfg.Hardware.PowerSwitch] = "Hauptschalter"
+	labels[cfg.Hardware.FaultSwitch] = "Notschalter"
 	return pins, labels
 }
 
@@ -157,3 +141,7 @@ func printEvents(ctx context.Context, out io.Writer, events <-chan hal.InputEven
 		}
 	}
 }
+
+var approachNames = [4]string{"Nord", "Ost", "Sued", "West"}
+
+var lampNames = [3]string{"Rot", "Gelb", "Gruen"}

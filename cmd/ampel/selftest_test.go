@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"ampel/internal/config"
+	"ampel/internal/controller"
 	"ampel/internal/hal"
 )
 
@@ -13,49 +14,47 @@ import (
 // abschalten. Sonst bleibt nach dem Test ein Licht stehen.
 func TestWalkLampsLightsEachLampAlone(t *testing.T) {
 	cfg := config.Default()
-	bits := len(cfg.Hardware.ShiftRegister.BitOrder)
-	driver := hal.NewMock(bits, 1)
+	driver := hal.NewMock(controller.LampCount, 1)
 
 	if err := walkLamps(context.Background(), io.Discard, driver, &cfg, 0); err != nil {
 		t.Fatalf("walkLamps: %v", err)
 	}
 
 	history := driver.History()
-	lamps := config.LampNames()
-	if len(history) != len(lamps)+1 {
-		t.Fatalf("%d Schreibzugriffe, erwartet %d", len(history), len(lamps)+1)
+	if len(history) != controller.LampCount+1 {
+		t.Fatalf("%d Schreibzugriffe, erwartet %d", len(history), controller.LampCount+1)
 	}
-
-	positions := cfg.Hardware.ShiftRegister.LampPositions()
-	for i, lamp := range lamps {
-		pattern := history[i]
-		want := positions[lamp]
-		for bit, on := range pattern {
-			if on != (bit == want) {
-				t.Errorf("bei lampe %s ist bit %d %v, erwartet %v", lamp, bit, on, bit == want)
+	for lamp := 0; lamp < controller.LampCount; lamp++ {
+		for index, on := range history[lamp] {
+			if on != (index == lamp) {
+				t.Errorf("bei lampe %d ist %d %v, erwartet %v", lamp, index, on, index == lamp)
 			}
 		}
 	}
-	for bit, on := range history[len(lamps)] {
+	for index, on := range history[controller.LampCount] {
 		if on {
-			t.Errorf("nach dem Test leuchtet noch bit %d", bit)
+			t.Errorf("nach dem Test leuchtet noch Lampe %d", index)
 		}
 	}
 }
 
-func TestInputPinsCoversSensorsAndControls(t *testing.T) {
+// Die Eingaenge sind die vier Haltelinien und die beiden Schalter, jeder mit Bezeichnung.
+func TestInputPinsCoversSensorsAndSwitches(t *testing.T) {
 	cfg := config.Default()
 	pins, labels := inputPins(&cfg)
 
-	if want := 4*cfg.Hardware.Sensors.SensorCount() + 1; len(pins) != want {
-		t.Fatalf("%d Eingaenge, erwartet %d", len(pins), want)
+	if len(pins) != 6 {
+		t.Fatalf("%d Eingaenge, erwartet 6", len(pins))
 	}
 	for _, pin := range pins {
 		if labels[pin] == "" {
 			t.Errorf("BCM %d hat keine Bezeichnung", pin)
 		}
 	}
-	if got := labels[cfg.Hardware.Sensors.North[0]]; got != "Nord Sensor 0" {
-		t.Errorf("Bezeichnung %q, erwartet \"Nord Sensor 0\"", got)
+	if got := labels[cfg.Hardware.Sensors.North]; got != "Nord Haltelinie" {
+		t.Errorf("Bezeichnung %q, erwartet \"Nord Haltelinie\"", got)
+	}
+	if got := labels[cfg.Hardware.FaultSwitch]; got != "Notschalter" {
+		t.Errorf("Bezeichnung %q, erwartet \"Notschalter\"", got)
 	}
 }

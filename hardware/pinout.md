@@ -4,61 +4,41 @@ Alle Nummern sind BCM-Nummern, nicht die Nummern der Stiftleiste. Massgeblich is
 `configs/config.yaml`; dieses Dokument beschreibt den Stand, mit dem die Steuerung
 ausgeliefert wird.
 
-## Schieberegister
+## Ampel-LEDs
 
-Zwoelf LEDs haengen an zwei kaskadierten 74HC595. Drei Leitungen des Pi genuegen, und der
-LED-Strom kommt aus dem Netzteil der Register, nicht aus dem Pi.
+Jede der zwoelf LEDs haengt unmittelbar an einer GPIO-Leitung, mit Vorwiderstand gegen Masse.
 
-| Funktion | BCM | Pin der Leiste | Richtung |
+| Zufahrt | Rot | Gelb | Gruen |
 |---|---|---|---|
-| Data (SER) | 17 | 11 | out |
-| Clock (SRCLK) | 27 | 13 | out |
-| Latch (RCLK) | 22 | 15 | out |
+| Nord | 17 | 27 | 22 |
+| Ost | 5 | 6 | 13 |
+| Sued | 19 | 26 | 12 |
+| West | 16 | 20 | 21 |
 
-Weitere Beschaltung der Register:
+Zum Strombudget: es leuchten nie alle zwoelf gleichzeitig. Im ungeguenstigsten Fall zeigen
+zwei Koepfe Rot mit Gelb und zwei Koepfe Rot, also sechs Lampen. Vorwiderstaende auf etwa
+5 mA auslegen, dann liegt die Summe bei 30 mA und damit unter der Empfehlung von 50 mA fuer
+alle Pins zusammen. Pro Pin sind 16 mA erlaubt, das ist reichlich Abstand.
 
-- `OE` (Pin 13 des 595) fest auf Masse, sonst bleiben die Ausgaenge hochohmig.
-- `SRCLR` (Pin 10) fest auf 3,3 V oder 5 V, sonst wird das Register dauernd geloescht.
-- `QH'` (Pin 9) des ersten Registers auf `SER` (Pin 14) des zweiten.
-- Ein Abblockkondensator 100 nF je Register direkt an den Versorgungspins.
-
-Betrieb an 5 V ist zulaessig, solange HC-Typen verbaut sind: deren Schaltschwelle liegt bei
-5 V Versorgung unter den 3,3 V des Pi. Bei HCT-Typen die Register an 3,3 V betreiben.
-
-Vorwiderstaende auf 4 bis 6 mA je LED auslegen. Bei 5 V und einer roten LED mit 2,0 V sind
-das 560 Ohm, bei gruen oder gelb mit 2,1 V ebenfalls 560 Ohm. Das ist fuer ein Modell hell
-genug und haelt die Summe aller LEDs unter dem, was ein 595 dauerhaft treiben kann.
-
-## Bitreihenfolge der Kette
-
-Das zuerst ausgeschobene Bit landet am entferntesten Ausgang. Die Reihenfolge steht in der
-Konfiguration unter `hardware.shift_register.bit_order` und ist ohne Codeaenderung
-korrigierbar, wenn beim Loeten zwei Leitungen vertauscht wurden.
-
-```
-N_red, N_yellow, N_green, E_red, E_yellow, E_green,
-S_red, S_yellow, S_green, W_red, W_yellow, W_green,
-free, free, free, free
-```
+Bei 3,3 V und einer roten LED mit 2,0 V sind 5 mA rund 270 Ohm, bei gelb und gruen mit 2,1 V
+rund 240 Ohm. Naechster Normwert nach oben ist sicherer als nach unten.
 
 ## Sensoren
 
-Jede Zufahrt hat drei Reed-Kontakte in Fahrtrichtung. Alle Eingaenge liegen am internen
+Ein Reed-Kontakt je Zufahrt, unmittelbar an der Haltelinie. Alle Eingaenge liegen am internen
 Pull-up und schalten gegen Masse; geschlossener Kontakt ist der Low-Pegel. Entprellt wird im
 Kernel mit 15 ms.
 
-| Zufahrt | S0 Haltelinie | S1 | S2 |
-|---|---|---|---|
-| Nord | 5 | 6 | 13 |
-| Ost | 19 | 26 | 12 |
-| Sued | 16 | 20 | 21 |
-| West | 23 | 24 | 25 |
+| Zufahrt | BCM |
+|---|---|
+| Nord | 23 |
+| Ost | 24 |
+| Sued | 25 |
+| West | 8 |
 
-S1 liegt etwa eine Fahrzeuglaenge plus Abstand hinter der Haltelinie, S2 etwa zwei. Gefuehrt
-wird, bis zu welchem Sensor eine Zufahrt belegt ist, nicht wie viele Fahrzeuge dort stehen.
-
-Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt. Ein stehendes Fahrzeug haelt den
-Kontakt geschlossen, und genau daraus entsteht die Rueckstaumessung.
+Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt: ein stehendes Fahrzeug haelt ihn
+geschlossen. Das Freiwerden der Linie ist deshalb das Ereignis, an dem die Steuerung eine
+Ueberfahrt erkennt.
 
 ## Anzeige
 

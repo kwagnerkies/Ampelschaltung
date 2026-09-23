@@ -8,7 +8,7 @@ import (
 // Validate prueft die gesamte Konfiguration und meldet alle Verstoesse gesammelt.
 func (c *Config) Validate() error {
 	var errs []error
-	errs = append(errs, c.Hardware.validate()...)
+	errs = append(errs, c.Hardware.validate(c.Display)...)
 	errs = append(errs, c.Timing.validate()...)
 	errs = append(errs, c.Display.validate()...)
 	return errors.Join(errs...)

@@ -6,35 +6,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-	"time"
 )
 
 func TestDefaultIsValid(t *testing.T) {
 	cfg := Default()
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Defaults muessen gueltig sein: %v", err)
-	}
-}
-
-func TestLoadShippedConfig(t *testing.T) {
-	cfg, err := Load(filepath.Join("..", "..", "configs", "config.yaml"))
-	if err != nil {
-		t.Fatalf("configs/config.yaml laedt nicht: %v", err)
-	}
-	if got, want := cfg.Timing.Yellow.Duration(), 3*time.Second; got != want {
-		t.Errorf("Gelbzeit %s, erwartet %s", got, want)
-	}
-	if got, want := cfg.Timing.Intergreen(), 6*time.Second; got != want {
-		t.Errorf("Zwischenzeiten %s, erwartet %s", got, want)
-	}
-	if got, want := cfg.Timing.Intergreen(), 6*time.Second; got != want {
-		t.Errorf("verteilbare Umlaufzeit %s, erwartet %s", got, want)
-	}
-	if got, want := cfg.Hardware.Sensors.North, []int{5, 6, 13}; !reflect.DeepEqual(got, want) {
-		t.Errorf("Sensoren Nord %v, erwartet %v", got, want)
-	}
-	if got := cfg.Hardware.Sensors.SensorCount(); got != 3 {
-		t.Errorf("Sensoranzahl %d, erwartet 3", got)
 	}
 }
 

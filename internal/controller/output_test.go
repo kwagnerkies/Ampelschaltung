@@ -8,21 +8,10 @@ import (
 	"ampel/internal/light"
 )
 
-var busPositions = [light.DirectionCount][3]int{
-	light.North: {0, 1, 2},
-	light.East:  {3, 4, 5},
-	light.South: {6, 7, 8},
-	light.West:  {9, 10, 11},
-}
-
 func newOutput(t *testing.T) (*Output, *hal.Mock) {
 	t.Helper()
-	bus, err := light.NewBus(busPositions, 16)
-	if err != nil {
-		t.Fatalf("NewBus: %v", err)
-	}
-	mock := hal.NewMock(16, 1)
-	return NewOutput(bus, mock), mock
+	mock := hal.NewMock(LampCount, 1)
+	return NewOutput(mock), mock
 }
 
 // Ein Konflikt darf die Hardware nicht erreichen. Das ist der Kern von Abschnitt 11 des Plans.

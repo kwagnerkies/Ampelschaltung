@@ -10,11 +10,12 @@ import (
 func printSummary(w io.Writer, cfg *config.Config, source string) {
 	fmt.Fprintf(w, "Konfiguration in Ordnung (%s)\n", source)
 	fmt.Fprintf(w, "  GPIO-Chip          %s\n", cfg.Hardware.Chip)
-	fmt.Fprintf(w, "  Schieberegister    Data %d, Clock %d, Latch %d\n",
-		cfg.Hardware.ShiftRegister.Data, cfg.Hardware.ShiftRegister.Clock, cfg.Hardware.ShiftRegister.Latch)
-	names := [4]string{"Nord", "Ost", "Sued", "West"}
-	for i, pins := range cfg.Hardware.Sensors.Approaches() {
-		fmt.Fprintf(w, "  Sensoren %-5s     %v\n", names[i], pins)
+	for i, head := range cfg.Hardware.Lamps.Heads() {
+		fmt.Fprintf(w, "  Lampen %-5s       Rot %d, Gelb %d, Gruen %d\n",
+			approachNames[i], head[0], head[1], head[2])
+	}
+	for i, pin := range cfg.Hardware.Sensors.Approaches() {
+		fmt.Fprintf(w, "  Haltelinie %-5s   BCM %d\n", approachNames[i], pin)
 	}
 	fmt.Fprintf(w, "  Schalter           Hauptschalter BCM %d, Notschalter BCM %d, Entprellung %s\n",
 		cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, cfg.Hardware.Debounce)

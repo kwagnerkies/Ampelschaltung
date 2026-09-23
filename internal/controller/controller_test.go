@@ -11,11 +11,11 @@ import (
 	"ampel/internal/strategy"
 )
 
-var sensorPins = [light.DirectionCount][]int{
-	light.North: {5, 6, 13},
-	light.East:  {19, 26, 12},
-	light.South: {16, 20, 21},
-	light.West:  {23, 24, 25},
+var sensorPins = [light.DirectionCount]int{
+	light.North: 23,
+	light.East:  24,
+	light.South: 25,
+	light.West:  8,
 }
 
 type record struct {
@@ -59,18 +59,10 @@ func newHarness(t *testing.T, green time.Duration, tune ...func(*Setup)) *harnes
 		t.Fatalf("NewFollowing: %v", err)
 	}
 	clk := clock.NewFake(start)
-	mock := hal.NewMock(16, 64)
+	mock := hal.NewMock(LampCount, 64)
 	observer := &recorder{}
 	setup := Setup{
 		Sensors:  sensorPins,
-		Debounce: 15 * time.Millisecond,
-		LampMatrix: [light.DirectionCount][3]int{
-			light.North: {0, 1, 2},
-			light.East:  {3, 4, 5},
-			light.South: {6, 7, 8},
-			light.West:  {9, 10, 11},
-		},
-		Bits:     16,
 		Timing:   timing,
 		Tick:     50 * time.Millisecond,
 		Sample:   time.Second,
@@ -187,13 +179,13 @@ func TestCrossingIsCountedWhenTheStopLineIsReleased(t *testing.T) {
 	if got := h.controller.State(); got.Phase != PhaseNS || got.Stage != StageGreen {
 		t.Fatalf("Zustand %s, erwartet die Freigabe fuer Nord und Sued", got.Name())
 	}
-	h.controller.Feed(Input{Pin: 5, Active: true, Time: h.clk.Now()})
+	h.controller.Feed(Input{Pin: 23, Active: true, Time: h.clk.Now()})
 	h.run(300 * time.Millisecond)
-	h.controller.Feed(Input{Pin: 5, Active: false, Time: h.clk.Now()})
+	h.controller.Feed(Input{Pin: 23, Active: false, Time: h.clk.Now()})
 	h.run(100 * time.Millisecond)
-	h.controller.Feed(Input{Pin: 5, Active: true, Time: h.clk.Now()})
+	h.controller.Feed(Input{Pin: 23, Active: true, Time: h.clk.Now()})
 	h.run(100 * time.Millisecond)
-	h.controller.Feed(Input{Pin: 5, Active: false, Time: h.clk.Now()})
+	h.controller.Feed(Input{Pin: 23, Active: false, Time: h.clk.Now()})
 	h.run(100 * time.Millisecond)
 
 	if got := h.controller.Snapshot(h.clk.Now()).Following; got != 1 {

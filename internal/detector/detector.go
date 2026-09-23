@@ -1,3 +1,4 @@
+// Paket detector ordnet die Haltelinien-Kontakte den Zufahrten zu.
 package detector
 
 import (
@@ -8,31 +9,24 @@ import (
 )
 
 // Detector ordnet GPIO-Pins den Zufahrten zu. Entprellt wird im Kernel, nicht hier: der
-// Treiber kann das zuverlaessiger, und eine zweite Stufe in Go wuerde dieselbe Arbeit
-// doppelt machen.
+// Treiber kann das zuverlaessiger.
 type Detector struct {
 	sensors map[int]*sensor
 }
 
 type sensor struct {
 	direction light.Direction
-	index     int
 	occupied  bool
 }
 
-// New erwartet die Sensorpins je Zufahrt in der Reihenfolge Haltelinie, dann aufwaerts.
-func New(pins [light.DirectionCount][]int) (*Detector, error) {
-	d := &Detector{sensors: make(map[int]*sensor)}
-	for direction, approach := range pins {
-		for index, pin := range approach {
-			if _, taken := d.sensors[pin]; taken {
-				return nil, fmt.Errorf("BCM %d ist doppelt zugeordnet", pin)
-			}
-			d.sensors[pin] = &sensor{direction: light.Direction(direction), index: index}
+// New erwartet je Zufahrt den Pin des Kontakts an der Haltelinie.
+func New(pins [light.DirectionCount]int) (*Detector, error) {
+	d := &Detector{sensors: make(map[int]*sensor, light.DirectionCount)}
+	for direction, pin := range pins {
+		if _, taken := d.sensors[pin]; taken {
+			return nil, fmt.Errorf("BCM %d ist doppelt zugeordnet", pin)
 		}
-	}
-	if len(d.sensors) == 0 {
-		return nil, fmt.Errorf("kein sensor zugeordnet")
+		d.sensors[pin] = &sensor{direction: light.Direction(direction)}
 	}
 	return d, nil
 }
@@ -47,22 +41,17 @@ func (d *Detector) Feed(pin int, occupied bool, at time.Time) ([]SensorEvent, er
 		return nil, nil
 	}
 	s.occupied = occupied
-	return []SensorEvent{{
-		Direction: s.direction,
-		Index:     s.index,
-		Occupied:  occupied,
-		At:        at,
-	}}, nil
+	return []SensorEvent{{Direction: s.direction, Occupied: occupied, At: at}}, nil
 }
 
-// Reset vergisst alle Pegel. Danach gilt jede Zufahrt als frei.
+// Reset vergisst alle Pegel. Danach gilt jede Haltelinie als frei.
 func (d *Detector) Reset() {
 	for _, s := range d.sensors {
 		s.occupied = false
 	}
 }
 
-// Knows sagt, ob dieser Pin zu einem Sensor gehoert. Der Hauptschalter gehoert nicht dazu.
+// Knows sagt, ob dieser Pin zu einer Zufahrt gehoert. Die Schalter gehoeren nicht dazu.
 func (d *Detector) Knows(pin int) bool {
 	_, ok := d.sensors[pin]
 	return ok

@@ -91,17 +91,12 @@ func TestSwitchingOnStartsFromAllRed(t *testing.T) {
 func TestSwitchingOnStartsANewMeasurement(t *testing.T) {
 	h := newPowerHarness(t)
 	h.run(time.Second)
-	for _, pin := range []int{12, 26, 19} {
-		h.controller.Feed(Input{Pin: pin, Active: true, Time: h.clk.Now()})
-	}
+	h.controller.Feed(Input{Pin: 24, Active: true, Time: h.clk.Now()})
 	h.run(time.Second)
 
 	h.flip(powerPin, false)
 	h.flip(powerPin, true)
 
-	if got := h.controller.Snapshot(h.clk.Now()).Reach[light.East]; got != 0 {
-		t.Errorf("belegte Sensoren Ost nach dem Einschalten %d, erwartet null", got)
-	}
 	if got := h.controller.Snapshot(h.clk.Now()).Following; got != 0 {
 		t.Errorf("%d Verlaengerungen nach dem Einschalten", got)
 	}

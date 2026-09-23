@@ -92,7 +92,7 @@ Funktionen sind die Regelung.
 | Wann gilt ein Fahrzeug als ueberfahren? | `controller/events.go`, die Haltelinie wird wieder frei |
 | Verhungert eine Richtung? | `following.go`, die Hoechstgruenzeit begrenzt jede Freigabe |
 | Wie prueft ihr ohne Hardware? | Die Tests fahren den Regelkreis mit Mock-Lampen und gefaelschter Uhr |
-| Warum Schieberegister? | Strombudget des Pi, `hardware/pinout.md` |
+| Traegt der Pi zwoelf LEDs? | Ja, es leuchten nie mehr als sechs, siehe `hardware/pinout.md` |
 
 ## Wo die Tests liegen
 

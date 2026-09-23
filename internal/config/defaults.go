@@ -8,25 +8,20 @@ func Default() Config {
 	return Config{
 		Hardware: Hardware{
 			Chip: "gpiochip0",
-			ShiftRegister: ShiftRegister{
-				Data:  17,
-				Clock: 27,
-				Latch: 22,
-				BitOrder: []string{
-					"N_red", "N_yellow", "N_green",
-					"E_red", "E_yellow", "E_green",
-					"S_red", "S_yellow", "S_green",
-					"W_red", "W_yellow", "W_green",
-					"free", "free", "free", "free",
-				},
+			Lamps: Lamps{
+				North: [3]int{17, 27, 22},
+				East:  [3]int{5, 6, 13},
+				South: [3]int{19, 26, 12},
+				West:  [3]int{16, 20, 21},
 			},
 			Sensors: Sensors{
-				North: []int{5, 6, 13},
-				East:  []int{19, 26, 12},
-				South: []int{16, 20, 21},
-				West:  []int{23, 24, 25},
+				North: 23,
+				East:  24,
+				South: 25,
+				West:  8,
 			},
 			PowerSwitch: 4,
+			FaultSwitch: 18,
 			Debounce:    millis(15),
 		},
 		Timing: Timing{

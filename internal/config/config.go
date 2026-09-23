@@ -10,26 +10,33 @@ type Config struct {
 }
 
 type Hardware struct {
-	Chip          string        `yaml:"chip"`
-	ShiftRegister ShiftRegister `yaml:"shift_register"`
-	Sensors       Sensors       `yaml:"sensors"`
-	PowerSwitch   int           `yaml:"power_switch"`
-	FaultSwitch   int           `yaml:"fault_switch"`
-	Debounce      Millis        `yaml:"debounce_ms"`
+	Chip        string  `yaml:"chip"`
+	Lamps       Lamps   `yaml:"lamps"`
+	Sensors     Sensors `yaml:"sensors"`
+	PowerSwitch int     `yaml:"power_switch"`
+	FaultSwitch int     `yaml:"fault_switch"`
+	Debounce    Millis  `yaml:"debounce_ms"`
 }
 
-type ShiftRegister struct {
-	Data     int      `yaml:"data"`
-	Clock    int      `yaml:"clock"`
-	Latch    int      `yaml:"latch"`
-	BitOrder []string `yaml:"bit_order"`
+// Lamps sind die zwoelf LED-Leitungen, je Ampelkopf Rot, Gelb, Gruen.
+type Lamps struct {
+	North [3]int `yaml:"north"`
+	East  [3]int `yaml:"east"`
+	South [3]int `yaml:"south"`
+	West  [3]int `yaml:"west"`
 }
 
+// Heads liefert die Lampenpins in der festen Reihenfolge Nord, Ost, Sued, West.
+func (l Lamps) Heads() [4][3]int {
+	return [4][3]int{l.North, l.East, l.South, l.West}
+}
+
+// Sensors ist je Zufahrt der Reed-Kontakt an der Haltelinie.
 type Sensors struct {
-	North []int `yaml:"north"`
-	East  []int `yaml:"east"`
-	South []int `yaml:"south"`
-	West  []int `yaml:"west"`
+	North int `yaml:"north"`
+	East  int `yaml:"east"`
+	South int `yaml:"south"`
+	West  int `yaml:"west"`
 }
 
 type Timing struct {
@@ -57,14 +64,8 @@ type Display struct {
 }
 
 // Approaches liefert die Sensorpins in der festen Reihenfolge Nord, Ost, Sued, West.
-func (s Sensors) Approaches() [4][]int {
-	return [4][]int{s.North, s.East, s.South, s.West}
-}
-
-// SensorCount ist die Anzahl Sensoren je Zufahrt. Die Validierung stellt sicher, dass alle
-// Zufahrten gleich viele haben.
-func (s Sensors) SensorCount() int {
-	return len(s.North)
+func (s Sensors) Approaches() [4]int {
+	return [4]int{s.North, s.East, s.South, s.West}
 }
 
 // Intergreen ist die Summe der Zwischenzeiten eines Phasenwechsels: Gelb, Allrot, RotGelb.

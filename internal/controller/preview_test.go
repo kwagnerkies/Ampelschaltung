@@ -19,7 +19,7 @@ func TestDisplayedGreenJumpsWhenVehiclesFollow(t *testing.T) {
 	}
 	before := h.controller.Snapshot(h.clk.Now())
 
-	loads := []*load{{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 700 * time.Millisecond}}
+	loads := []*load{{direction: light.North, stopLine: 23, interval: 700 * time.Millisecond}}
 	h.drive(loads, 2*time.Second)
 
 	after := h.controller.Snapshot(h.clk.Now())
@@ -44,8 +44,8 @@ func TestDisplayedGreenJumpsWhenVehiclesFollow(t *testing.T) {
 func TestScatteredTrafficDoesNotExtend(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: light.North, stopLine: 5, upstream: []int{6, 13}, interval: 5 * time.Second},
-		{direction: light.South, stopLine: 16, upstream: []int{20, 21}, interval: 5 * time.Second},
+		{direction: light.North, stopLine: 23, interval: 5 * time.Second},
+		{direction: light.South, stopLine: 25, interval: 5 * time.Second},
 	}
 	h.drive(loads, 8*time.Second)
 
