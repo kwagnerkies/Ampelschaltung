@@ -1,0 +1,59 @@
+# Bestellliste
+
+Mengen mit Reserve. Die Reserve ist kein Luxus: Reed-Kontakte sind Glas und brechen beim
+Einlegen, LEDs werden beim Loeten zu heiss.
+
+## Elektronik
+
+| Menge | Teil | Anmerkung |
+|---|---|---|
+| 5 | LED 5 mm rot, diffus | 4 verbaut |
+| 5 | LED 5 mm gelb, diffus | 4 verbaut |
+| 5 | LED 5 mm gruen, diffus | 4 verbaut |
+| 15 | Widerstand 330 Ohm, 1/4 W | 12 verbaut, je LED einer |
+| 10 | Reed-Kontakt, Schliesser, Glaskoerper 14 mm | 4 verbaut, der Rest ist Bruchreserve |
+| 20 | Neodym-Scheibenmagnet 5 x 2 mm | einer je Modellauto |
+| 2 | Kippschalter, ein Umschalter, Einbau 6 mm | Hauptschalter und Notschalter |
+| 1 | TFT-Modul 2,4 Zoll, ILI9341, **SPI** | Stiftreihe mit SDI, SCK, DC, RESET |
+
+Achte beim Display auf die SPI-Bauart. Module mit `D0` bis `D7` sind parallel und passen
+nicht.
+
+## Verkabelung
+
+| Menge | Teil | Anmerkung |
+|---|---|---|
+| 1 | GPIO-Breakout mit Flachbandkabel, 40-polig | erspart das Stochern an der Stiftleiste |
+| 1 | Lochrasterplatine 80 x 50 mm | traegt die Widerstaende und die Masseschiene |
+| 10 m | Litze 0,14 mm2, mehrere Farben | rund 40 Verbindungen |
+| 1 | Satz Jumperkabel Buchse-Buchse | fuer das Display |
+| 2 | Stiftleiste 40-polig, gerade | zum Auftrennen |
+| 1 | Schrumpfschlauchsortiment | jede Loetstelle an den Reed-Kontakten |
+| 20 | Kabelbinder klein | Zugentlastung unter der Platte |
+
+## Rechner
+
+| Menge | Teil | Anmerkung |
+|---|---|---|
+| 1 | Raspberry Pi 2 B oder Pi 3 | vorhanden |
+| 1 | Netzteil 5 V, mindestens 2 A | kein Handy-Ladegeraet |
+| 1 | microSD-Karte 16 GB | zweite als Reserve ist Gold wert |
+
+## Mechanik
+
+| Menge | Teil | Anmerkung |
+|---|---|---|
+| 1 kg | PLA-Filament | Platte, Masten, Gehaeuse, Fahrzeuge |
+| 1 | Sekundenkleber | Reed-Kontakte in den Kanaelen |
+| 1 | Isolierband oder Kaptonband | Kontakte fixieren, bevor geklebt wird |
+
+## Was du nicht brauchst
+
+Keine Schieberegister, keine Pegelwandler, keine externe 5-V-Schiene: die LEDs haengen
+unmittelbar an den GPIO-Leitungen. Es leuchten nie mehr als sechs gleichzeitig, das sind bei
+330 Ohm etwa 24 mA und damit deutlich unter der Grenze des Pi.
+
+## Kosten grob
+
+Elektronik und Verkabelung zusammen unter 30 Euro, wenn das Display etwa 10 Euro kostet. Der
+groesste Posten ist das Filament.
