@@ -26,6 +26,10 @@ timing:
   extension_ms: 3000
 
 
+api:
+  enabled: true
+  address: ":8080"
+
 display:
   enabled: true
   spi: /dev/spidev0.0

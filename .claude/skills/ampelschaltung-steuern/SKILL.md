@@ -97,6 +97,38 @@ make deploy PI_HOST=$PI
 
 Ersetzt nur das Programm und startet den Dienst neu. Konfiguration und Dienstdatei bleiben.
 
+## Fernsteuerung ueber ampelctl
+
+Die Anlage bietet eine HTTP-Schnittstelle, standardmaessig auf Port 8080. `ampelctl` liegt
+nach der Installation neben `ampel`.
+
+| Zweck | Befehl |
+|---|---|
+| Zustand anzeigen | `ampelctl status` |
+| Anlage einschalten | `ampelctl an` |
+| Anlage ausschalten | `ampelctl aus` |
+| Notzustand ausloesen | `ampelctl not an` |
+| Notzustand beenden | `ampelctl not aus` |
+
+Von einem anderen Rechner mit `-host`:
+
+```
+ampelctl -host http://raspberrypi.local:8080 status
+```
+
+Ohne CLI geht es auch mit curl:
+
+```
+curl http://raspberrypi.local:8080/status
+curl -X POST http://raspberrypi.local:8080/notschalter/an
+```
+
+Die Schnittstelle wirkt wie ein zweiter Satz Schalter: sie schickt dieselben Flanken wie die
+physischen Kippschalter. Wer danach den echten Schalter umlegt, gewinnt. Abschalten laesst sie
+sich mit `api.enabled: false` in der Konfiguration.
+
+Es gibt keine Anmeldung. Die Anlage gehoert deshalb nicht ins offene Netz.
+
 ## Fehlersuche
 
 | Symptom | Ursache |

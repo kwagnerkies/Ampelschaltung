@@ -1,6 +1,10 @@
 package main
 
 import (
+	"net/http"
+	"time"
+
+	"ampel/internal/api"
 	"ampel/internal/clock"
 	"ampel/internal/config"
 	"ampel/internal/controller"
@@ -97,7 +101,8 @@ func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	setup.Switches = readSwitches(cfg, inputs)
 	setup.Clock = clock.NewReal()
 	setup.Writer = driver
-	setup.Inputs = pump(ctx, inputs.Events())
+	commands := make(chan controller.Input, inputBuffer)
+	setup.Inputs = pump(ctx, inputs.Events(), commands)
 
 	screen, closeDisplay, err := openDisplay(chip, cfg, out)
 	if err != nil {
@@ -105,11 +110,14 @@ func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	} else {
 		defer closeDisplay()
 	}
+	store := &api.Store{}
+	observers := controller.Observers{store}
 	var panel *display.Observer
 	if screen != nil {
 		panel = display.NewObserver(screen, nil, func(err error) { fmt.Fprintln(out, "Anzeige:", err) })
-		setup.Observer = panel
+		observers = append(observers, panel)
 	}
+	setup.Observer = observers
 
 	control, err := controller.Build(setup)
 	if err != nil {
@@ -117,6 +125,20 @@ func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	}
 	if panel != nil {
 		panel.Source(control.Snapshot)
+	}
+	if cfg.API.Enabled {
+		server := &http.Server{
+			Addr:              cfg.API.Address,
+			Handler:           api.NewServer(store, commands, cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, setup.Switches.PowerOn, setup.Switches.FaultOn).Handler(),
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		go func() {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				fmt.Fprintln(out, "Schnittstelle:", err)
+			}
+		}()
+		defer func() { _ = server.Close() }()
+		fmt.Fprintln(out, "Schnittstelle auf", cfg.API.Address)
 	}
 
 	fmt.Fprintln(out, "Betrieb gestartet, Verlaengerung bei dicht folgenden Fahrzeugen")
@@ -143,20 +165,23 @@ func readSwitches(cfg *config.Config, source hal.InputSource) *controller.Switch
 	return s
 }
 
-func pump(ctx context.Context, events <-chan hal.InputEvent) <-chan controller.Input {
+func pump(ctx context.Context, events <-chan hal.InputEvent, commands <-chan controller.Input) <-chan controller.Input {
 	inputs := make(chan controller.Input, inputBuffer)
 	go func() {
 		defer close(inputs)
 		for {
+			var input controller.Input
 			select {
 			case <-ctx.Done():
 				return
 			case event := <-events:
-				select {
-				case inputs <- controller.Input{Pin: event.Pin, Active: event.Active, Time: event.Time}:
-				case <-ctx.Done():
-					return
-				}
+				input = controller.Input{Pin: event.Pin, Active: event.Active, Time: event.Time}
+			case input = <-commands:
+			}
+			select {
+			case inputs <- input:
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()

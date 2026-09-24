@@ -36,6 +36,7 @@ func (c *Config) Validate() error {
 	errs = append(errs, c.Hardware.validate(c.Display)...)
 	errs = append(errs, c.Timing.validate()...)
 	errs = append(errs, c.Display.validate()...)
+	errs = append(errs, c.API.validate()...)
 	return errors.Join(errs...)
 }
 
@@ -65,6 +66,13 @@ func (t Timing) validate() []error {
 		errs = append(errs, fmt.Errorf("timing.extension_ms (%s) darf timing.max_green_ms (%s) nicht ueberschreiten", t.Extension, t.MaxGreen))
 	}
 	return errs
+}
+
+func (a API) validate() []error {
+	if a.Enabled && a.Address == "" {
+		return []error{errors.New("api.address darf nicht leer sein")}
+	}
+	return nil
 }
 
 func (d Display) validate() []error {

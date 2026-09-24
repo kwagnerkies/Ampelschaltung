@@ -9,12 +9,13 @@ PI_STAGE ?= /tmp/ampel-install
 all: fmt vet test build
 
 build:
-	go build -o bin/$(BINARY) ./cmd/ampel
+	go build -o bin/ ./cmd/...
 
 # pi baut fuer Raspberry Pi OS 32 Bit, das auf Pi 2 und Pi 3 laeuft. pi64 baut fuer die
 # 64-Bit-Variante, die es erst ab Pi 3 gibt.
 pi:
 	GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/$(BINARY)-armv7 ./cmd/ampel
+	GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/ampelctl-armv7 ./cmd/ampelctl
 
 pi64:
 	GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/$(BINARY)-arm64 ./cmd/ampel
@@ -43,7 +44,7 @@ install: build
 
 install-pi: pi
 	ssh $(PI_HOST) 'mkdir -p $(PI_STAGE)'
-	scp bin/$(BINARY)-armv7 $(CONFIG) deploy/ampel.service deploy/install.sh \
+	scp bin/$(BINARY)-armv7 bin/ampelctl-armv7 $(CONFIG) deploy/ampel.service deploy/install.sh \
 		docs/aufbau.md docs/vorfuehrung.md $(PI_HOST):$(PI_STAGE)/
 	ssh $(PI_HOST) 'sudo sh $(PI_STAGE)/install.sh $(PI_STAGE)'
 

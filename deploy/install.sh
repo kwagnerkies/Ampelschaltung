@@ -8,6 +8,7 @@ if [ -f "$SRC/configs/config.yaml" ]; then
 	REPO=$SRC
 	SRC=$SRC/deploy
 	[ -f "$REPO/bin/ampel" ] && BINARY=$REPO/bin/ampel
+	[ -f "$REPO/bin/ampelctl" ] && CTL=$REPO/bin/ampelctl
 	CONFIGSRC=$REPO/configs/config.yaml
 	DOCSRC=$REPO/docs
 fi
@@ -42,6 +43,12 @@ usermod --append --groups gpio,spi ampel
 
 install -d -m 0755 /etc/ampel "$DOCS"
 install -m 0755 "$binary" "$BIN"
+
+ctl=${CTL:-$SRC/ampelctl-armv7}
+[ -f "$ctl" ] || ctl=$SRC/ampelctl
+if [ -f "$ctl" ]; then
+	install -m 0755 "$ctl" /usr/local/bin/ampelctl
+fi
 
 
 if [ -f "$CONFIG" ]; then

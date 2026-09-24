@@ -22,6 +22,7 @@ PrivateTmp=true
 DevicePolicy=closed
 DeviceAllow=/dev/gpiochip0 rw
 DeviceAllow=/dev/spidev0.0 rw
+IPAddressAllow=any
 StandardOutput=journal
 StandardError=journal
 

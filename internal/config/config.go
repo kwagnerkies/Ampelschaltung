@@ -14,6 +14,7 @@ type Config struct {
 	Hardware Hardware `yaml:"hardware"`
 	Timing   Timing   `yaml:"timing"`
 	Display  Display  `yaml:"display"`
+	API      API      `yaml:"api"`
 }
 
 type Hardware struct {
@@ -51,6 +52,11 @@ type Timing struct {
 	MaxGreen  Millis `yaml:"max_green_ms"`
 	Follow    Millis `yaml:"follow_ms"`
 	Extension Millis `yaml:"extension_ms"`
+}
+
+type API struct {
+	Enabled bool   `yaml:"enabled"`
+	Address string `yaml:"address"`
 }
 
 type Display struct {
@@ -99,6 +105,7 @@ func Default() Config {
 			Follow:    millis(2000),
 			Extension: millis(3000),
 		},
+		API: API{Enabled: true, Address: ":8080"},
 		Display: Display{
 			Enabled:  true,
 			Device:   "/dev/spidev0.0",
