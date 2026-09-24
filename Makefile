@@ -4,7 +4,7 @@ PI_HOST ?= ampel@raspberrypi.local
 PI_BIN ?= /usr/local/bin/ampel
 PI_STAGE ?= /tmp/ampel-install
 
-.PHONY: all build pi pi64 test vet fmt lint validate deploy install-pi clean
+.PHONY: all build pi pi64 install test vet fmt lint validate deploy install-pi clean
 
 all: fmt vet test build
 
@@ -37,6 +37,9 @@ validate: build
 deploy: pi
 	scp bin/$(BINARY)-armv7 $(PI_HOST):/tmp/$(BINARY)
 	ssh $(PI_HOST) 'sudo install -m 0755 /tmp/$(BINARY) $(PI_BIN) && sudo systemctl restart ampel'
+
+install: build
+	sudo sh deploy/install.sh .
 
 install-pi: pi
 	ssh $(PI_HOST) 'mkdir -p $(PI_STAGE)'

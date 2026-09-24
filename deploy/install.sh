@@ -4,6 +4,13 @@
 set -eu
 
 SRC=${1:-$(dirname "$0")}
+if [ -f "$SRC/configs/config.yaml" ]; then
+	REPO=$SRC
+	SRC=$SRC/deploy
+	[ -f "$REPO/bin/ampel" ] && BINARY=$REPO/bin/ampel
+	CONFIGSRC=$REPO/configs/config.yaml
+	DOCSRC=$REPO/docs
+fi
 BIN=/usr/local/bin/ampel
 CONFIG=/etc/ampel/config.yaml
 UNIT=/etc/systemd/system/ampel.service
@@ -14,7 +21,7 @@ if [ "$(id -u)" -ne 0 ]; then
 	exit 1
 fi
 
-binary=$SRC/ampel-armv7
+binary=${BINARY:-$SRC/ampel-armv7}
 [ -f "$binary" ] || binary=$SRC/ampel
 if [ ! -f "$binary" ]; then
 	echo "Kein Programm in $SRC gefunden, erwartet ampel-armv7 oder ampel." >&2
@@ -39,13 +46,16 @@ install -m 0755 "$binary" "$BIN"
 
 if [ -f "$CONFIG" ]; then
 	echo "$CONFIG bleibt unveraendert, neue Vorlage liegt als $CONFIG.neu"
-	install -m 0644 "$SRC/config.yaml" "$CONFIG.neu"
+	install -m 0644 "${CONFIGSRC:-$SRC/config.yaml}" "$CONFIG.neu"
 else
-	install -m 0644 "$SRC/config.yaml" "$CONFIG"
+	install -m 0644 "${CONFIGSRC:-$SRC/config.yaml}" "$CONFIG"
 fi
 install -m 0644 "$SRC/ampel.service" "$UNIT"
-for doc in aufbau.md vorfuehrung.md architektur.md; do
-	[ -f "$SRC/$doc" ] && install -m 0644 "$SRC/$doc" "$DOCS/$doc"
+for doc in aufbau.md vorfuehrung.md architektur.md projektziel.md; do
+	src=${DOCSRC:-$SRC}/$doc
+	if [ -f "$src" ]; then
+		install -m 0644 "$src" "$DOCS/$doc"
+	fi
 done
 
 # Die Anzeige haengt an SPI. Ohne diese Zeile in /boot/config.txt gibt es kein spidev.
