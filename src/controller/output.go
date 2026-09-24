@@ -1,30 +1,30 @@
-package steuerung
+package controller
 
 import (
-	"ampel/src/signal"
+	"ampel/src/light"
 	"errors"
 	"fmt"
 	"time"
 )
 
-const LampCount = signal.DirectionCount * 3
+const LampCount = light.DirectionCount * 3
 
 type LampWriter interface {
 	Write(lamps []bool) error
 }
 
 type Output struct {
-	heads  signal.Heads
+	heads  light.Heads
 	writer LampWriter
 }
 
 func NewOutput(writer LampWriter) *Output {
-	return &Output{heads: signal.NewHeads(), writer: writer}
+	return &Output{heads: light.NewHeads(), writer: writer}
 }
 
-func (o *Output) Aspects() [signal.DirectionCount]signal.Aspect { return o.heads.Aspects() }
+func (o *Output) Aspects() [light.DirectionCount]light.Aspect { return o.heads.Aspects() }
 
-func (o *Output) Show(aspects [signal.DirectionCount]signal.Aspect) error {
+func (o *Output) Show(aspects [light.DirectionCount]light.Aspect) error {
 	if err := Check(aspects); err != nil {
 		return err
 	}
@@ -38,14 +38,14 @@ func (o *Output) Show(aspects [signal.DirectionCount]signal.Aspect) error {
 }
 
 func (o *Output) Dark() error {
-	var off [signal.DirectionCount]signal.Aspect
+	var off [light.DirectionCount]light.Aspect
 	for i := range off {
-		off[i] = signal.AspectOff
+		off[i] = light.AspectOff
 	}
 	return o.Show(off)
 }
 
-func pattern(aspects [signal.DirectionCount]signal.Aspect) []bool {
+func pattern(aspects [light.DirectionCount]light.Aspect) []bool {
 	lamps := make([]bool, LampCount)
 	for i, aspect := range aspects {
 		on := aspect.Lamps()
@@ -56,16 +56,16 @@ func pattern(aspects [signal.DirectionCount]signal.Aspect) []bool {
 	return lamps
 }
 
-var conflicts = [signal.DirectionCount][signal.DirectionCount]bool{
-	signal.North: {signal.East: true, signal.West: true},
-	signal.East:  {signal.North: true, signal.South: true},
-	signal.South: {signal.East: true, signal.West: true},
-	signal.West:  {signal.North: true, signal.South: true},
+var conflicts = [light.DirectionCount][light.DirectionCount]bool{
+	light.North: {light.East: true, light.West: true},
+	light.East:  {light.North: true, light.South: true},
+	light.South: {light.East: true, light.West: true},
+	light.West:  {light.North: true, light.South: true},
 }
 
 var ErrConflict = errors.New("unzulaessiger signalzustand")
 
-func Check(aspects [signal.DirectionCount]signal.Aspect) error {
+func Check(aspects [light.DirectionCount]light.Aspect) error {
 	for i, own := range aspects {
 		if !own.Releasing() {
 			continue
@@ -76,11 +76,11 @@ func Check(aspects [signal.DirectionCount]signal.Aspect) error {
 			}
 			if conflicts[i][j] && other.Releasing() {
 				return fmt.Errorf("%w: %s zeigt %s, %s zeigt %s",
-					ErrConflict, signal.Direction(i), own, signal.Direction(j), other)
+					ErrConflict, light.Direction(i), own, light.Direction(j), other)
 			}
-			if other == signal.AspectOff {
+			if other == light.AspectOff {
 				return fmt.Errorf("%w: %s zeigt %s, %s ist dunkel",
-					ErrConflict, signal.Direction(i), own, signal.Direction(j))
+					ErrConflict, light.Direction(i), own, light.Direction(j))
 			}
 		}
 	}
@@ -130,15 +130,15 @@ func (c *Controller) flash(now time.Time) {
 		return
 	}
 	c.flashOn = on
-	aspect := signal.AspectOff
+	aspect := light.AspectOff
 	if on {
-		aspect = signal.AspectYellowFlash
+		aspect = light.AspectYellowFlash
 	}
 	_ = c.showAll(aspect)
 }
 
-func (c *Controller) showAll(aspect signal.Aspect) error {
-	var aspects [signal.DirectionCount]signal.Aspect
+func (c *Controller) showAll(aspect light.Aspect) error {
+	var aspects [light.DirectionCount]light.Aspect
 	for direction := range aspects {
 		aspects[direction] = aspect
 	}

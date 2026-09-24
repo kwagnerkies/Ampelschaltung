@@ -1,4 +1,4 @@
-package regel
+package strategy
 
 import (
 	"testing"

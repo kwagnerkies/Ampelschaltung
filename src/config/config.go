@@ -1,12 +1,12 @@
-package konfiguration
+package config
 
 import (
-	"ampel/src/regel"
-	"ampel/src/steuerung"
+	"ampel/src/controller"
+	"ampel/src/strategy"
 	"fmt"
 	"time"
 
-	"ampel/src/treiber/tft"
+	"ampel/src/driver/tft"
 	"gopkg.in/yaml.v3"
 )
 
@@ -140,16 +140,16 @@ func (m Millis) Duration() time.Duration { return time.Duration(m) }
 
 func (m Millis) String() string { return time.Duration(m).String() }
 
-func (c *Config) ControllerTiming() steuerung.Timing {
-	return steuerung.Timing{
+func (c *Config) ControllerTiming() controller.Timing {
+	return controller.Timing{
 		Yellow:    c.Timing.Yellow.Duration(),
 		AllRed:    c.Timing.AllRed.Duration(),
 		RedYellow: c.Timing.RedYellow.Duration(),
 	}
 }
 
-func (c *Config) Following() (*regel.Following, error) {
-	return regel.NewFollowing(
+func (c *Config) Following() (*strategy.Following, error) {
+	return strategy.NewFollowing(
 		c.Timing.BaseGreen.Duration(),
 		c.Timing.Extension.Duration(),
 		c.Timing.MaxGreen.Duration(),
@@ -163,12 +163,12 @@ func (d Display) TFTRotation() int {
 	return tft.RotationLandscape
 }
 
-func (c *Config) Setup() (steuerung.Setup, error) {
-	return steuerung.Setup{
+func (c *Config) Setup() (controller.Setup, error) {
+	return controller.Setup{
 		Sensors: c.Hardware.Sensors.Approaches(),
 		Timing:  c.ControllerTiming(),
 		Follow:  c.Timing.Follow.Duration(),
-		Tick:    steuerung.DefaultTick,
+		Tick:    controller.DefaultTick,
 		Sample:  time.Second,
 	}, nil
 }

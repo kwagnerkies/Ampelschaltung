@@ -2,11 +2,11 @@ package main
 
 import (
 	"ampel/src/clock"
-	"ampel/src/konfiguration"
-	"ampel/src/signal"
-	"ampel/src/steuerung"
-	"ampel/src/treiber"
-	"ampel/src/treiber/gpio"
+	"ampel/src/config"
+	"ampel/src/controller"
+	"ampel/src/driver"
+	"ampel/src/driver/gpio"
+	"ampel/src/light"
 	"context"
 	"errors"
 	"fmt"
@@ -19,7 +19,7 @@ const lampDwell = 400 * time.Millisecond
 
 const selftestBuffer = 256
 
-func runSelftest(ctx context.Context, cfg *konfiguration.Config, out io.Writer) error {
+func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	chip, err := gpio.OpenChip(cfg.Hardware.Chip)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func runSelftest(ctx context.Context, cfg *konfiguration.Config, out io.Writer) 
 	}
 
 	fmt.Fprintln(out, "Signalfolge, beide Freigabephasen einmal:")
-	if err := showSequence(ctx, out, steuerung.NewOutput(driver), cfg.Timing); err != nil {
+	if err := showSequence(ctx, out, controller.NewOutput(driver), cfg.Timing); err != nil {
 		return err
 	}
 
@@ -70,8 +70,8 @@ func runSelftest(ctx context.Context, cfg *konfiguration.Config, out io.Writer) 
 	return nil
 }
 
-func openLamps(chip *gpio.Chip, cfg *konfiguration.Config) (treiber.LampDriver, error) {
-	var lines []treiber.OutputLine
+func openLamps(chip *gpio.Chip, cfg *config.Config) (driver.LampDriver, error) {
+	var lines []driver.OutputLine
 	for i, head := range cfg.Hardware.Lamps.Heads() {
 		for j, pin := range head {
 			line, err := chip.Output(pin)
@@ -87,9 +87,9 @@ func openLamps(chip *gpio.Chip, cfg *konfiguration.Config) (treiber.LampDriver, 
 	return gpio.NewLamps(lines), nil
 }
 
-func walkLamps(ctx context.Context, out io.Writer, driver treiber.LampDriver, cfg *konfiguration.Config, dwell time.Duration) error {
-	for index := 0; index < steuerung.LampCount; index++ {
-		pattern := make([]bool, steuerung.LampCount)
+func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, cfg *config.Config, dwell time.Duration) error {
+	for index := 0; index < controller.LampCount; index++ {
+		pattern := make([]bool, controller.LampCount)
 		pattern[index] = true
 		if err := driver.Write(pattern); err != nil {
 			return fmt.Errorf("lampe %d schalten: %w", index, err)
@@ -108,7 +108,7 @@ func walkLamps(ctx context.Context, out io.Writer, driver treiber.LampDriver, cf
 	return nil
 }
 
-func inputPins(cfg *konfiguration.Config) ([]int, map[int]string) {
+func inputPins(cfg *config.Config) ([]int, map[int]string) {
 	names := [4]string{"Nord", "Ost", "Sued", "West"}
 	pins := make([]int, 0, 6)
 	labels := make(map[int]string, 6)
@@ -122,7 +122,7 @@ func inputPins(cfg *konfiguration.Config) ([]int, map[int]string) {
 	return pins, labels
 }
 
-func printEvents(ctx context.Context, out io.Writer, events <-chan treiber.InputEvent, labels map[int]string) {
+func printEvents(ctx context.Context, out io.Writer, events <-chan driver.InputEvent, labels map[int]string) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -143,11 +143,11 @@ var approachNames = [4]string{"Nord", "Ost", "Sued", "West"}
 var lampNames = [3]string{"Rot", "Gelb", "Gruen"}
 
 type step struct {
-	aspects [signal.DirectionCount]signal.Aspect
+	aspects [light.DirectionCount]light.Aspect
 	hold    time.Duration
 }
 
-func showSequence(ctx context.Context, out io.Writer, output *steuerung.Output, timing konfiguration.Timing) error {
+func showSequence(ctx context.Context, out io.Writer, output *controller.Output, timing config.Timing) error {
 	for _, s := range sequenceSteps(timing) {
 		if err := output.Show(s.aspects); err != nil {
 			return fmt.Errorf("signalbild schalten: %w", err)
@@ -162,40 +162,40 @@ func showSequence(ctx context.Context, out io.Writer, output *steuerung.Output, 
 	return nil
 }
 
-func sequenceSteps(timing konfiguration.Timing) []step {
+func sequenceSteps(timing config.Timing) []step {
 	const (
 		ns = 0
 		ew = 1
 	)
-	phase := func(free int, aspect signal.Aspect) [signal.DirectionCount]signal.Aspect {
-		aspects := [signal.DirectionCount]signal.Aspect{
-			signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed,
+	phase := func(free int, aspect light.Aspect) [light.DirectionCount]light.Aspect {
+		aspects := [light.DirectionCount]light.Aspect{
+			light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed,
 		}
 		if free == ns {
-			aspects[signal.North], aspects[signal.South] = aspect, aspect
+			aspects[light.North], aspects[light.South] = aspect, aspect
 		} else {
-			aspects[signal.East], aspects[signal.West] = aspect, aspect
+			aspects[light.East], aspects[light.West] = aspect, aspect
 		}
 		return aspects
 	}
-	allRed := phase(ns, signal.AspectRed)
+	allRed := phase(ns, light.AspectRed)
 
 	steps := []step{{aspects: allRed, hold: timing.AllRed.Duration()}}
 	for _, free := range []int{ns, ew} {
 		steps = append(steps,
-			step{phase(free, signal.AspectRedYellow), timing.RedYellow.Duration()},
-			step{phase(free, signal.AspectGreen), timing.BaseGreen.Duration()},
-			step{phase(free, signal.AspectYellow), timing.Yellow.Duration()},
+			step{phase(free, light.AspectRedYellow), timing.RedYellow.Duration()},
+			step{phase(free, light.AspectGreen), timing.BaseGreen.Duration()},
+			step{phase(free, light.AspectYellow), timing.Yellow.Duration()},
 			step{allRed, timing.AllRed.Duration()},
 		)
 	}
 	return steps
 }
 
-func describe(aspects [signal.DirectionCount]signal.Aspect) string {
-	parts := make([]string, 0, signal.DirectionCount)
+func describe(aspects [light.DirectionCount]light.Aspect) string {
+	parts := make([]string, 0, light.DirectionCount)
 	for i, aspect := range aspects {
-		parts = append(parts, fmt.Sprintf("%s %s", signal.Direction(i), aspect))
+		parts = append(parts, fmt.Sprintf("%s %s", light.Direction(i), aspect))
 	}
 	return strings.Join(parts, ", ")
 }

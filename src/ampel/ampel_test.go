@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ampel/src/konfiguration"
-	"ampel/src/signal"
-	"ampel/src/steuerung"
-	"ampel/src/treiber/mock"
+	"ampel/src/config"
+	"ampel/src/controller"
+	"ampel/src/driver/mock"
+	"ampel/src/light"
 	"context"
 	"io"
 	"os"
@@ -15,25 +15,25 @@ import (
 )
 
 func TestWalkLampsLightsEachLampAlone(t *testing.T) {
-	cfg := konfiguration.Default()
-	driver := mock.NewMock(steuerung.LampCount, 1)
+	cfg := config.Default()
+	driver := mock.NewMock(controller.LampCount, 1)
 
 	if err := walkLamps(context.Background(), io.Discard, driver, &cfg, 0); err != nil {
 		t.Fatalf("walkLamps: %v", err)
 	}
 
 	history := driver.History()
-	if len(history) != steuerung.LampCount+1 {
-		t.Fatalf("%d Schreibzugriffe, erwartet %d", len(history), steuerung.LampCount+1)
+	if len(history) != controller.LampCount+1 {
+		t.Fatalf("%d Schreibzugriffe, erwartet %d", len(history), controller.LampCount+1)
 	}
-	for lamp := 0; lamp < steuerung.LampCount; lamp++ {
+	for lamp := 0; lamp < controller.LampCount; lamp++ {
 		for index, on := range history[lamp] {
 			if on != (index == lamp) {
 				t.Errorf("bei lampe %d ist %d %v, erwartet %v", lamp, index, on, index == lamp)
 			}
 		}
 	}
-	for index, on := range history[steuerung.LampCount] {
+	for index, on := range history[controller.LampCount] {
 		if on {
 			t.Errorf("nach dem Test leuchtet noch Lampe %d", index)
 		}
@@ -41,7 +41,7 @@ func TestWalkLampsLightsEachLampAlone(t *testing.T) {
 }
 
 func TestInputPinsCoversSensorsAndSwitches(t *testing.T) {
-	cfg := konfiguration.Default()
+	cfg := config.Default()
 	pins, labels := inputPins(&cfg)
 
 	if len(pins) != 6 {
@@ -61,23 +61,23 @@ func TestInputPinsCoversSensorsAndSwitches(t *testing.T) {
 }
 
 func TestSequencePassesGuardedOutput(t *testing.T) {
-	cfg := konfiguration.Default()
-	mock := mock.NewMock(steuerung.LampCount, 1)
-	output := steuerung.NewOutput(mock)
+	cfg := config.Default()
+	mock := mock.NewMock(controller.LampCount, 1)
+	output := controller.NewOutput(mock)
 
-	greens := map[signal.Direction]int{}
+	greens := map[light.Direction]int{}
 	for i, s := range sequenceSteps(cfg.Timing) {
 		if err := output.Show(s.aspects); err != nil {
 			t.Fatalf("schritt %d (%s): %v", i, describe(s.aspects), err)
 		}
 		for direction, aspect := range s.aspects {
-			if aspect == signal.AspectGreen {
-				greens[signal.Direction(direction)]++
+			if aspect == light.AspectGreen {
+				greens[light.Direction(direction)]++
 			}
 		}
 	}
 
-	for _, direction := range signal.Directions() {
+	for _, direction := range light.Directions() {
 		if greens[direction] != 1 {
 			t.Errorf("zufahrt %s war %d mal gruen, erwartet einmal", direction, greens[direction])
 		}
@@ -85,11 +85,11 @@ func TestSequencePassesGuardedOutput(t *testing.T) {
 }
 
 func TestSequenceWrapsGreenInTransitions(t *testing.T) {
-	cfg := konfiguration.Default()
+	cfg := config.Default()
 	steps := sequenceSteps(cfg.Timing)
 
-	for _, direction := range signal.Directions() {
-		var seen []signal.Aspect
+	for _, direction := range light.Directions() {
+		var seen []light.Aspect
 		for _, s := range steps {
 			aspect := s.aspects[direction]
 			if len(seen) == 0 || seen[len(seen)-1] != aspect {
@@ -98,35 +98,35 @@ func TestSequenceWrapsGreenInTransitions(t *testing.T) {
 		}
 		green := -1
 		for i, aspect := range seen {
-			if aspect == signal.AspectGreen {
+			if aspect == light.AspectGreen {
 				green = i
 			}
 		}
 		if green <= 0 || green+1 >= len(seen) {
 			t.Fatalf("zufahrt %s: gruen liegt nicht innerhalb der folge %v", direction, seen)
 		}
-		if seen[green-1] != signal.AspectRedYellow {
+		if seen[green-1] != light.AspectRedYellow {
 			t.Errorf("zufahrt %s zeigt vor Gruen %s, erwartet RotGelb", direction, seen[green-1])
 		}
-		if seen[green+1] != signal.AspectYellow {
+		if seen[green+1] != light.AspectYellow {
 			t.Errorf("zufahrt %s zeigt nach Gruen %s, erwartet Gelb", direction, seen[green+1])
 		}
 	}
 }
 
 func TestSequenceHoldsComeFromConfig(t *testing.T) {
-	cfg := konfiguration.Default()
-	cfg.Timing.BaseGreen = konfiguration.Millis(4 * time.Second)
+	cfg := config.Default()
+	cfg.Timing.BaseGreen = config.Millis(4 * time.Second)
 	steps := sequenceSteps(cfg.Timing)
 
 	for _, s := range steps {
 		var want time.Duration
 		switch {
-		case containsAspect(s.aspects, signal.AspectGreen):
+		case containsAspect(s.aspects, light.AspectGreen):
 			want = 4 * time.Second
-		case containsAspect(s.aspects, signal.AspectYellow):
+		case containsAspect(s.aspects, light.AspectYellow):
 			want = cfg.Timing.Yellow.Duration()
-		case containsAspect(s.aspects, signal.AspectRedYellow):
+		case containsAspect(s.aspects, light.AspectRedYellow):
 			want = cfg.Timing.RedYellow.Duration()
 		default:
 			want = cfg.Timing.AllRed.Duration()
@@ -137,7 +137,7 @@ func TestSequenceHoldsComeFromConfig(t *testing.T) {
 	}
 }
 
-func containsAspect(aspects [signal.DirectionCount]signal.Aspect, want signal.Aspect) bool {
+func containsAspect(aspects [light.DirectionCount]light.Aspect, want light.Aspect) bool {
 	for _, aspect := range aspects {
 		if aspect == want {
 			return true
@@ -208,7 +208,7 @@ func TestUnitStartsInstalledProgram(t *testing.T) {
 }
 
 func TestUnitMatchesConfig(t *testing.T) {
-	cfg, err := konfiguration.Load(configPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		t.Fatalf("Konfiguration laden: %v", err)
 	}

@@ -1,9 +1,9 @@
-package steuerung
+package controller
 
 import (
 	"time"
 
-	"ampel/src/signal"
+	"ampel/src/light"
 )
 
 const DefaultSwitchDebounce = 100 * time.Millisecond
@@ -81,7 +81,7 @@ func (c *Controller) switchStep(now time.Time) bool {
 
 func (c *Controller) switchOff(now time.Time) {
 	c.observer.PowerChanged(now, false)
-	if err := c.showAll(signal.AspectOff); err != nil {
+	if err := c.showAll(light.AspectOff); err != nil {
 		c.enterFault(now, err)
 	}
 }

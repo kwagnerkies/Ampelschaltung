@@ -1,7 +1,7 @@
-package erkennung
+package detector
 
 import (
-	"ampel/src/signal"
+	"ampel/src/light"
 	"fmt"
 	"time"
 )
@@ -11,17 +11,17 @@ type Detector struct {
 }
 
 type sensor struct {
-	direction signal.Direction
+	direction light.Direction
 	occupied  bool
 }
 
-func New(pins [signal.DirectionCount]int) (*Detector, error) {
-	d := &Detector{sensors: make(map[int]*sensor, signal.DirectionCount)}
+func New(pins [light.DirectionCount]int) (*Detector, error) {
+	d := &Detector{sensors: make(map[int]*sensor, light.DirectionCount)}
 	for direction, pin := range pins {
 		if _, taken := d.sensors[pin]; taken {
 			return nil, fmt.Errorf("BCM %d ist doppelt zugeordnet", pin)
 		}
-		d.sensors[pin] = &sensor{direction: signal.Direction(direction)}
+		d.sensors[pin] = &sensor{direction: light.Direction(direction)}
 	}
 	return d, nil
 }
@@ -50,7 +50,7 @@ func (d *Detector) Knows(pin int) bool {
 }
 
 type SensorEvent struct {
-	Direction signal.Direction
+	Direction light.Direction
 	Occupied  bool
 	At        time.Time
 }

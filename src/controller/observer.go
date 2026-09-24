@@ -1,8 +1,8 @@
-package steuerung
+package controller
 
 import (
-	"ampel/src/erkennung"
-	"ampel/src/signal"
+	"ampel/src/detector"
+	"ampel/src/light"
 	"time"
 )
 
@@ -10,13 +10,13 @@ type Snapshot struct {
 	State     State
 	Elapsed   time.Duration
 	Following int
-	Aspects   [signal.DirectionCount]signal.Aspect
-	Green     [signal.DirectionCount]time.Duration
+	Aspects   [light.DirectionCount]light.Aspect
+	Green     [light.DirectionCount]time.Duration
 }
 
 type Observer interface {
 	PhaseChanged(at time.Time, state State)
-	SensorChanged(event erkennung.SensorEvent)
+	SensorChanged(event detector.SensorEvent)
 	PowerChanged(at time.Time, on bool)
 	Fault(at time.Time, err error)
 	Sample(at time.Time, snapshot Snapshot)
@@ -26,11 +26,11 @@ type NopObserver struct{}
 
 var _ Observer = NopObserver{}
 
-func (NopObserver) PhaseChanged(time.Time, State)       {}
-func (NopObserver) SensorChanged(erkennung.SensorEvent) {}
-func (NopObserver) PowerChanged(time.Time, bool)        {}
-func (NopObserver) Fault(time.Time, error)              {}
-func (NopObserver) Sample(time.Time, Snapshot)          {}
+func (NopObserver) PhaseChanged(time.Time, State)      {}
+func (NopObserver) SensorChanged(detector.SensorEvent) {}
+func (NopObserver) PowerChanged(time.Time, bool)       {}
+func (NopObserver) Fault(time.Time, error)             {}
+func (NopObserver) Sample(time.Time, Snapshot)         {}
 
 type Observers []Observer
 
@@ -42,7 +42,7 @@ func (o Observers) PhaseChanged(at time.Time, state State) {
 	}
 }
 
-func (o Observers) SensorChanged(event erkennung.SensorEvent) {
+func (o Observers) SensorChanged(event detector.SensorEvent) {
 	for _, observer := range o {
 		observer.SensorChanged(event)
 	}

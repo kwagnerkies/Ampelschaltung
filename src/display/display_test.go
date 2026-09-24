@@ -1,9 +1,9 @@
-package anzeige
+package display
 
 import (
-	"ampel/src/erkennung"
-	"ampel/src/signal"
-	"ampel/src/steuerung"
+	"ampel/src/controller"
+	"ampel/src/detector"
+	"ampel/src/light"
 	"testing"
 	"time"
 )
@@ -27,12 +27,12 @@ func (f *fake) Fill(x, y, w, h int, c Color) error {
 
 func newFake() *fake { return &fake{width: 320, height: 240} }
 
-func fields(north, east, south, west int) [signal.DirectionCount]Field {
-	return [signal.DirectionCount]Field{
-		signal.North: {Seconds: north, Color: Green},
-		signal.East:  {Seconds: east, Color: Red},
-		signal.South: {Seconds: south, Color: Green},
-		signal.West:  {Seconds: west, Color: Red},
+func fields(north, east, south, west int) [light.DirectionCount]Field {
+	return [light.DirectionCount]Field{
+		light.North: {Seconds: north, Color: Green},
+		light.East:  {Seconds: east, Color: Red},
+		light.South: {Seconds: south, Color: Green},
+		light.West:  {Seconds: west, Color: Red},
 	}
 }
 
@@ -64,10 +64,10 @@ func TestOnlyChangedFieldsAreRedrawn(t *testing.T) {
 	if got, want := len(canvas.fills), 2*2*7; got != want {
 		t.Fatalf("%d Zeichenbefehle, erwartet %d fuer zwei geaenderte Zufahrten", got, want)
 	}
-	east := screen.boxes[signal.East]
+	east := screen.boxes[light.East]
 	for _, f := range canvas.fills {
 		inEast := f.x >= east[0] && f.x < east[0]+east[2]
-		west := screen.boxes[signal.West]
+		west := screen.boxes[light.West]
 		inWest := f.x >= west[0] && f.x < west[0]+west[2]
 		if !inEast && !inWest {
 			t.Fatalf("Zeichenbefehl bei x=%d liegt weder bei Ost noch bei West", f.x)
@@ -92,8 +92,8 @@ func TestUnchangedScreenDrawsNothing(t *testing.T) {
 
 func TestLayoutIsACross(t *testing.T) {
 	screen := New(newFake())
-	north, east, south, west := screen.boxes[signal.North], screen.boxes[signal.East],
-		screen.boxes[signal.South], screen.boxes[signal.West]
+	north, east, south, west := screen.boxes[light.North], screen.boxes[light.East],
+		screen.boxes[light.South], screen.boxes[light.West]
 	if north[1] >= south[1] {
 		t.Error("Nord liegt nicht ueber Sued")
 	}
@@ -106,12 +106,12 @@ func TestLayoutIsACross(t *testing.T) {
 }
 
 func TestAspectColors(t *testing.T) {
-	cases := map[signal.Aspect]Color{
-		signal.AspectGreen:     Green,
-		signal.AspectYellow:    Yellow,
-		signal.AspectRedYellow: Yellow,
-		signal.AspectRed:       Red,
-		signal.AspectOff:       Grey,
+	cases := map[light.Aspect]Color{
+		light.AspectGreen:     Green,
+		light.AspectYellow:    Yellow,
+		light.AspectRedYellow: Yellow,
+		light.AspectRed:       Red,
+		light.AspectOff:       Grey,
 	}
 	for aspect, want := range cases {
 		if got := AspectColor(aspect); got != want {
@@ -130,19 +130,19 @@ func TestDigitsDiffer(t *testing.T) {
 	}
 }
 
-func snapshot(east time.Duration) steuerung.Snapshot {
-	s := steuerung.Snapshot{}
-	s.Aspects = [signal.DirectionCount]signal.Aspect{
-		signal.North: signal.AspectGreen,
-		signal.East:  signal.AspectRed,
-		signal.South: signal.AspectGreen,
-		signal.West:  signal.AspectRed,
+func snapshot(east time.Duration) controller.Snapshot {
+	s := controller.Snapshot{}
+	s.Aspects = [light.DirectionCount]light.Aspect{
+		light.North: light.AspectGreen,
+		light.East:  light.AspectRed,
+		light.South: light.AspectGreen,
+		light.West:  light.AspectRed,
 	}
-	s.Green = [signal.DirectionCount]time.Duration{
-		signal.North: 18 * time.Second,
-		signal.East:  east,
-		signal.South: 18 * time.Second,
-		signal.West:  east,
+	s.Green = [light.DirectionCount]time.Duration{
+		light.North: 18 * time.Second,
+		light.East:  east,
+		light.South: 18 * time.Second,
+		light.West:  east,
 	}
 	return s
 }
@@ -150,13 +150,13 @@ func snapshot(east time.Duration) steuerung.Snapshot {
 func TestSensorEventRedrawsImmediately(t *testing.T) {
 	canvas := newFake()
 	current := snapshot(7 * time.Second)
-	observer := NewObserver(New(canvas), func(time.Time) steuerung.Snapshot { return current }, nil)
+	observer := NewObserver(New(canvas), func(time.Time) controller.Snapshot { return current }, nil)
 
 	observer.Sample(time.Time{}, current)
 	canvas.fills = nil
 
 	current = snapshot(12 * time.Second)
-	observer.SensorChanged(erkennung.SensorEvent{Direction: signal.East, Occupied: true})
+	observer.SensorChanged(detector.SensorEvent{Direction: light.East, Occupied: true})
 	if len(canvas.fills) == 0 {
 		t.Fatal("das Sensorereignis zeichnete nichts neu")
 	}
@@ -170,13 +170,13 @@ func TestSecondsAreRounded(t *testing.T) {
 	screen := New(canvas)
 	observer := NewObserver(screen, nil, nil)
 	observer.Sample(time.Time{}, snapshot(7600*time.Millisecond))
-	if got := screen.last[signal.East].Seconds; got != 8 {
+	if got := screen.last[light.East].Seconds; got != 8 {
 		t.Errorf("7,6 Sekunden werden als %d angezeigt", got)
 	}
 }
 
 func TestObserverWithoutSourceIsSilent(t *testing.T) {
 	observer := NewObserver(New(newFake()), nil, nil)
-	observer.SensorChanged(erkennung.SensorEvent{Direction: signal.North})
-	observer.PhaseChanged(time.Time{}, steuerung.State{})
+	observer.SensorChanged(detector.SensorEvent{Direction: light.North})
+	observer.PhaseChanged(time.Time{}, controller.State{})
 }

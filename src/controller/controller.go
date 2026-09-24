@@ -1,10 +1,10 @@
-package steuerung
+package controller
 
 import (
 	"ampel/src/clock"
-	"ampel/src/erkennung"
-	"ampel/src/regel"
-	"ampel/src/signal"
+	"ampel/src/detector"
+	"ampel/src/light"
+	"ampel/src/strategy"
 	"context"
 	"errors"
 	"fmt"
@@ -21,9 +21,9 @@ type Options struct {
 	Timing    Timing
 	Tick      time.Duration
 	Sample    time.Duration
-	Detector  *erkennung.Detector
+	Detector  *detector.Detector
 	Output    *Output
-	Strategy  regel.Strategy
+	Strategy  strategy.Strategy
 	Clock     clock.Clock
 	Inputs    <-chan Input
 	Observer  Observer
@@ -38,9 +38,9 @@ type Controller struct {
 	sample    time.Duration
 	flashHalf time.Duration
 	machine   *Machine
-	detect    *erkennung.Detector
+	detect    *detector.Detector
 	output    *Output
-	strategy  regel.Strategy
+	strategy  strategy.Strategy
 	clk       clock.Clock
 	inputs    <-chan Input
 	observer  Observer
@@ -49,7 +49,7 @@ type Controller struct {
 	follow time.Duration
 
 	started      time.Time
-	lastCrossing [signal.DirectionCount]time.Time
+	lastCrossing [light.DirectionCount]time.Time
 	following    int
 	lastSample   time.Time
 	begun        bool
@@ -149,7 +149,7 @@ func (c *Controller) Step(now time.Time) {
 		state = c.machine.State()
 		if state.Stage == StageGreen {
 			c.following = 0
-			c.lastCrossing = [signal.DirectionCount]time.Time{}
+			c.lastCrossing = [light.DirectionCount]time.Time{}
 			state = c.machine.State()
 		}
 		if err := c.show(); err != nil {
@@ -167,7 +167,7 @@ func (c *Controller) Step(now time.Time) {
 func (c *Controller) Reset(now time.Time) {
 	c.detect.Reset()
 	c.following = 0
-	c.lastCrossing = [signal.DirectionCount]time.Time{}
+	c.lastCrossing = [light.DirectionCount]time.Time{}
 }
 
 const DefaultTick = 50 * time.Millisecond
@@ -175,13 +175,13 @@ const DefaultTick = 50 * time.Millisecond
 const DefaultFollow = 2 * time.Second
 
 type Setup struct {
-	Sensors [signal.DirectionCount]int
+	Sensors [light.DirectionCount]int
 	Follow  time.Duration
 	Timing  Timing
 	Tick    time.Duration
 	Sample  time.Duration
 
-	Strategy regel.Strategy
+	Strategy strategy.Strategy
 	Clock    clock.Clock
 	Writer   LampWriter
 	Inputs   <-chan Input
@@ -190,7 +190,7 @@ type Setup struct {
 }
 
 func Build(setup Setup) (*Controller, error) {
-	detect, err := erkennung.New(setup.Sensors)
+	detect, err := detector.New(setup.Sensors)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (c *Controller) Feed(input Input) {
 	c.applyEvents(events)
 }
 
-func (c *Controller) applyEvents(events []erkennung.SensorEvent) {
+func (c *Controller) applyEvents(events []detector.SensorEvent) {
 	for _, event := range events {
 		c.observer.SensorChanged(event)
 		if !event.Occupied {
@@ -236,15 +236,15 @@ func (c *Controller) applyEvents(events []erkennung.SensorEvent) {
 	}
 }
 
-func (c *Controller) view(now time.Time) regel.View {
-	return regel.View{
+func (c *Controller) view(now time.Time) strategy.View {
+	return strategy.View{
 		Now:        now,
 		GreenSince: c.machine.State().Since,
 		Following:  c.following,
 	}
 }
 
-func (c *Controller) countCrossing(at time.Time, direction signal.Direction) {
+func (c *Controller) countCrossing(at time.Time, direction light.Direction) {
 	state := c.machine.State()
 	if state.Stage != StageGreen || PhaseOf(direction) != state.Phase {
 		return
@@ -263,13 +263,13 @@ func (c *Controller) Snapshot(now time.Time) Snapshot {
 		Following: c.following,
 		Aspects:   state.Aspects(),
 	}
-	for _, direction := range signal.Directions() {
+	for _, direction := range light.Directions() {
 		if PhaseOf(direction) == state.Phase && state.Stage == StageGreen {
 			if remaining := state.Target - snapshot.Elapsed; remaining > 0 {
 				snapshot.Green[direction] = remaining
 			}
 		} else {
-			snapshot.Green[direction] = c.strategy.TargetGreen(regel.View{Now: now, GreenSince: now})
+			snapshot.Green[direction] = c.strategy.TargetGreen(strategy.View{Now: now, GreenSince: now})
 		}
 	}
 	return snapshot

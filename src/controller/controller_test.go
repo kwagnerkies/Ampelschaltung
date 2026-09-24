@@ -1,11 +1,11 @@
-package steuerung
+package controller
 
 import (
 	"ampel/src/clock"
-	"ampel/src/erkennung"
-	"ampel/src/regel"
-	"ampel/src/signal"
-	"ampel/src/treiber/mock"
+	"ampel/src/detector"
+	"ampel/src/driver/mock"
+	"ampel/src/light"
+	"ampel/src/strategy"
 	"errors"
 	"testing"
 	"time"
@@ -16,11 +16,11 @@ const (
 	faultPin = 18
 )
 
-var sensorPins = [signal.DirectionCount]int{
-	signal.North: 23,
-	signal.East:  24,
-	signal.South: 25,
-	signal.West:  8,
+var sensorPins = [light.DirectionCount]int{
+	light.North: 23,
+	light.East:  24,
+	light.South: 25,
+	light.West:  8,
 }
 
 type record struct {
@@ -55,7 +55,7 @@ type harness struct {
 
 func newHarness(t *testing.T, green time.Duration, tune ...func(*Setup)) *harness {
 	t.Helper()
-	following, err := regel.NewFollowing(green, 3*time.Second, green+15*time.Second)
+	following, err := strategy.NewFollowing(green, 3*time.Second, green+15*time.Second)
 	if err != nil {
 		t.Fatalf("NewFollowing: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestWrittenPatternsNeverViolateSignalRules(t *testing.T) {
 		if err := Check(current); err != nil {
 			t.Fatalf("muster %d ist unzulaessig: %v", i+1, err)
 		}
-		for _, direction := range signal.Directions() {
+		for _, direction := range light.Directions() {
 			if !current[direction].CanFollow(previous[direction]) {
 				t.Fatalf("muster %d: %s wechselt von %s auf %s",
 					i+1, direction, previous[direction], current[direction])
@@ -202,39 +202,39 @@ func TestShutdownEndsInAllRed(t *testing.T) {
 			t.Fatalf("nach %s: Shutdown: %v", wait, err)
 		}
 		aspects := aspectsOf(h.mock.Pattern())
-		for _, direction := range signal.Directions() {
-			if aspects[direction] != signal.AspectRed {
+		for _, direction := range light.Directions() {
+			if aspects[direction] != light.AspectRed {
 				t.Errorf("nach %s zeigt %s %s, erwartet Rot", wait, direction, aspects[direction])
 			}
 		}
 	}
 }
 
-func aspectsOf(pattern []bool) [signal.DirectionCount]signal.Aspect {
-	var aspects [signal.DirectionCount]signal.Aspect
-	for _, direction := range signal.Directions() {
+func aspectsOf(pattern []bool) [light.DirectionCount]light.Aspect {
+	var aspects [light.DirectionCount]light.Aspect
+	for _, direction := range light.Directions() {
 		base := int(direction) * 3
-		lamps := signal.Lamps{Red: pattern[base], Yellow: pattern[base+1], Green: pattern[base+2]}
+		lamps := light.Lamps{Red: pattern[base], Yellow: pattern[base+1], Green: pattern[base+2]}
 		switch lamps {
-		case signal.Lamps{Red: true}:
-			aspects[direction] = signal.AspectRed
-		case signal.Lamps{Red: true, Yellow: true}:
-			aspects[direction] = signal.AspectRedYellow
-		case signal.Lamps{Green: true}:
-			aspects[direction] = signal.AspectGreen
-		case signal.Lamps{Yellow: true}:
-			aspects[direction] = signal.AspectYellow
+		case light.Lamps{Red: true}:
+			aspects[direction] = light.AspectRed
+		case light.Lamps{Red: true, Yellow: true}:
+			aspects[direction] = light.AspectRedYellow
+		case light.Lamps{Green: true}:
+			aspects[direction] = light.AspectGreen
+		case light.Lamps{Yellow: true}:
+			aspects[direction] = light.AspectYellow
 		default:
-			aspects[direction] = signal.AspectOff
+			aspects[direction] = light.AspectOff
 		}
 	}
 	return aspects
 }
 
-var _ = erkennung.SensorEvent{}
+var _ = detector.SensorEvent{}
 
 type load struct {
-	direction signal.Direction
+	direction light.Direction
 	stopLine  int
 	interval  time.Duration
 	next      time.Duration
@@ -245,7 +245,7 @@ func newAdaptiveHarness(t *testing.T) *harness {
 	clk := clock.NewFake(start)
 	mock := mock.NewMock(LampCount, 4096)
 	observer := &recorder{}
-	adaptive, err := regel.NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)
+	adaptive, err := strategy.NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)
 	if err != nil {
 		t.Fatalf("NewFollowing: %v", err)
 	}
@@ -270,10 +270,10 @@ func newAdaptiveHarness(t *testing.T) *harness {
 func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: signal.North, stopLine: 23, interval: 700 * time.Millisecond},
-		{direction: signal.South, stopLine: 25, interval: 700 * time.Millisecond},
-		{direction: signal.East, stopLine: 24, interval: 6 * time.Second},
-		{direction: signal.West, stopLine: 8, interval: 6 * time.Second},
+		{direction: light.North, stopLine: 23, interval: 700 * time.Millisecond},
+		{direction: light.South, stopLine: 25, interval: 700 * time.Millisecond},
+		{direction: light.East, stopLine: 24, interval: 6 * time.Second},
+		{direction: light.West, stopLine: 8, interval: 6 * time.Second},
 	}
 	h.drive(loads, 15*time.Minute)
 
@@ -296,10 +296,10 @@ func TestAdaptiveFavoursLoadedDirection(t *testing.T) {
 func TestScatteredLoadKeepsBaseGreen(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: signal.North, stopLine: 23, interval: 5 * time.Second},
-		{direction: signal.South, stopLine: 25, interval: 5 * time.Second},
-		{direction: signal.East, stopLine: 24, interval: 5 * time.Second},
-		{direction: signal.West, stopLine: 8, interval: 5 * time.Second},
+		{direction: light.North, stopLine: 23, interval: 5 * time.Second},
+		{direction: light.South, stopLine: 25, interval: 5 * time.Second},
+		{direction: light.East, stopLine: 24, interval: 5 * time.Second},
+		{direction: light.West, stopLine: 8, interval: 5 * time.Second},
 	}
 	h.drive(loads, 5*time.Minute)
 
@@ -357,7 +357,7 @@ func (h *harness) meanGreen(name string) time.Duration {
 	return sum / time.Duration(count)
 }
 
-func releases(phase Phase, direction signal.Direction) bool {
+func releases(phase Phase, direction light.Direction) bool {
 	for _, released := range phase.Directions() {
 		if released == direction {
 			return true
@@ -376,22 +376,22 @@ func TestDisplayedGreenJumpsWhenVehiclesFollow(t *testing.T) {
 	}
 	before := h.controller.Snapshot(h.clk.Now())
 
-	loads := []*load{{direction: signal.North, stopLine: 23, interval: 700 * time.Millisecond}}
+	loads := []*load{{direction: light.North, stopLine: 23, interval: 700 * time.Millisecond}}
 	h.drive(loads, 2*time.Second)
 
 	after := h.controller.Snapshot(h.clk.Now())
 	if after.Following <= before.Following {
 		t.Fatalf("%d Verlaengerungen, vorher %d", after.Following, before.Following)
 	}
-	if after.Green[signal.North] <= before.Green[signal.North] {
+	if after.Green[light.North] <= before.Green[light.North] {
 		t.Errorf("Restzeit fiel von %s auf %s, erwartet einen Sprung nach oben",
-			before.Green[signal.North], after.Green[signal.North])
+			before.Green[light.North], after.Green[light.North])
 	}
-	if after.Green[signal.North] != after.Green[signal.South] {
+	if after.Green[light.North] != after.Green[light.South] {
 		t.Errorf("Nord zeigt %s, Sued %s, beide teilen sich die Freigabe",
-			after.Green[signal.North], after.Green[signal.South])
+			after.Green[light.North], after.Green[light.South])
 	}
-	if got := after.Green[signal.East]; got != 8*time.Second {
+	if got := after.Green[light.East]; got != 8*time.Second {
 		t.Errorf("die wartende Richtung zeigt %s, erwartet ihre Grundzeit von 8s", got)
 	}
 }
@@ -399,8 +399,8 @@ func TestDisplayedGreenJumpsWhenVehiclesFollow(t *testing.T) {
 func TestScatteredTrafficDoesNotExtend(t *testing.T) {
 	h := newAdaptiveHarness(t)
 	loads := []*load{
-		{direction: signal.North, stopLine: 23, interval: 5 * time.Second},
-		{direction: signal.South, stopLine: 25, interval: 5 * time.Second},
+		{direction: light.North, stopLine: 23, interval: 5 * time.Second},
+		{direction: light.South, stopLine: 25, interval: 5 * time.Second},
 	}
 	h.drive(loads, 8*time.Second)
 
@@ -453,14 +453,14 @@ func newOutput(t *testing.T) (*Output, *mock.Mock) {
 
 func TestShowRejectsConflictBeforeWriting(t *testing.T) {
 	output, mock := newOutput(t)
-	if err := output.Show([signal.DirectionCount]signal.Aspect{
-		signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed}); err != nil {
+	if err := output.Show([light.DirectionCount]light.Aspect{
+		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed}); err != nil {
 		t.Fatalf("alles auf Rot: %v", err)
 	}
 	writes := mock.Writes()
 
-	err := output.Show([signal.DirectionCount]signal.Aspect{
-		signal.AspectRedYellow, signal.AspectRedYellow, signal.AspectRed, signal.AspectRed})
+	err := output.Show([light.DirectionCount]light.Aspect{
+		light.AspectRedYellow, light.AspectRedYellow, light.AspectRed, light.AspectRed})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("Fehler %v, erwartet ErrConflict", err)
 	}
@@ -468,22 +468,22 @@ func TestShowRejectsConflictBeforeWriting(t *testing.T) {
 		t.Error("der Konflikt wurde in die Hardware geschrieben")
 	}
 	for i, aspect := range output.Aspects() {
-		if aspect != signal.AspectRed {
-			t.Errorf("Zufahrt %s zeigt %s, erwartet unveraendert Rot", signal.Direction(i), aspect)
+		if aspect != light.AspectRed {
+			t.Errorf("Zufahrt %s zeigt %s, erwartet unveraendert Rot", light.Direction(i), aspect)
 		}
 	}
 }
 
 func TestShowRejectsSequenceViolation(t *testing.T) {
 	output, mock := newOutput(t)
-	if err := output.Show([signal.DirectionCount]signal.Aspect{
-		signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed}); err != nil {
+	if err := output.Show([light.DirectionCount]light.Aspect{
+		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed}); err != nil {
 		t.Fatalf("alles auf Rot: %v", err)
 	}
 	writes := mock.Writes()
 
-	err := output.Show([signal.DirectionCount]signal.Aspect{
-		signal.AspectGreen, signal.AspectRed, signal.AspectGreen, signal.AspectRed})
+	err := output.Show([light.DirectionCount]light.Aspect{
+		light.AspectGreen, light.AspectRed, light.AspectGreen, light.AspectRed})
 	if err == nil {
 		t.Fatal("Gruen direkt nach Rot wurde angenommen")
 	}
@@ -494,10 +494,10 @@ func TestShowRejectsSequenceViolation(t *testing.T) {
 
 func TestShowWritesPattern(t *testing.T) {
 	output, mock := newOutput(t)
-	steps := [][signal.DirectionCount]signal.Aspect{
-		{signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed},
-		{signal.AspectRedYellow, signal.AspectRed, signal.AspectRedYellow, signal.AspectRed},
-		{signal.AspectGreen, signal.AspectRed, signal.AspectGreen, signal.AspectRed},
+	steps := [][light.DirectionCount]light.Aspect{
+		{light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed},
+		{light.AspectRedYellow, light.AspectRed, light.AspectRedYellow, light.AspectRed},
+		{light.AspectGreen, light.AspectRed, light.AspectGreen, light.AspectRed},
 	}
 	for _, step := range steps {
 		if err := output.Show(step); err != nil {
@@ -518,8 +518,8 @@ func TestShowWritesPattern(t *testing.T) {
 
 func TestDarkTurnsEverythingOff(t *testing.T) {
 	output, mock := newOutput(t)
-	if err := output.Show([signal.DirectionCount]signal.Aspect{
-		signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed}); err != nil {
+	if err := output.Show([light.DirectionCount]light.Aspect{
+		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed}); err != nil {
 		t.Fatalf("alles auf Rot: %v", err)
 	}
 	if err := output.Dark(); err != nil {
@@ -532,24 +532,24 @@ func TestDarkTurnsEverythingOff(t *testing.T) {
 	}
 }
 
-func allRed() [signal.DirectionCount]signal.Aspect {
-	return [signal.DirectionCount]signal.Aspect{
-		signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed,
+func allRed() [light.DirectionCount]light.Aspect {
+	return [light.DirectionCount]light.Aspect{
+		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed,
 	}
 }
 
 func TestCheckCoversAllDirectionPairs(t *testing.T) {
-	for _, a := range signal.Directions() {
-		for _, b := range signal.Directions() {
+	for _, a := range light.Directions() {
+		for _, b := range light.Directions() {
 			if a == b {
 				continue
 			}
 			aspects := allRed()
-			aspects[a] = signal.AspectGreen
-			aspects[b] = signal.AspectGreen
+			aspects[a] = light.AspectGreen
+			aspects[b] = light.AspectGreen
 
-			opposite := (a == signal.North && b == signal.South) || (a == signal.South && b == signal.North) ||
-				(a == signal.East && b == signal.West) || (a == signal.West && b == signal.East)
+			opposite := (a == light.North && b == light.South) || (a == light.South && b == light.North) ||
+				(a == light.East && b == light.West) || (a == light.West && b == light.East)
 			err := Check(aspects)
 			if opposite && err != nil {
 				t.Errorf("%s und %s gemeinsam gruen wurde abgewiesen: %v", a, b, err)
@@ -567,16 +567,16 @@ func TestCheckCoversAllDirectionPairs(t *testing.T) {
 func TestCheckRejectsOverlappingTransitions(t *testing.T) {
 	cases := []struct {
 		name    string
-		aspects [signal.DirectionCount]signal.Aspect
+		aspects [light.DirectionCount]light.Aspect
 	}{
-		{"gelb gegen kreuzendes gruen", [signal.DirectionCount]signal.Aspect{
-			signal.AspectYellow, signal.AspectGreen, signal.AspectRed, signal.AspectRed}},
-		{"rotgelb gegen kreuzendes gelb", [signal.DirectionCount]signal.Aspect{
-			signal.AspectRed, signal.AspectRedYellow, signal.AspectYellow, signal.AspectRed}},
-		{"rotgelb gegen kreuzendes rotgelb", [signal.DirectionCount]signal.Aspect{
-			signal.AspectRedYellow, signal.AspectRedYellow, signal.AspectRed, signal.AspectRed}},
-		{"dunkler kopf neben freigabe", [signal.DirectionCount]signal.Aspect{
-			signal.AspectGreen, signal.AspectOff, signal.AspectRed, signal.AspectRed}},
+		{"gelb gegen kreuzendes gruen", [light.DirectionCount]light.Aspect{
+			light.AspectYellow, light.AspectGreen, light.AspectRed, light.AspectRed}},
+		{"rotgelb gegen kreuzendes gelb", [light.DirectionCount]light.Aspect{
+			light.AspectRed, light.AspectRedYellow, light.AspectYellow, light.AspectRed}},
+		{"rotgelb gegen kreuzendes rotgelb", [light.DirectionCount]light.Aspect{
+			light.AspectRedYellow, light.AspectRedYellow, light.AspectRed, light.AspectRed}},
+		{"dunkler kopf neben freigabe", [light.DirectionCount]light.Aspect{
+			light.AspectGreen, light.AspectOff, light.AspectRed, light.AspectRed}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -590,21 +590,21 @@ func TestCheckRejectsOverlappingTransitions(t *testing.T) {
 func TestCheckAcceptsRegularStates(t *testing.T) {
 	cases := []struct {
 		name    string
-		aspects [signal.DirectionCount]signal.Aspect
+		aspects [light.DirectionCount]light.Aspect
 	}{
 		{"alles rot", allRed()},
-		{"nord und sued gruen", [signal.DirectionCount]signal.Aspect{
-			signal.AspectGreen, signal.AspectRed, signal.AspectGreen, signal.AspectRed}},
-		{"ost und west gruen", [signal.DirectionCount]signal.Aspect{
-			signal.AspectRed, signal.AspectGreen, signal.AspectRed, signal.AspectGreen}},
-		{"nord und sued gelb", [signal.DirectionCount]signal.Aspect{
-			signal.AspectYellow, signal.AspectRed, signal.AspectYellow, signal.AspectRed}},
-		{"ost und west rotgelb", [signal.DirectionCount]signal.Aspect{
-			signal.AspectRed, signal.AspectRedYellow, signal.AspectRed, signal.AspectRedYellow}},
-		{"notzustand blinkt", [signal.DirectionCount]signal.Aspect{
-			signal.AspectYellowFlash, signal.AspectYellowFlash, signal.AspectYellowFlash, signal.AspectYellowFlash}},
-		{"alles abgeschaltet", [signal.DirectionCount]signal.Aspect{
-			signal.AspectOff, signal.AspectOff, signal.AspectOff, signal.AspectOff}},
+		{"nord und sued gruen", [light.DirectionCount]light.Aspect{
+			light.AspectGreen, light.AspectRed, light.AspectGreen, light.AspectRed}},
+		{"ost und west gruen", [light.DirectionCount]light.Aspect{
+			light.AspectRed, light.AspectGreen, light.AspectRed, light.AspectGreen}},
+		{"nord und sued gelb", [light.DirectionCount]light.Aspect{
+			light.AspectYellow, light.AspectRed, light.AspectYellow, light.AspectRed}},
+		{"ost und west rotgelb", [light.DirectionCount]light.Aspect{
+			light.AspectRed, light.AspectRedYellow, light.AspectRed, light.AspectRedYellow}},
+		{"notzustand blinkt", [light.DirectionCount]light.Aspect{
+			light.AspectYellowFlash, light.AspectYellowFlash, light.AspectYellowFlash, light.AspectYellowFlash}},
+		{"alles abgeschaltet", [light.DirectionCount]light.Aspect{
+			light.AspectOff, light.AspectOff, light.AspectOff, light.AspectOff}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -685,18 +685,18 @@ func TestMachineHoldsGreenWithoutStrategy(t *testing.T) {
 func TestStateAspects(t *testing.T) {
 	cases := []struct {
 		state State
-		want  [signal.DirectionCount]signal.Aspect
+		want  [light.DirectionCount]light.Aspect
 	}{
 		{State{Phase: PhaseNS, Stage: StageGreen},
-			[signal.DirectionCount]signal.Aspect{signal.AspectGreen, signal.AspectRed, signal.AspectGreen, signal.AspectRed}},
+			[light.DirectionCount]light.Aspect{light.AspectGreen, light.AspectRed, light.AspectGreen, light.AspectRed}},
 		{State{Phase: PhaseNS, Stage: StageYellow},
-			[signal.DirectionCount]signal.Aspect{signal.AspectYellow, signal.AspectRed, signal.AspectYellow, signal.AspectRed}},
+			[light.DirectionCount]light.Aspect{light.AspectYellow, light.AspectRed, light.AspectYellow, light.AspectRed}},
 		{State{Phase: PhaseEW, Stage: StageRedYellow},
-			[signal.DirectionCount]signal.Aspect{signal.AspectRed, signal.AspectRedYellow, signal.AspectRed, signal.AspectRedYellow}},
+			[light.DirectionCount]light.Aspect{light.AspectRed, light.AspectRedYellow, light.AspectRed, light.AspectRedYellow}},
 		{State{Phase: PhaseEW, Stage: StageAllRed},
-			[signal.DirectionCount]signal.Aspect{signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed}},
+			[light.DirectionCount]light.Aspect{light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed}},
 		{State{Phase: PhaseStartup, Stage: StageAllRed},
-			[signal.DirectionCount]signal.Aspect{signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed}},
+			[light.DirectionCount]light.Aspect{light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed}},
 	}
 	for _, tc := range cases {
 		if got := tc.state.Aspects(); got != tc.want {
@@ -733,7 +733,7 @@ func TestFaultEntersFlashState(t *testing.T) {
 	}
 }
 
-func allShow(aspects [signal.DirectionCount]signal.Aspect, want signal.Aspect) bool {
+func allShow(aspects [light.DirectionCount]light.Aspect, want light.Aspect) bool {
 	for _, aspect := range aspects {
 		if aspect != want {
 			return false
@@ -765,7 +765,7 @@ func TestSwitchingOffDarkensTheIntersection(t *testing.T) {
 	if h.controller.On() {
 		t.Fatal("der Hauptschalter blieb ohne Wirkung")
 	}
-	if !allShow(aspectsOf(h.mock.Pattern()), signal.AspectOff) {
+	if !allShow(aspectsOf(h.mock.Pattern()), light.AspectOff) {
 		t.Errorf("nach dem Ausschalten zeigt die Kreuzung %v", aspectsOf(h.mock.Pattern()))
 	}
 
@@ -792,7 +792,7 @@ func TestSwitchingOnStartsFromAllRed(t *testing.T) {
 	}
 
 	first := aspectsOf(h.mock.History()[mark])
-	if !allShow(first, signal.AspectRed) {
+	if !allShow(first, light.AspectRed) {
 		t.Errorf("das erste Bild nach dem Einschalten ist %v, erwartet Allrot", first)
 	}
 	h.run(2 * time.Minute)
@@ -803,7 +803,7 @@ func TestSwitchingOnStartsFromAllRed(t *testing.T) {
 		if err := Check(current); err != nil {
 			t.Fatalf("muster %d ist unzulaessig: %v", i, err)
 		}
-		for _, direction := range signal.Directions() {
+		for _, direction := range light.Directions() {
 			if !current[direction].CanFollow(previous[direction]) {
 				t.Fatalf("muster %d: %s wechselt von %s auf %s",
 					i, direction, previous[direction], current[direction])
@@ -859,9 +859,9 @@ func TestFaultSwitchBlinksAndRestarts(t *testing.T) {
 	pulses := 0
 	for _, pattern := range h.mock.History()[mark:] {
 		switch aspects := aspectsOf(pattern); {
-		case allShow(aspects, signal.AspectYellow):
+		case allShow(aspects, light.AspectYellow):
 			pulses++
-		case allShow(aspects, signal.AspectOff):
+		case allShow(aspects, light.AspectOff):
 		default:
 			t.Fatalf("im Notzustand geschriebenes Muster %v", aspects)
 		}
@@ -872,7 +872,7 @@ func TestFaultSwitchBlinksAndRestarts(t *testing.T) {
 
 	h.flip(faultPin, false)
 	first := aspectsOf(h.mock.Pattern())
-	if !allShow(first, signal.AspectRed) {
+	if !allShow(first, light.AspectRed) {
 		t.Errorf("nach dem Zuruecklegen zeigt die Kreuzung %v, erwartet Allrot", first)
 	}
 	h.run(time.Minute)
@@ -891,7 +891,7 @@ func TestWarningUsesOnlyTheYellowLamp(t *testing.T) {
 
 	lit := false
 	for _, pattern := range h.mock.History()[mark:] {
-		for _, direction := range signal.Directions() {
+		for _, direction := range light.Directions() {
 			base := int(direction) * 3
 			if pattern[base] || pattern[base+2] {
 				t.Fatalf("%s zeigt Rot oder Gruen im Notzustand: %v", direction, pattern[base:base+3])

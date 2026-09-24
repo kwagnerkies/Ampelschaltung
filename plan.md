@@ -124,25 +124,25 @@ ampel/
 
     ampelctl/            Bedienung ueber die Kommandozeile
 
-    steuerung/           Regelkreis, Phasenautomat, Schalter, Sicherheit
+    controller/          Regelkreis, Phasenautomat, Schalter, Sicherheit
 
-    regel/               Gruenzeitverlaengerung
+    strategy/            Gruenzeitverlaengerung
 
-    signal/              Signalbilder und Ampelkoepfe
+    light/               Signalbilder und Ampelkoepfe
 
-    erkennung/           Zuordnung der Haltelinien-Kontakte
+    detector/            Zuordnung der Haltelinien-Kontakte
 
-    anzeige/             Darstellung der Gruenzeiten im Kreuz
+    display/             Darstellung der Gruenzeiten im Kreuz
 
     api/                 Socket-Schnittstelle fuer ampelctl
 
-    konfiguration/       Strukturen, Laden, Validierung
+    config/              Strukturen, Laden, Validierung
 
     clock/               Uhr, echt und gefaelscht
 
-    treiber/
+    driver/
 
-      treiber.go         Schnittstellen der Hardwareschicht
+      driver.go          Schnittstellen der Hardwareschicht
 
       gpio/              Chip, Eingaenge, LED-Leitungen
 

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"ampel/src/signal"
-	"ampel/src/steuerung"
+	"ampel/src/controller"
+	"ampel/src/light"
 )
 
 const (
@@ -16,28 +16,28 @@ const (
 	faultPin = 18
 )
 
-func newServer(t *testing.T) (*Server, *Store, chan steuerung.Input) {
+func newServer(t *testing.T) (*Server, *Store, chan controller.Input) {
 	t.Helper()
 	store := &Store{}
-	inputs := make(chan steuerung.Input, 4)
+	inputs := make(chan controller.Input, 4)
 	return NewServer(store, inputs, powerPin, faultPin, true, false), store, inputs
 }
 
-func sample() steuerung.Snapshot {
-	var snapshot steuerung.Snapshot
-	snapshot.State = steuerung.State{Phase: steuerung.PhaseNS, Stage: steuerung.StageGreen}
+func sample() controller.Snapshot {
+	var snapshot controller.Snapshot
+	snapshot.State = controller.State{Phase: controller.PhaseNS, Stage: controller.StageGreen}
 	snapshot.Following = 2
-	snapshot.Aspects = [signal.DirectionCount]signal.Aspect{
-		signal.North: signal.AspectGreen,
-		signal.East:  signal.AspectRed,
-		signal.South: signal.AspectGreen,
-		signal.West:  signal.AspectRed,
+	snapshot.Aspects = [light.DirectionCount]light.Aspect{
+		light.North: light.AspectGreen,
+		light.East:  light.AspectRed,
+		light.South: light.AspectGreen,
+		light.West:  light.AspectRed,
 	}
-	snapshot.Green = [signal.DirectionCount]time.Duration{
-		signal.North: 11 * time.Second,
-		signal.East:  5 * time.Second,
-		signal.South: 11 * time.Second,
-		signal.West:  5 * time.Second,
+	snapshot.Green = [light.DirectionCount]time.Duration{
+		light.North: 11 * time.Second,
+		light.East:  5 * time.Second,
+		light.South: 11 * time.Second,
+		light.West:  5 * time.Second,
 	}
 	return snapshot
 }
@@ -114,7 +114,7 @@ func TestUnknownPositionIsRejected(t *testing.T) {
 
 func TestFullChannelDoesNotBlock(t *testing.T) {
 	store := &Store{}
-	inputs := make(chan steuerung.Input)
+	inputs := make(chan controller.Input)
 	server := NewServer(store, inputs, powerPin, faultPin, true, false)
 
 	recorder := httptest.NewRecorder()

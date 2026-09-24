@@ -1,7 +1,7 @@
-package steuerung
+package controller
 
 import (
-	"ampel/src/signal"
+	"ampel/src/light"
 	"time"
 )
 
@@ -51,19 +51,19 @@ func (s Stage) String() string {
 	return "unbekannt"
 }
 
-func (p Phase) Directions() []signal.Direction {
+func (p Phase) Directions() []light.Direction {
 	switch p {
 	case PhaseNS:
-		return []signal.Direction{signal.North, signal.South}
+		return []light.Direction{light.North, light.South}
 	case PhaseEW:
-		return []signal.Direction{signal.East, signal.West}
+		return []light.Direction{light.East, light.West}
 	}
 	return nil
 }
 
-func PhaseOf(direction signal.Direction) Phase {
+func PhaseOf(direction light.Direction) Phase {
 	switch direction {
-	case signal.North, signal.South:
+	case light.North, light.South:
 		return PhaseNS
 	}
 	return PhaseEW
@@ -93,18 +93,18 @@ func (s State) Name() string {
 	return s.Phase.String() + "_" + s.Stage.String()
 }
 
-func (s State) Aspects() [signal.DirectionCount]signal.Aspect {
-	aspects := [signal.DirectionCount]signal.Aspect{
-		signal.AspectRed, signal.AspectRed, signal.AspectRed, signal.AspectRed,
+func (s State) Aspects() [light.DirectionCount]light.Aspect {
+	aspects := [light.DirectionCount]light.Aspect{
+		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed,
 	}
-	var aspect signal.Aspect
+	var aspect light.Aspect
 	switch s.Stage {
 	case StageGreen:
-		aspect = signal.AspectGreen
+		aspect = light.AspectGreen
 	case StageYellow:
-		aspect = signal.AspectYellow
+		aspect = light.AspectYellow
 	case StageRedYellow:
-		aspect = signal.AspectRedYellow
+		aspect = light.AspectRedYellow
 	default:
 		return aspects
 	}

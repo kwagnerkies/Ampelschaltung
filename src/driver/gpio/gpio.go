@@ -9,7 +9,7 @@ import (
 	"github.com/warthog618/go-gpiocdev"
 
 	"ampel/src/clock"
-	"ampel/src/treiber"
+	"ampel/src/driver"
 )
 
 const consumer = "ampel"
@@ -26,7 +26,7 @@ func OpenChip(name string) (*Chip, error) {
 	return &Chip{chip: chip}, nil
 }
 
-func (c *Chip) Output(pin int) (treiber.OutputLine, error) {
+func (c *Chip) Output(pin int) (driver.OutputLine, error) {
 	line, err := c.chip.RequestLine(pin, gpiocdev.AsOutput(0))
 	if err != nil {
 		return nil, fmt.Errorf("ausgang BCM %d anfordern: %w", pin, err)
@@ -66,12 +66,12 @@ func (g gpioOutput) Close() error {
 type GPIOInput struct {
 	lines   *gpiocdev.Lines
 	offsets []int
-	events  chan treiber.InputEvent
+	events  chan driver.InputEvent
 	clk     clock.Clock
 	dropped atomic.Uint64
 }
 
-var _ treiber.InputSource = (*GPIOInput)(nil)
+var _ driver.InputSource = (*GPIOInput)(nil)
 
 func NewGPIOInput(chipName string, pins []int, debounce time.Duration, buffer int, clk clock.Clock) (*GPIOInput, error) {
 	if len(pins) == 0 {
@@ -79,7 +79,7 @@ func NewGPIOInput(chipName string, pins []int, debounce time.Duration, buffer in
 	}
 	in := &GPIOInput{
 		offsets: slices.Clone(pins),
-		events:  make(chan treiber.InputEvent, buffer),
+		events:  make(chan driver.InputEvent, buffer),
 		clk:     clk,
 	}
 	lines, err := gpiocdev.RequestLines(chipName, in.offsets,
@@ -97,7 +97,7 @@ func NewGPIOInput(chipName string, pins []int, debounce time.Duration, buffer in
 	return in, nil
 }
 
-func (g *GPIOInput) Events() <-chan treiber.InputEvent { return g.events }
+func (g *GPIOInput) Events() <-chan driver.InputEvent { return g.events }
 
 func (g *GPIOInput) Read(pin int) (bool, error) {
 	index := slices.Index(g.offsets, pin)
@@ -121,7 +121,7 @@ func (g *GPIOInput) Close() error {
 }
 
 func (g *GPIOInput) handle(event gpiocdev.LineEvent) {
-	e := treiber.InputEvent{
+	e := driver.InputEvent{
 		Pin:    event.Offset,
 		Active: event.Type == gpiocdev.LineEventFallingEdge,
 		Time:   g.clk.Now(),
@@ -134,12 +134,12 @@ func (g *GPIOInput) handle(event gpiocdev.LineEvent) {
 }
 
 type Lamps struct {
-	lines []treiber.OutputLine
+	lines []driver.OutputLine
 }
 
-var _ treiber.LampDriver = (*Lamps)(nil)
+var _ driver.LampDriver = (*Lamps)(nil)
 
-func NewLamps(lines []treiber.OutputLine) *Lamps { return &Lamps{lines: lines} }
+func NewLamps(lines []driver.OutputLine) *Lamps { return &Lamps{lines: lines} }
 
 func (l *Lamps) Write(state []bool) error {
 	if len(state) != len(l.lines) {

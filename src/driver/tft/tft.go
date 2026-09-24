@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"ampel/src/treiber"
+	"ampel/src/driver"
 )
 
 const (
@@ -87,11 +87,11 @@ const chunk = 4096
 
 type TFT struct {
 	bus           Transport
-	dc, reset     treiber.OutputLine
+	dc, reset     driver.OutputLine
 	width, height int
 }
 
-func NewTFT(bus Transport, dc, reset treiber.OutputLine, rotation int) (*TFT, error) {
+func NewTFT(bus Transport, dc, reset driver.OutputLine, rotation int) (*TFT, error) {
 	if bus == nil || dc == nil {
 		return nil, fmt.Errorf("anzeige: bus und dc-leitung sind pflicht")
 	}

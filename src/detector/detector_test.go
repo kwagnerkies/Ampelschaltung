@@ -1,19 +1,19 @@
-package erkennung
+package detector
 
 import (
 	"testing"
 	"time"
 
-	"ampel/src/signal"
+	"ampel/src/light"
 )
 
 var base = time.Date(2026, 4, 1, 7, 0, 0, 0, time.UTC)
 
-var pins = [signal.DirectionCount]int{
-	signal.North: 23,
-	signal.East:  24,
-	signal.South: 25,
-	signal.West:  8,
+var pins = [light.DirectionCount]int{
+	light.North: 23,
+	light.East:  24,
+	light.South: 25,
+	light.West:  8,
 }
 
 func newDetector(t *testing.T) *Detector {
@@ -35,7 +35,7 @@ func TestFeedEmitsImmediately(t *testing.T) {
 		t.Fatalf("%d Ereignisse, erwartet eines", len(events))
 	}
 	got := events[0]
-	if got.Direction != signal.East || !got.Occupied || !got.At.Equal(base) {
+	if got.Direction != light.East || !got.Occupied || !got.At.Equal(base) {
 		t.Errorf("Ereignis %+v", got)
 	}
 }
@@ -69,7 +69,7 @@ func TestFeedRejectsUnknownPin(t *testing.T) {
 
 func TestNewRejectsDuplicatePin(t *testing.T) {
 	doubled := pins
-	doubled[signal.West] = doubled[signal.North]
+	doubled[light.West] = doubled[light.North]
 	if _, err := New(doubled); err == nil {
 		t.Error("ein doppelt vergebener Pin wurde angenommen")
 	}

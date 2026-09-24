@@ -13,7 +13,7 @@ Der vollstaendige Plan steht in docs/Plan.md. Vor jedem Arbeitspaket lesen.
 
 - Keine Kommentare. Namen erklaeren den Code.
 
-- Aller Go-Code liegt unter src/, die Hardwaretreiber unter src/treiber/. Eine Datei je Paket, solange sie unter etwa 350 Zeilen bleibt. Tests liegen neben ihrem Paket.
+- Aller Go-Code liegt unter src/, die Hardwaretreiber unter src/driver/. Eine Datei je Paket, solange sie unter etwa 350 Zeilen bleibt. Tests liegen neben ihrem Paket.
 
 - Bezeichner Englisch, Nutzertexte und CSV-Kopf Deutsch.
 

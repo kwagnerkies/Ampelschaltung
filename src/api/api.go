@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"ampel/src/erkennung"
-	"ampel/src/signal"
-	"ampel/src/steuerung"
+	"ampel/src/controller"
+	"ampel/src/detector"
+	"ampel/src/light"
 )
 
 type Status struct {
@@ -26,19 +26,19 @@ type Status struct {
 }
 
 type Store struct {
-	steuerung.NopObserver
+	controller.NopObserver
 	mu       sync.Mutex
-	snapshot steuerung.Snapshot
+	snapshot controller.Snapshot
 	seen     bool
 }
 
-func (s *Store) Sample(_ time.Time, snapshot steuerung.Snapshot) {
+func (s *Store) Sample(_ time.Time, snapshot controller.Snapshot) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.snapshot, s.seen = snapshot, true
 }
 
-func (s *Store) SensorChanged(erkennung.SensorEvent) {}
+func (s *Store) SensorChanged(detector.SensorEvent) {}
 
 func (s *Store) Status() (Status, bool) {
 	s.mu.Lock()
@@ -51,10 +51,10 @@ func (s *Store) Status() (Status, bool) {
 	status := Status{
 		Phase:         snapshot.State.Name(),
 		Verlaengerung: snapshot.Following,
-		Gruenzeiten:   make(map[string]int, signal.DirectionCount),
-		Signalbilder:  make(map[string]string, signal.DirectionCount),
+		Gruenzeiten:   make(map[string]int, light.DirectionCount),
+		Signalbilder:  make(map[string]string, light.DirectionCount),
 	}
-	for _, direction := range signal.Directions() {
+	for _, direction := range light.Directions() {
 		name := direction.String()
 		status.Gruenzeiten[name] = int(snapshot.Green[direction].Round(time.Second) / time.Second)
 		status.Signalbilder[name] = snapshot.Aspects[direction].String()
@@ -64,7 +64,7 @@ func (s *Store) Status() (Status, bool) {
 
 type Server struct {
 	store    *Store
-	inputs   chan<- steuerung.Input
+	inputs   chan<- controller.Input
 	powerPin int
 	faultPin int
 	powerOn  bool
@@ -73,7 +73,7 @@ type Server struct {
 	now      func() time.Time
 }
 
-func NewServer(store *Store, inputs chan<- steuerung.Input, powerPin, faultPin int, powerOn, faultOn bool) *Server {
+func NewServer(store *Store, inputs chan<- controller.Input, powerPin, faultPin int, powerOn, faultOn bool) *Server {
 	return &Server{
 		store:    store,
 		inputs:   inputs,
@@ -121,7 +121,7 @@ func (s *Server) switchTo(w http.ResponseWriter, r *http.Request, pin int, state
 		return
 	}
 	select {
-	case s.inputs <- steuerung.Input{Pin: pin, Active: on, Time: s.now()}:
+	case s.inputs <- controller.Input{Pin: pin, Active: on, Time: s.now()}:
 	default:
 		http.Error(w, "die anlage nimmt gerade nichts an", http.StatusServiceUnavailable)
 		return

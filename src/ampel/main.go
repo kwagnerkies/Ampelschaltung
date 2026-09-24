@@ -4,14 +4,14 @@ import (
 	"net/http"
 	"time"
 
-	"ampel/src/anzeige"
 	"ampel/src/api"
 	"ampel/src/clock"
-	"ampel/src/konfiguration"
-	"ampel/src/steuerung"
-	"ampel/src/treiber"
-	"ampel/src/treiber/gpio"
-	"ampel/src/treiber/tft"
+	"ampel/src/config"
+	"ampel/src/controller"
+	"ampel/src/display"
+	"ampel/src/driver"
+	"ampel/src/driver/gpio"
+	"ampel/src/driver/tft"
 	"context"
 	"errors"
 	"flag"
@@ -54,13 +54,13 @@ func run() error {
 	return runControl(ctx, cfg, os.Stdout)
 }
 
-func loadConfig(path string) (*konfiguration.Config, string, error) {
-	cfg, err := konfiguration.Load(path)
+func loadConfig(path string) (*config.Config, string, error) {
+	cfg, err := config.Load(path)
 	switch {
 	case err == nil:
 		return cfg, path, nil
 	case errors.Is(err, fs.ErrNotExist):
-		fallback := konfiguration.Default()
+		fallback := config.Default()
 		if err := fallback.Validate(); err != nil {
 			return nil, "", fmt.Errorf("eingebaute Defaults sind ungueltig: %w", err)
 		}
@@ -72,7 +72,7 @@ func loadConfig(path string) (*konfiguration.Config, string, error) {
 
 const inputBuffer = 256
 
-func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) error {
+func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	chip, err := gpio.OpenChip(cfg.Hardware.Chip)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 	setup.Switches = readSwitches(cfg, inputs)
 	setup.Clock = clock.NewReal()
 	setup.Writer = driver
-	commands := make(chan steuerung.Input, inputBuffer)
+	commands := make(chan controller.Input, inputBuffer)
 	setup.Inputs = pump(ctx, inputs.Events(), commands)
 
 	screen, closeDisplay, err := openDisplay(chip, cfg, out)
@@ -113,15 +113,15 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 		defer closeDisplay()
 	}
 	store := &api.Store{}
-	observers := steuerung.Observers{store}
-	var panel *anzeige.Observer
+	observers := controller.Observers{store}
+	var panel *display.Observer
 	if screen != nil {
-		panel = anzeige.NewObserver(screen, nil, func(err error) { fmt.Fprintln(out, "Anzeige:", err) })
+		panel = display.NewObserver(screen, nil, func(err error) { fmt.Fprintln(out, "Anzeige:", err) })
 		observers = append(observers, panel)
 	}
 	setup.Observer = observers
 
-	control, err := steuerung.Build(setup)
+	control, err := controller.Build(setup)
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,8 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 	return err
 }
 
-func readSwitches(cfg *konfiguration.Config, source treiber.InputSource) *steuerung.Switches {
-	s := &steuerung.Switches{
+func readSwitches(cfg *config.Config, source driver.InputSource) *controller.Switches {
+	s := &controller.Switches{
 		PowerPin: cfg.Hardware.PowerSwitch,
 		FaultPin: cfg.Hardware.FaultSwitch,
 		PowerOn:  true,
@@ -171,17 +171,17 @@ func readSwitches(cfg *konfiguration.Config, source treiber.InputSource) *steuer
 	return s
 }
 
-func pump(ctx context.Context, events <-chan treiber.InputEvent, commands <-chan steuerung.Input) <-chan steuerung.Input {
-	inputs := make(chan steuerung.Input, inputBuffer)
+func pump(ctx context.Context, events <-chan driver.InputEvent, commands <-chan controller.Input) <-chan controller.Input {
+	inputs := make(chan controller.Input, inputBuffer)
 	go func() {
 		defer close(inputs)
 		for {
-			var input steuerung.Input
+			var input controller.Input
 			select {
 			case <-ctx.Done():
 				return
 			case event := <-events:
-				input = steuerung.Input{Pin: event.Pin, Active: event.Active, Time: event.Time}
+				input = controller.Input{Pin: event.Pin, Active: event.Active, Time: event.Time}
 			case input = <-commands:
 			}
 			select {
@@ -194,7 +194,7 @@ func pump(ctx context.Context, events <-chan treiber.InputEvent, commands <-chan
 	return inputs
 }
 
-func printSummary(w io.Writer, cfg *konfiguration.Config, source string) {
+func printSummary(w io.Writer, cfg *config.Config, source string) {
 	fmt.Fprintf(w, "Konfiguration in Ordnung (%s)\n", source)
 	fmt.Fprintf(w, "  GPIO-Chip          %s\n", cfg.Hardware.Chip)
 	for i, head := range cfg.Hardware.Lamps.Heads() {
@@ -226,11 +226,11 @@ type canvas struct {
 
 func (c canvas) Size() (int, int) { return c.tft.Size() }
 
-func (c canvas) Fill(x, y, width, height int, color anzeige.Color) error {
+func (c canvas) Fill(x, y, width, height int, color display.Color) error {
 	return c.tft.Fill(x, y, width, height, uint16(color))
 }
 
-func openDisplay(chip *gpio.Chip, cfg *konfiguration.Config, out io.Writer) (*anzeige.Screen, func(), error) {
+func openDisplay(chip *gpio.Chip, cfg *config.Config, out io.Writer) (*display.Screen, func(), error) {
 	if !cfg.Display.Enabled {
 		return nil, func() {}, nil
 	}
@@ -243,7 +243,7 @@ func openDisplay(chip *gpio.Chip, cfg *konfiguration.Config, out io.Writer) (*an
 		_ = bus.Close()
 		return nil, nil, fmt.Errorf("anzeige, dc-leitung: %w", err)
 	}
-	var reset treiber.OutputLine
+	var reset driver.OutputLine
 	if cfg.Display.Reset >= 0 {
 		reset, err = chip.Output(cfg.Display.Reset)
 		if err != nil {
@@ -266,15 +266,15 @@ func openDisplay(chip *gpio.Chip, cfg *konfiguration.Config, out io.Writer) (*an
 		}
 	}
 	fmt.Fprintf(out, "Anzeige an %s, Aufloesung %s\n", cfg.Display.Device, size(tft))
-	return anzeige.New(canvas{tft: tft}), closer, nil
+	return display.New(canvas{tft: tft}), closer, nil
 }
 
-func showTestPattern(screen *anzeige.Screen) error {
-	return screen.Update([4]anzeige.Field{
-		{Seconds: 88, Color: anzeige.Green},
-		{Seconds: 88, Color: anzeige.Red},
-		{Seconds: 88, Color: anzeige.Yellow},
-		{Seconds: 88, Color: anzeige.White},
+func showTestPattern(screen *display.Screen) error {
+	return screen.Update([4]display.Field{
+		{Seconds: 88, Color: display.Green},
+		{Seconds: 88, Color: display.Red},
+		{Seconds: 88, Color: display.Yellow},
+		{Seconds: 88, Color: display.White},
 	})
 }
 

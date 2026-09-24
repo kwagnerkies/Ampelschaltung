@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"ampel/src/treiber"
+	"ampel/src/driver"
 )
 
 type Mock struct {
@@ -15,19 +15,19 @@ type Mock struct {
 	history [][]bool
 	closed  bool
 	levels  map[int]bool
-	events  chan treiber.InputEvent
+	events  chan driver.InputEvent
 }
 
 var (
-	_ treiber.LampDriver  = (*Mock)(nil)
-	_ treiber.InputSource = (*Mock)(nil)
+	_ driver.LampDriver  = (*Mock)(nil)
+	_ driver.InputSource = (*Mock)(nil)
 )
 
 func NewMock(bits, buffer int) *Mock {
 	return &Mock{
 		pattern: make([]bool, bits),
 		levels:  make(map[int]bool),
-		events:  make(chan treiber.InputEvent, buffer),
+		events:  make(chan driver.InputEvent, buffer),
 	}
 }
 
@@ -53,7 +53,7 @@ func (m *Mock) Close() error {
 	return nil
 }
 
-func (m *Mock) Events() <-chan treiber.InputEvent { return m.events }
+func (m *Mock) Events() <-chan driver.InputEvent { return m.events }
 
 func (m *Mock) Read(pin int) (bool, error) {
 	m.mu.Lock()
@@ -98,7 +98,7 @@ func (m *Mock) SetLevel(pin int, active bool) {
 func (m *Mock) Emit(pin int, active bool, at time.Time) error {
 	m.SetLevel(pin, active)
 	select {
-	case m.events <- treiber.InputEvent{Pin: pin, Active: active, Time: at}:
+	case m.events <- driver.InputEvent{Pin: pin, Active: active, Time: at}:
 		return nil
 	default:
 		return fmt.Errorf("ereigniskanal voll, flanke an BCM %d verworfen", pin)

@@ -1,9 +1,9 @@
-package anzeige
+package display
 
 import (
-	"ampel/src/erkennung"
-	"ampel/src/signal"
-	"ampel/src/steuerung"
+	"ampel/src/controller"
+	"ampel/src/detector"
+	"ampel/src/light"
 	"time"
 )
 
@@ -89,8 +89,8 @@ type Field struct {
 
 type Screen struct {
 	canvas Canvas
-	boxes  [signal.DirectionCount][4]int
-	last   [signal.DirectionCount]Field
+	boxes  [light.DirectionCount][4]int
+	last   [light.DirectionCount]Field
 	drawn  bool
 }
 
@@ -103,16 +103,16 @@ func New(canvas Canvas) *Screen {
 	margin := boxHeight / 4
 	return &Screen{
 		canvas: canvas,
-		boxes: [signal.DirectionCount][4]int{
-			signal.North: {centerX, margin, boxWidth, boxHeight},
-			signal.East:  {width - boxWidth - margin, centerY, boxWidth, boxHeight},
-			signal.South: {centerX, height - boxHeight - margin, boxWidth, boxHeight},
-			signal.West:  {margin, centerY, boxWidth, boxHeight},
+		boxes: [light.DirectionCount][4]int{
+			light.North: {centerX, margin, boxWidth, boxHeight},
+			light.East:  {width - boxWidth - margin, centerY, boxWidth, boxHeight},
+			light.South: {centerX, height - boxHeight - margin, boxWidth, boxHeight},
+			light.West:  {margin, centerY, boxWidth, boxHeight},
 		},
 	}
 }
 
-func (s *Screen) Update(fields [signal.DirectionCount]Field) error {
+func (s *Screen) Update(fields [light.DirectionCount]Field) error {
 	if !s.drawn {
 		width, height := s.canvas.Size()
 		if err := s.canvas.Fill(0, 0, width, height, Black); err != nil {
@@ -139,36 +139,36 @@ func (s *Screen) Clear() error {
 	return s.canvas.Fill(0, 0, width, height, Black)
 }
 
-func AspectColor(aspect signal.Aspect) Color {
+func AspectColor(aspect light.Aspect) Color {
 	switch aspect {
-	case signal.AspectGreen:
+	case light.AspectGreen:
 		return Green
-	case signal.AspectYellow, signal.AspectRedYellow, signal.AspectYellowFlash:
+	case light.AspectYellow, light.AspectRedYellow, light.AspectYellowFlash:
 		return Yellow
-	case signal.AspectRed:
+	case light.AspectRed:
 		return Red
 	}
 	return Grey
 }
 
 type Observer struct {
-	steuerung.NopObserver
+	controller.NopObserver
 	screen  *Screen
-	source  func(time.Time) steuerung.Snapshot
+	source  func(time.Time) controller.Snapshot
 	onError func(error)
 }
 
-var _ steuerung.Observer = (*Observer)(nil)
+var _ controller.Observer = (*Observer)(nil)
 
-func NewObserver(screen *Screen, source func(time.Time) steuerung.Snapshot, onError func(error)) *Observer {
+func NewObserver(screen *Screen, source func(time.Time) controller.Snapshot, onError func(error)) *Observer {
 	return &Observer{screen: screen, source: source, onError: onError}
 }
 
-func (o *Observer) Source(source func(time.Time) steuerung.Snapshot) { o.source = source }
+func (o *Observer) Source(source func(time.Time) controller.Snapshot) { o.source = source }
 
-func (o *Observer) SensorChanged(event erkennung.SensorEvent) { o.refresh(event.At) }
+func (o *Observer) SensorChanged(event detector.SensorEvent) { o.refresh(event.At) }
 
-func (o *Observer) PhaseChanged(at time.Time, _ steuerung.State) { o.refresh(at) }
+func (o *Observer) PhaseChanged(at time.Time, _ controller.State) { o.refresh(at) }
 
 func (o *Observer) PowerChanged(at time.Time, on bool) {
 	if on {
@@ -180,7 +180,7 @@ func (o *Observer) PowerChanged(at time.Time, on bool) {
 	}
 }
 
-func (o *Observer) Sample(_ time.Time, snapshot steuerung.Snapshot) { o.render(snapshot) }
+func (o *Observer) Sample(_ time.Time, snapshot controller.Snapshot) { o.render(snapshot) }
 
 func (o *Observer) refresh(at time.Time) {
 	if o.source == nil {
@@ -189,9 +189,9 @@ func (o *Observer) refresh(at time.Time) {
 	o.render(o.source(at))
 }
 
-func (o *Observer) render(snapshot steuerung.Snapshot) {
-	var fields [signal.DirectionCount]Field
-	for _, direction := range signal.Directions() {
+func (o *Observer) render(snapshot controller.Snapshot) {
+	var fields [light.DirectionCount]Field
+	for _, direction := range light.Directions() {
 		fields[direction] = Field{
 			Seconds: int(snapshot.Green[direction].Round(time.Second) / time.Second),
 			Color:   AspectColor(snapshot.Aspects[direction]),
