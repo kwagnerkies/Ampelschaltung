@@ -112,105 +112,51 @@ Die Domaene darf `periph`, `gpiocdev` oder `os` nicht importieren. Das ist die B
 
 ### 4.2 Projektstruktur
 
+
+
 ```
 
 ampel/
 
-  cmd/
+  src/
 
-    ampel/
+    ampel/               Prozessstart, Verdrahtung, Selbsttest
 
-      main.go              Prozessstart, Flags, Signalbehandlung, Verdrahtung
+    ampelctl/            Bedienung ueber die Kommandozeile
 
-  internal/
+    steuerung/           Regelkreis, Phasenautomat, Schalter, Sicherheit
 
-    config/
+    regel/               Gruenzeitverlaengerung
 
-      config.go            Strukturen
+    signal/              Signalbilder und Ampelkoepfe
 
-      load.go              Laden, Defaults, Validierung
+    erkennung/           Zuordnung der Haltelinien-Kontakte
 
-    hal/
+    anzeige/             Darstellung der Gruenzeiten im Kreuz
 
-      hal.go               Interfaces LampDriver, InputSource
+    fernbedienung/       Socket-Schnittstelle fuer ampelctl
 
-      lamps.go             Zwoelf LED-Leitungen
+    konfiguration/       Strukturen, Laden, Validierung
 
-      gpioin.go            Eingaenge mit Edge-Events
+    zeit/                Uhr, echt und gefaelscht
 
-      mock.go              Testimplementierung
+    treiber/
 
-      chip.go              Oeffnen und Schliessen von gpiochip0
+      treiber.go         Schnittstellen der Hardwareschicht
 
-    light/
+      gpio/              Chip, Eingaenge, LED-Leitungen
 
-      head.go              Ampelkopf, Lampenzustand
+      tft/               SPI und ILI9341
 
-      aspect.go            Signalbilder und deutsche Folge
-
-    detector/
-
-      detector.go          Reed-Auswertung, Zuordnung der Pins
-
-      event.go             Ereignistypen
-
-    controller/
-
-      controller.go        Regelkreis, Ereignisschleife
-
-      phase.go             Phasendefinition und Konflikte
-
-      statemachine.go      Uebergaenge samt Zwischenzeiten
-
-      safety.go            Konfliktpruefung, Notzustand
-
-    strategy/
-
-      strategy.go          Interface
-
-      following.go         Verlaengerung bei dicht folgenden Fahrzeugen
-
-      params.go            Grenzwerte und Berechnung
-
-    display/
-
-      screen.go            Anordnung der vier Gruenzeiten im Kreuz
-
-      digits.go            Ziffern aus sieben Segmenten
-
-      observer.go          Anbindung an den Regelkreis
-
-    mode/
-
-      switch.go            Entprellter Kippschalter
-
-    clock/
-
-      clock.go             Interface Real und Fake
+      mock/              Testimplementierung
 
   configs/
 
-    config.yaml
-
   deploy/
-
-    ampel.service
-
-    install.sh
 
   hardware/
 
-    pinout.md
-
-    schematic/
-
-    stl/
-
   docs/
-
-    aufbau.md
-
-  testdata/
 
   Makefile
 
@@ -218,7 +164,11 @@ ampel/
 
 ```
 
-Hinweis: Das Paket heisst `light`, nicht `signal`, um die Kollision mit `os/signal` zu vermeiden.
+
+
+Testdateien liegen neben ihrem Paket, wie es Go verlangt.
+
+
 
 ### 4.3 Nebenlaeufigkeit
 

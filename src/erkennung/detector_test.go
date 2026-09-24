@@ -1,0 +1,91 @@
+package erkennung
+
+import (
+	"testing"
+	"time"
+
+	"ampel/src/signal"
+)
+
+var base = time.Date(2026, 4, 1, 7, 0, 0, 0, time.UTC)
+
+var pins = [signal.DirectionCount]int{
+	signal.North: 23,
+	signal.East:  24,
+	signal.South: 25,
+	signal.West:  8,
+}
+
+func newDetector(t *testing.T) *Detector {
+	t.Helper()
+	d, err := New(pins)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return d
+}
+
+func TestFeedEmitsImmediately(t *testing.T) {
+	d := newDetector(t)
+	events, err := d.Feed(24, true, base)
+	if err != nil {
+		t.Fatalf("Feed: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("%d Ereignisse, erwartet eines", len(events))
+	}
+	got := events[0]
+	if got.Direction != signal.East || !got.Occupied || !got.At.Equal(base) {
+		t.Errorf("Ereignis %+v", got)
+	}
+}
+
+func TestFeedIgnoresRepeatedLevel(t *testing.T) {
+	d := newDetector(t)
+	if _, err := d.Feed(23, true, base); err != nil {
+		t.Fatalf("Feed: %v", err)
+	}
+	events, err := d.Feed(23, true, base.Add(time.Second))
+	if err != nil {
+		t.Fatalf("Feed: %v", err)
+	}
+	if len(events) != 0 {
+		t.Errorf("%d Ereignisse fuer denselben Pegel", len(events))
+	}
+}
+
+func TestFeedRejectsUnknownPin(t *testing.T) {
+	d := newDetector(t)
+	if _, err := d.Feed(4, true, base); err == nil {
+		t.Error("ein fremder Pin wurde angenommen")
+	}
+	if d.Knows(4) {
+		t.Error("der Hauptschalter gilt als Sensor")
+	}
+	if !d.Knows(25) {
+		t.Error("ein Sensorpin gilt als unbekannt")
+	}
+}
+
+func TestNewRejectsDuplicatePin(t *testing.T) {
+	doubled := pins
+	doubled[signal.West] = doubled[signal.North]
+	if _, err := New(doubled); err == nil {
+		t.Error("ein doppelt vergebener Pin wurde angenommen")
+	}
+}
+
+func TestResetForgetsLevels(t *testing.T) {
+	d := newDetector(t)
+	if _, err := d.Feed(25, true, base); err != nil {
+		t.Fatalf("Feed: %v", err)
+	}
+	d.Reset()
+	events, err := d.Feed(25, true, base.Add(time.Second))
+	if err != nil {
+		t.Fatalf("Feed: %v", err)
+	}
+	if len(events) != 1 {
+		t.Errorf("%d Ereignisse nach dem Reset, erwartet eines", len(events))
+	}
+}
