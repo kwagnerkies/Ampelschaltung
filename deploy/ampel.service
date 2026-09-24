@@ -11,8 +11,6 @@ Group=gpio
 SupplementaryGroups=spi
 Restart=always
 RestartSec=2
-# SIGTERM fuehrt zum geordneten Herunterfahren: alle Signale auf Rot, Histogramm sichern,
-# CSV-Puffer leeren. Zehn Sekunden reichen dafuer weit.
 KillSignal=SIGTERM
 TimeoutStopSec=10
 NoNewPrivileges=true
