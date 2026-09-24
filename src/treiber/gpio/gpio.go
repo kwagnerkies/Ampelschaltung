@@ -8,8 +8,8 @@ import (
 
 	"github.com/warthog618/go-gpiocdev"
 
+	"ampel/src/clock"
 	"ampel/src/treiber"
-	"ampel/src/zeit"
 )
 
 const consumer = "ampel"
@@ -67,13 +67,13 @@ type GPIOInput struct {
 	lines   *gpiocdev.Lines
 	offsets []int
 	events  chan treiber.InputEvent
-	clk     zeit.Clock
+	clk     clock.Clock
 	dropped atomic.Uint64
 }
 
 var _ treiber.InputSource = (*GPIOInput)(nil)
 
-func NewGPIOInput(chipName string, pins []int, debounce time.Duration, buffer int, clk zeit.Clock) (*GPIOInput, error) {
+func NewGPIOInput(chipName string, pins []int, debounce time.Duration, buffer int, clk clock.Clock) (*GPIOInput, error) {
 	if len(pins) == 0 {
 		return nil, fmt.Errorf("kein eingang angefordert")
 	}

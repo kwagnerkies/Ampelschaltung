@@ -70,7 +70,7 @@ func (t Timing) validate() []error {
 
 func (a API) validate() []error {
 	if a.Enabled && a.Socket == "" {
-		return []error{errors.New("fernbedienung.socket darf nicht leer sein")}
+		return []error{errors.New("api.socket darf nicht leer sein")}
 	}
 	return nil
 }

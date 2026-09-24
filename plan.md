@@ -134,11 +134,11 @@ ampel/
 
     anzeige/             Darstellung der Gruenzeiten im Kreuz
 
-    fernbedienung/       Socket-Schnittstelle fuer ampelctl
+    api/                 Socket-Schnittstelle fuer ampelctl
 
     konfiguration/       Strukturen, Laden, Validierung
 
-    zeit/                Uhr, echt und gefaelscht
+    clock/               Uhr, echt und gefaelscht
 
     treiber/
 

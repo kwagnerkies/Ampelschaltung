@@ -1,10 +1,10 @@
 package steuerung
 
 import (
+	"ampel/src/clock"
 	"ampel/src/erkennung"
 	"ampel/src/regel"
 	"ampel/src/signal"
-	"ampel/src/zeit"
 	"context"
 	"errors"
 	"fmt"
@@ -24,7 +24,7 @@ type Options struct {
 	Detector  *erkennung.Detector
 	Output    *Output
 	Strategy  regel.Strategy
-	Clock     zeit.Clock
+	Clock     clock.Clock
 	Inputs    <-chan Input
 	Observer  Observer
 	FlashHalf time.Duration
@@ -41,7 +41,7 @@ type Controller struct {
 	detect    *erkennung.Detector
 	output    *Output
 	strategy  regel.Strategy
-	clk       zeit.Clock
+	clk       clock.Clock
 	inputs    <-chan Input
 	observer  Observer
 	switches  *switches
@@ -182,7 +182,7 @@ type Setup struct {
 	Sample  time.Duration
 
 	Strategy regel.Strategy
-	Clock    zeit.Clock
+	Clock    clock.Clock
 	Writer   LampWriter
 	Inputs   <-chan Input
 	Observer Observer

@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"ampel/src/anzeige"
-	"ampel/src/fernbedienung"
+	"ampel/src/api"
+	"ampel/src/clock"
 	"ampel/src/konfiguration"
 	"ampel/src/steuerung"
 	"ampel/src/treiber"
 	"ampel/src/treiber/gpio"
 	"ampel/src/treiber/tft"
-	"ampel/src/zeit"
 	"context"
 	"errors"
 	"flag"
@@ -86,7 +86,7 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 	defer func() { _ = driver.Close() }()
 
 	pins, _ := inputPins(cfg)
-	inputs, err := gpio.NewGPIOInput(cfg.Hardware.Chip, pins, cfg.Hardware.Debounce.Duration(), inputBuffer, zeit.NewReal())
+	inputs, err := gpio.NewGPIOInput(cfg.Hardware.Chip, pins, cfg.Hardware.Debounce.Duration(), inputBuffer, clock.NewReal())
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 		return err
 	}
 	setup.Switches = readSwitches(cfg, inputs)
-	setup.Clock = zeit.NewReal()
+	setup.Clock = clock.NewReal()
 	setup.Writer = driver
 	commands := make(chan steuerung.Input, inputBuffer)
 	setup.Inputs = pump(ctx, inputs.Events(), commands)
@@ -112,7 +112,7 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 	} else {
 		defer closeDisplay()
 	}
-	store := &fernbedienung.Store{}
+	store := &api.Store{}
 	observers := steuerung.Observers{store}
 	var panel *anzeige.Observer
 	if screen != nil {
@@ -129,12 +129,12 @@ func runControl(ctx context.Context, cfg *konfiguration.Config, out io.Writer) e
 		panel.Source(control.Snapshot)
 	}
 	if cfg.API.Enabled {
-		listener, err := fernbedienung.Listen(cfg.API.Socket)
+		listener, err := api.Listen(cfg.API.Socket)
 		if err != nil {
 			fmt.Fprintln(out, "Hinweis: Schnittstelle nicht verfuegbar:", err)
 		} else {
 			server := &http.Server{
-				Handler:           fernbedienung.NewServer(store, commands, cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, setup.Switches.PowerOn, setup.Switches.FaultOn).Handler(),
+				Handler:           api.NewServer(store, commands, cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, setup.Switches.PowerOn, setup.Switches.FaultOn).Handler(),
 				ReadHeaderTimeout: 5 * time.Second,
 			}
 			go func() {

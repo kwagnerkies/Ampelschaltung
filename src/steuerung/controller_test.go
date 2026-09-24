@@ -1,11 +1,11 @@
 package steuerung
 
 import (
+	"ampel/src/clock"
 	"ampel/src/erkennung"
 	"ampel/src/regel"
 	"ampel/src/signal"
 	"ampel/src/treiber/mock"
-	"ampel/src/zeit"
 	"errors"
 	"testing"
 	"time"
@@ -48,7 +48,7 @@ func (r *recorder) Sample(time.Time, Snapshot) { r.samples++ }
 
 type harness struct {
 	controller *Controller
-	clk        *zeit.Fake
+	clk        *clock.Fake
 	mock       *mock.Mock
 	observer   *recorder
 }
@@ -59,7 +59,7 @@ func newHarness(t *testing.T, green time.Duration, tune ...func(*Setup)) *harnes
 	if err != nil {
 		t.Fatalf("NewFollowing: %v", err)
 	}
-	clk := zeit.NewFake(start)
+	clk := clock.NewFake(start)
 	mock := mock.NewMock(LampCount, 64)
 	observer := &recorder{}
 	setup := Setup{
@@ -242,7 +242,7 @@ type load struct {
 
 func newAdaptiveHarness(t *testing.T) *harness {
 	t.Helper()
-	clk := zeit.NewFake(start)
+	clk := clock.NewFake(start)
 	mock := mock.NewMock(LampCount, 4096)
 	observer := &recorder{}
 	adaptive, err := regel.NewFollowing(8*time.Second, 3*time.Second, 30*time.Second)

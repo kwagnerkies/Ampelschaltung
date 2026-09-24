@@ -1,12 +1,12 @@
 package main
 
 import (
+	"ampel/src/clock"
 	"ampel/src/konfiguration"
 	"ampel/src/signal"
 	"ampel/src/steuerung"
 	"ampel/src/treiber"
 	"ampel/src/treiber/gpio"
-	"ampel/src/zeit"
 	"context"
 	"errors"
 	"fmt"
@@ -46,7 +46,7 @@ func runSelftest(ctx context.Context, cfg *konfiguration.Config, out io.Writer) 
 	}
 
 	pins, labels := inputPins(cfg)
-	inputs, err := gpio.NewGPIOInput(cfg.Hardware.Chip, pins, cfg.Hardware.Debounce.Duration(), selftestBuffer, zeit.NewReal())
+	inputs, err := gpio.NewGPIOInput(cfg.Hardware.Chip, pins, cfg.Hardware.Debounce.Duration(), selftestBuffer, clock.NewReal())
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package zeit
+package clock
 
 import (
 	"sync"

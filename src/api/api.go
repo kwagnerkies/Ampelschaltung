@@ -1,4 +1,4 @@
-package fernbedienung
+package api
 
 import (
 	"encoding/json"
