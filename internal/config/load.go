@@ -69,8 +69,8 @@ func (t Timing) validate() []error {
 }
 
 func (a API) validate() []error {
-	if a.Enabled && a.Address == "" {
-		return []error{errors.New("api.address darf nicht leer sein")}
+	if a.Enabled && a.Socket == "" {
+		return []error{errors.New("api.socket darf nicht leer sein")}
 	}
 	return nil
 }

@@ -56,7 +56,7 @@ type Timing struct {
 
 type API struct {
 	Enabled bool   `yaml:"enabled"`
-	Address string `yaml:"address"`
+	Socket  string `yaml:"socket"`
 }
 
 type Display struct {
@@ -105,7 +105,7 @@ func Default() Config {
 			Follow:    millis(2000),
 			Extension: millis(3000),
 		},
-		API: API{Enabled: true, Address: ":8080"},
+		API: API{Enabled: true, Socket: "/run/ampel/ampel.sock"},
 		Display: Display{
 			Enabled:  true,
 			Device:   "/dev/spidev0.0",

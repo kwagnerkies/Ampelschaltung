@@ -34,8 +34,9 @@ dicht folgenden Fahrzeug nach oben, die wartende zeigt ihre Grundzeit.
 Notschalter: alle mittleren Lampen blinken im Sekundentakt gelb, zurueckgelegt beginnt die
 Anlage wieder bei Allrot.
 
-**Fernsteuerung.** Eine HTTP-Schnittstelle liefert den Zustand als JSON und nimmt dieselben
-Schaltbefehle an wie die beiden Kippschalter. Das Kommandozeilenwerkzeug `ampelctl` nutzt sie.
+**Bedienung ueber die Kommandozeile.** Das Werkzeug `ampelctl` zeigt den Zustand an und
+schaltet die Anlage, ueber einen lokalen Socket ohne Netzwerkport. Es schickt dieselben
+Flanken wie die beiden Kippschalter.
 
 **Sicherheit.** Eine Konfliktmatrix prueft jedes Signalbild unmittelbar vor der Ausgabe an die
 Hardware; kein Weg fuehrt daran vorbei. Zusaetzlich wird die Signalfolge geprueft, sodass von

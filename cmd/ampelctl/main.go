@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"sort"
@@ -21,7 +23,7 @@ func main() {
 
 func run(args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("ampelctl", flag.ContinueOnError)
-	host := flags.String("host", "http://localhost:8080", "Adresse der Anlage")
+	socket := flags.String("socket", "/run/ampel/ampel.sock", "Socket der Anlage")
 	flags.Usage = func() { usage(flags.Output()) }
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -32,23 +34,32 @@ func run(args []string, out io.Writer) error {
 		return nil
 	}
 
-	client := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var dialer net.Dialer
+				return dialer.DialContext(ctx, "unix", *socket)
+			},
+		},
+	}
+	const host = "http://anlage"
 	switch rest[0] {
 	case "status":
-		return status(client, *host, out)
+		return status(client, host, out)
 	case "an", "aus":
-		return post(client, *host, "/hauptschalter/"+rest[0], out)
+		return post(client, host, "/hauptschalter/"+rest[0], out)
 	case "not":
 		if len(rest) != 2 || (rest[1] != "an" && rest[1] != "aus") {
 			return fmt.Errorf("not braucht an oder aus")
 		}
-		return post(client, *host, "/notschalter/"+rest[1], out)
+		return post(client, host, "/notschalter/"+rest[1], out)
 	}
 	return fmt.Errorf("unbekannter Befehl %q", rest[0])
 }
 
 func usage(out io.Writer) {
-	fmt.Fprint(out, `Aufruf: ampelctl [-host adresse] befehl
+	fmt.Fprint(out, `Aufruf: ampelctl [-socket pfad] befehl
 
   status      Zustand der Kreuzung anzeigen
   an          Anlage einschalten

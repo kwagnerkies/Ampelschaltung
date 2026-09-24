@@ -22,7 +22,9 @@ PrivateTmp=true
 DevicePolicy=closed
 DeviceAllow=/dev/gpiochip0 rw
 DeviceAllow=/dev/spidev0.0 rw
-IPAddressAllow=any
+RuntimeDirectory=ampel
+RuntimeDirectoryMode=0750
+PrivateNetwork=true
 StandardOutput=journal
 StandardError=journal
 

@@ -97,10 +97,10 @@ make deploy PI_HOST=$PI
 
 Ersetzt nur das Programm und startet den Dienst neu. Konfiguration und Dienstdatei bleiben.
 
-## Fernsteuerung ueber ampelctl
+## Bedienen mit ampelctl
 
-Die Anlage bietet eine HTTP-Schnittstelle, standardmaessig auf Port 8080. `ampelctl` liegt
-nach der Installation neben `ampel`.
+`ampelctl` liegt nach der Installation neben `ampel` und spricht ueber einen lokalen Socket
+mit dem laufenden Dienst. Kein Netzwerkport, kein Zugriff von aussen.
 
 | Zweck | Befehl |
 |---|---|
@@ -110,24 +110,24 @@ nach der Installation neben `ampel`.
 | Notzustand ausloesen | `ampelctl not an` |
 | Notzustand beenden | `ampelctl not aus` |
 
-Von einem anderen Rechner mit `-host`:
-
 ```
-ampelctl -host http://raspberrypi.local:8080 status
+$ ampelctl status
+Anlage      laeuft
+Notzustand  nein
+Phase       NS_Gruen
+Verlaengert 2 mal
+  Nord  Gruen    11 s
+  Ost   Rot       5 s
+  Sued  Gruen    11 s
+  West  Rot       5 s
 ```
 
-Ohne CLI geht es auch mit curl:
+Der Socket liegt unter `/run/ampel/ampel.sock` und gehoert der Gruppe `gpio`. Wer ihn lesen
+darf, darf schalten; `sudo` ist dafuer noetig, wenn dein Nutzer nicht in der Gruppe ist.
 
-```
-curl http://raspberrypi.local:8080/status
-curl -X POST http://raspberrypi.local:8080/notschalter/an
-```
-
-Die Schnittstelle wirkt wie ein zweiter Satz Schalter: sie schickt dieselben Flanken wie die
-physischen Kippschalter. Wer danach den echten Schalter umlegt, gewinnt. Abschalten laesst sie
-sich mit `api.enabled: false` in der Konfiguration.
-
-Es gibt keine Anmeldung. Die Anlage gehoert deshalb nicht ins offene Netz.
+Die Befehle wirken wie ein zweiter Satz Schalter: sie schicken dieselben Flanken wie die
+physischen Kippschalter, und wer danach den echten Schalter umlegt, gewinnt. Abschalten laesst
+sich das Ganze mit `api.enabled: false` in der Konfiguration.
 
 ## Fehlersuche
 

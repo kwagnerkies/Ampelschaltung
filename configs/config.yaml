@@ -28,7 +28,7 @@ timing:
 
 api:
   enabled: true
-  address: ":8080"
+  socket: /run/ampel/ampel.sock
 
 display:
   enabled: true

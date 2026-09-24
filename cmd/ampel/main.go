@@ -127,18 +127,22 @@ func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 		panel.Source(control.Snapshot)
 	}
 	if cfg.API.Enabled {
-		server := &http.Server{
-			Addr:              cfg.API.Address,
-			Handler:           api.NewServer(store, commands, cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, setup.Switches.PowerOn, setup.Switches.FaultOn).Handler(),
-			ReadHeaderTimeout: 5 * time.Second,
-		}
-		go func() {
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				fmt.Fprintln(out, "Schnittstelle:", err)
+		listener, err := api.Listen(cfg.API.Socket)
+		if err != nil {
+			fmt.Fprintln(out, "Hinweis: Schnittstelle nicht verfuegbar:", err)
+		} else {
+			server := &http.Server{
+				Handler:           api.NewServer(store, commands, cfg.Hardware.PowerSwitch, cfg.Hardware.FaultSwitch, setup.Switches.PowerOn, setup.Switches.FaultOn).Handler(),
+				ReadHeaderTimeout: 5 * time.Second,
 			}
-		}()
-		defer func() { _ = server.Close() }()
-		fmt.Fprintln(out, "Schnittstelle auf", cfg.API.Address)
+			go func() {
+				if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					fmt.Fprintln(out, "Schnittstelle:", err)
+				}
+			}()
+			defer func() { _ = server.Close() }()
+			fmt.Fprintln(out, "Schnittstelle auf", cfg.API.Socket)
+		}
 	}
 
 	fmt.Fprintln(out, "Betrieb gestartet, Verlaengerung bei dicht folgenden Fahrzeugen")

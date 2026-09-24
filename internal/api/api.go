@@ -3,7 +3,11 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/fs"
+	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -139,3 +143,17 @@ func stellung(value string) (bool, error) {
 }
 
 var errUnknown = errors.New("stellung muss an oder aus sein")
+
+func Listen(socket string) (net.Listener, error) {
+	if err := os.Remove(socket); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("alten socket %s entfernen: %w", socket, err)
+	}
+	listener, err := net.Listen("unix", socket)
+	if err != nil {
+		return nil, fmt.Errorf("socket %s anlegen: %w", socket, err)
+	}
+	if err := os.Chmod(socket, 0o660); err != nil {
+		return nil, fmt.Errorf("rechte an %s setzen: %w", socket, err)
+	}
+	return listener, nil
+}
