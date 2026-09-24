@@ -12,7 +12,7 @@ ohne Tastatur und ohne Bildschirm selbstaendig steuert.
 - SSH aktiviert, ein Nutzer mit sudo-Recht.
 - Auf dem Arbeitsrechner Go und `make`. Auf dem Pi wird kein Go installiert.
 
-Die Verdrahtung steht in `hardware/pinout.md`. Vor dem ersten Start pruefen: gemeinsame
+Die Verdrahtung steht in `docs/hardware/pinout.md`. Vor dem ersten Start pruefen: gemeinsame
 Masse, `OE` des 595 auf Masse, `SRCLR` auf High, Vorwiderstaende bestueckt.
 
 ## 2. Programm uebersetzen

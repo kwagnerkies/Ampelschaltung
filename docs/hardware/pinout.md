@@ -81,3 +81,5 @@ weil ein mechanischer Schalter laenger prellt als ein Reed-Kontakt.
 Pi, Register und LED-Versorgung brauchen eine gemeinsame Masse. Fehlt sie, schaltet die Kette
 scheinbar zufaellig. Der Pi selbst wird ueber sein Netzteil versorgt, nicht ueber die
 5-V-Schiene der Register.
+
+Die gezeichnete Fassung steht in `schaltplan.md`.

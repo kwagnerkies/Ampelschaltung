@@ -151,5 +151,5 @@ Beide beginnen beim Zuruecklegen wieder bei Allrot.
 
 ## Weiterfuehrend
 
-`docs/aufbau.md` fuer die Inbetriebnahme, `hardware/bauplan.md` fuer die Verdrahtung,
+`docs/aufbau.md` fuer die Inbetriebnahme, `docs/hardware/bauplan.md` fuer die Verdrahtung,
 `docs/architektur.md` als Lesepfad durch den Code.

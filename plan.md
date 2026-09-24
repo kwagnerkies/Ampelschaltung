@@ -158,6 +158,8 @@ ampel/
 
   docs/
 
+    hardware/          Pinplan, Schaltplan, Bauplan, Bestellliste
+
   Makefile
 
   go.mod
