@@ -1,6 +1,6 @@
 # Plan: Adaptive Ampelsteuerung als Modellkreuzung
 
-Cyberphysisches System auf Raspberry Pi 2 B, Sprache Go, Zielplattform Linux (Raspberry Pi OS Lite, 32 Bit).
+Cyberphysisches System auf Raspberry Pi 2 B oder Pi 3, Sprache Python, Zielplattform Raspberry Pi OS Lite.
 
 ## 1. Projektziel
 
@@ -20,23 +20,23 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 - Bezeichner in Englisch, damit der Code konsistent zu Standardbibliothek und Abhaengigkeiten bleibt. Nutzertexte und Dokumentation in Deutsch.
 
-- Eine Datei je Paket, solange sie unter etwa 350 Zeilen bleibt. Erst darueber wird aufgeteilt.
+- Eine Datei je Zustaendigkeit, Richtwert unter 200 Zeilen. Erst darueber wird aufgeteilt.
 
-- Fehler werden mit `fmt.Errorf` und `%w` umschlossen und nach oben gereicht. `panic` nur in `main` beim Startfehler.
+- Fehler werden als Ausnahme nach oben gereicht und nur dort gefangen, wo sich sinnvoll darauf reagieren laesst.
 
-- `go vet` und `gofmt` muessen sauber durchlaufen. `golangci-lint` mit Standardsatz als Ziel.
+- `make test` muss vor jedem Commit durchlaufen.
 
 ### Plattform
 
-- Raspberry Pi 2 Model B, ARMv7, 32 Bit. Build mit `GOOS=linux GOARCH=arm GOARM=7`.
+- Raspberry Pi 2 Model B oder Pi 3, Raspberry Pi OS Lite, 32 oder 64 Bit.
 
-- Entwicklung erfolgt auf dem Arbeitsrechner, Cross-Compile und Deployment per `scp`. Auf dem Pi wird kein Go installiert.
+- Python 3.11 oder neuer, wie es Raspberry Pi OS mitbringt. Der Code laeuft direkt auf dem Pi, kein Uebersetzen, kein Cross-Compile.
+
+- Einzige Abhaengigkeit ausserhalb der Standardbibliothek ist `python3-gpiozero` fuer die sechs GPIO-Leitungen. SPI, das WS2812-Bitmuster und der Displaycontroller sind selbst geschrieben.
 
 - Der Pi 2 hat kein WLAN an Bord. Netzwerk ueber Ethernet oder USB-Stick.
 
-- GPIO-Zugriff ueber das Character-Device `/dev/gpiochip0`. Kein sysfs, das ist veraltet.
-
-- Empfohlene Bibliothek: `github.com/warthog618/go-gpiocdev`. Sie bietet Edge-Events, interne Pull-ups und Debounce direkt auf Kernelebene.
+- GPIO-Zugriff ueber `gpiozero`, das im Hintergrund das Character-Device benutzt. Kein sysfs, das ist veraltet.
 
 ## 3. Hardwarearchitektur
 
@@ -98,17 +98,15 @@ Das bedeutet, dass zeitweise zwei LEDs eines Kopfes leuchten. Der Treiber muss d
 
 ### 4.1 Schichten
 
-Vier Schichten, Abhaengigkeiten zeigen nur nach unten.
+Drei Schichten, Abhaengigkeiten zeigen nur nach unten.
 
-1. **HAL**: physische Ein- und Ausgabe. Kennt GPIO, kennt keine Ampeln.
+1. **Treiber**: physische Ein- und Ausgabe unter `ampel/driver/`. Kennt SPI und GPIO, kennt keine Ampeln.
 
-2. **Domaene**: Detektor, Ampelkopf, Zufahrtszustand, Phasenautomat, Strategien, Anzeige. Kennt keine Hardware, nur Interfaces.
+2. **Regelung**: `signal`, `phase`, `rule`, `control`. Kennt keine Hardware; die Lampen bekommt sie als Objekt mit einer `write`-Methode uebergeben, die Zeit als Zahl.
 
-3. **Anwendung**: der Regelkreis, der alles verdrahtet und den Zustand besitzt.
+3. **Anwendung**: `main` verdrahtet alles, dazu `config`, `display`, `api` und `ampelctl`.
 
-4. **Adapter**: Konfiguration, Anzeige, Prozesssteuerung, Kommandozeile.
-
-Die Domaene darf `periph`, `gpiocdev` oder `os` nicht importieren. Das ist die Bedingung dafuer, dass die gesamte Regelungslogik ohne Hardware testbar bleibt.
+Die Regelung importiert nichts aus `driver`. Das ist die Bedingung dafuer, dass sie ohne Hardware testbar bleibt: in den Tests steht statt der Lampenkette eine Attrappe, die ihre Aufrufe mitschreibt.
 
 ### 4.2 Projektstruktur
 
@@ -118,47 +116,41 @@ Die Domaene darf `periph`, `gpiocdev` oder `os` nicht importieren. Das ist die B
 
 ampel/
 
-  src/
+  ampel/
 
-    ampel/               Prozessstart, Verdrahtung, Selbsttest
+    signal.py          Signalbilder, deutsche Folge, Konfliktmatrix
 
-    ampelctl/            Bedienung ueber die Kommandozeile
+    phase.py           Phasen, Zwischenzeiten, Zustandsautomat
 
-    controller/          Regelkreis, Phasenautomat, Schalter, Sicherheit
+    rule.py            die adaptive Regel
 
-    strategy/            Gruenzeitverlaengerung
+    control.py         Regelkreis, Ausgabe, Schalter, Notzustand
 
-    light/               Signalbilder und Ampelkoepfe
+    display.py         Darstellung der Gruenzeiten im Kreuz
 
-    detector/            Zuordnung der Haltelinien-Kontakte
+    api.py             Schnittstelle ueber einen Unix-Socket
 
-    display/             Darstellung der Gruenzeiten im Kreuz
+    config.py          TOML laden, Pins pruefen
 
-    api/                 Socket-Schnittstelle fuer ampelctl
-
-    config/              Strukturen, Laden, Validierung
-
-    clock/               Uhr, echt und gefaelscht
+    main.py            Verdrahtung, Selbsttest, Kommandozeile
 
     driver/
 
-      driver.go          Schnittstellen der Hardwareschicht
+      spi.py           SPI-Zugriff
 
-      gpio/              Chip und Eingaenge
+      ws2812.py        Lampenkette der vier Ampelkoepfe
 
-      spi/               SPI-Transport
+      tft.py           ILI9341
 
-      ws2812/            Lampenkette der vier Ampelkoepfe
+      gpio.py          die sechs Leitungen ueber gpiozero
 
-      tft/               SPI und ILI9341
+    tests/             eine Datei je Gebiet
 
-      mock/              Testimplementierung
+  ampelctl             Bedienung ueber die Kommandozeile
 
-  configs/
+  config.toml          Vorlage der Konfiguration
 
-  deploy/
-
-  hardware/
+  deploy/              systemd-Unit und Installationsskript
 
   docs/
 
@@ -166,35 +158,29 @@ ampel/
 
   Makefile
 
-  go.mod
-
 ```
-
-
-
-Testdateien liegen neben ihrem Paket, wie es Go verlangt.
 
 
 
 ### 4.3 Nebenlaeufigkeit
 
-Ein einziger Goroutine besitzt den Steuerzustand. Alles andere kommuniziert ueber Kanaele. Keine geteilten Strukturen mit Mutex, keine Zustandsaenderung aus Interrupt-Callbacks heraus.
+Der Steuerzustand gehoert der Hauptschleife. Sie taktet alle 50 ms, fragt nichts ab und wartet auf nichts.
 
-- Je Eingang eine Goroutine, die Edge-Events in `chan InputEvent` legt.
+Zwei Dinge laufen daneben: `gpiozero` meldet Flanken aus einem eigenen Thread, und die Schnittstelle bedient `ampelctl` aus einem weiteren. Beide rufen nur kurze Methoden des Regelkreises auf und geben sofort zurueck; nichts davon blockiert die Schleife.
 
-- Der Controller laeuft in `Run(ctx)` mit `select` ueber Ereigniskanal, Ticker (50 ms) und `ctx.Done()`.
-
-- Die Anzeige haengt als Beobachter am Regelkreis und wird aus dessen Goroutine bedient. Ein Fehler der Anzeige haelt die Steuerung nie an.
+- Die Anzeige wird aus der Hauptschleife bedient. Ein Fehler der Anzeige haelt die Steuerung nie an.
 
 ## 5. Domaenenmodell
 
-```go
+```python
 
-type Direction int // North, East, South, West
+NORTH, EAST, SOUTH, WEST = range(4)
 
-type Aspect uint8 // AspectRed, AspectRedYellow, AspectGreen, AspectYellow, AspectOff, AspectYellowFlash
+class Aspect(Enum):   RED, RED_YELLOW, GREEN, YELLOW, OFF, YELLOW_FLASH
 
-type Phase int // PhaseNS, PhaseEW, PhaseAllRed, PhaseStartup, PhaseFault
+class Phase(Enum):    STARTUP, NS, EW, FAULT
+
+class Stage(Enum):    GREEN, YELLOW, ALL_RED, RED_YELLOW
 
 ```
 
@@ -208,7 +194,7 @@ Gruen A -> Gelb A (3 s) -> Allrot (2 s) -> RotGelb B (1 s) -> Gruen B
 
 ```
 
-Die Zwischenzeiten sind fest und werden von keiner Strategie veraendert. Nur die Dauer der Gruenphasen ist Stellgroesse.
+Die Zwischenzeiten sind fest und werden von der Regel nicht veraendert. Nur die Dauer der Gruenphasen ist Stellgroesse.
 
 ## 6. Adaptive Regelung
 
@@ -226,7 +212,7 @@ ziel = min(ziel, hoechstgruenzeit)
 
 ```
 
-Startwerte: Grundzeit 5 s, Verlaengerung 3 s, Folgezeit 2 s, Hoechstgruenzeit 20 s. Die Werte wurden im Simulator gesucht, nicht geraten.
+Startwerte: Grundzeit 5 s, Verlaengerung 3 s, Folgezeit 2 s, Hoechstgruenzeit 20 s. Sie stehen unter `[timing]` in der Konfiguration.
 
 ### 6.2 Was bewusst fehlt
 
@@ -236,11 +222,11 @@ Keine geglaettete Nachfrage, keine Aufteilung einer Umlaufzeit, kein Lueckenabbr
 
 ### 8.1 Hauptschalter
 
-Ein Kippschalter schaltet die ganze Anlage. Er wird zyklisch abgefragt, nicht per Interrupt, mit 100 ms Entprellung.
+Ein Kippschalter schaltet die ganze Anlage. Entprellt wird mit 15 ms in `gpiozero`.
 
 Ausschalten: alle Lichter gehen aus, der Phasenautomat steht still, Sensorereignisse werden verworfen. Eine dunkle Kreuzung ist der ehrliche Zustand einer abgeschalteten Anlage.
 
-Einschalten: die Anlage beginnt mit Allrot und laeuft von dort die normale Folge. Aus dem dunklen Zustand darf nie unmittelbar eine Freigabe folgen. Zugleich beginnt eine neue Messung mit neuer Lauf-Kennung im Log, und ein Notzustand wird verlassen: aus und wieder an ist der Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
+Einschalten: die Anlage beginnt mit Allrot und laeuft von dort die normale Folge. Aus dem dunklen Zustand darf nie unmittelbar eine Freigabe folgen. Zugleich wird ein Notzustand verlassen: aus und wieder an ist der Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
 
 ### 8.2 Notschalter
 
@@ -252,181 +238,205 @@ Die Anzeige ist Zubehoer: faellt sie aus, steuert die Kreuzung weiter.
 
 ## 10. Konfiguration
 
-Eine YAML-Datei, Pfad per Flag `-config`. Alles Physikalische und alle Regelparameter stehen dort. Im Code stehen nur Defaults fuer den Fall einer fehlenden Datei.
+Eine TOML-Datei, Pfad per `-config`. Alles Physikalische und alle Regelparameter stehen dort. Im Code stehen nur Vorgaben fuer den Fall einer fehlenden Datei.
 
-```yaml
+```toml
 
-hardware:
+[lamps]
 
-  chip: gpiochip0
+spi = "/dev/spidev1.0"
 
-  shift_register:
+speed_hz = 2400000
 
-    data: 17
+brightness = 60
 
-    clock: 27
+pixels = [0, 4, 7]
 
-    latch: 22
 
-    bit_order: [N_red, N_yellow, N_green, E_red, ...]
 
-  sensors:
+[sensors]
 
-    north: [5, 6, 13]
+north = 23
 
-    east:  [19, 26, 12]
+east = 24
 
-    south: [16, 20, 21]
+south = 25
 
-    west:  [23, 24, 25]
+west = 3
 
-  mode_switch: 4
 
-  reset_button: 18
 
-  debounce_ms: 15
+[switches]
 
-timing:
+power = 4
 
-  yellow_ms: 3000
+fault = 27
 
-  red_yellow_ms: 1000
 
-  all_red_ms: 2000
 
-  base_green_ms: 5000
+[display]
 
-  max_green_ms: 20000
+enabled = true
 
-  follow_ms: 2000
+spi = "/dev/spidev0.0"
 
-  extension_ms: 3000
+speed_hz = 24000000
 
-fixed:
+dc = 2
 
-  green_ms: 15000
+rotation = "quer"
 
-adaptive:
 
-  demand_alpha: 0.3
 
-logging:
+[api]
 
-  dir: /var/log/ampel
+enabled = true
 
-  state_interval_ms: 1000
+socket = "/run/ampel/ampel.sock"
 
-  buffer: 4096
+
+
+[timing]
+
+yellow = 3.0
+
+all_red = 2.0
+
+red_yellow = 1.0
+
+base_green = 5.0
+
+max_green = 20.0
+
+follow = 2.0
+
+extension = 3.0
 
 ```
 
-Validierung beim Laden: Pins duerfen sich nicht doppeln, `base_green` nicht groesser als `max_green`, Bitreihenfolge muss genau zwoelf belegte Positionen haben. Fehlerhafte Konfiguration bricht den Start ab.
+Validierung beim Laden: kein Pin doppelt belegt, kein Pin auf einer SPI-Leitung, `pixels` drei verschiedene Werte von 0 bis 7. Fehlerhafte Konfiguration bricht den Start ab. `-validate` prueft und beendet.
 
 ## 11. Sicherheit und Fehlerbehandlung
 
-Auch ein Modell soll nie zwei konfliktaere Gruensignale zeigen. Die Pruefung liegt bewusst nicht in der Strategie, sondern unmittelbar vor der Hardwareausgabe.
+Auch ein Modell soll nie zwei konfliktaere Gruensignale zeigen. Die Pruefung liegt bewusst nicht in der Regel, sondern unmittelbar vor der Hardwareausgabe.
 
-- `safety.Check(state) error` prueft vor jedem Schreibvorgang gegen eine Konfliktmatrix. Kein Ausgabepfad umgeht diese Funktion.
+- `signal.check(aspects)` prueft vor jedem Schreibvorgang gegen eine Konfliktmatrix und wirft `ConflictError`. Kein Ausgabepfad umgeht `Output.show`.
 
-- Schlaegt die Pruefung fehl, geht das System in `PhaseFault`: alle Lichter gelb blinkend mit 1 Hz, Ereignis im Log, Weiterbetrieb nur nach Neustart.
+- Zusaetzlich prueft `Aspect.can_follow` die deutsche Signalfolge: von Gruen kommt nur Gelb, nie direkt Rot.
 
-- `SIGINT` und `SIGTERM` fuehren ueber `context.Context` zu geordnetem Herunterfahren: alle Signale auf Rot, GPIO-Leitungen freigeben.
+- Schlaegt eine der beiden Pruefungen fehl, geht die Anlage in den Notzustand: alle mittleren Lampen blinken mit 1 Hz gelb. Heraus fuehrt der Notschalter oder aus und wieder an.
 
-- Vor jedem `recover` in `main` steht der Versuch, alle Ausgaenge abzuschalten. Ein leuchtendes Gruen nach einem Absturz ist der schlechteste denkbare Endzustand.
+- `SIGINT` und `SIGTERM` fuehren zum geordneten Herunterfahren: alle Signale auf Rot, Lampen und GPIO freigeben.
+
+- Der Notzustand ist auch von Hand erreichbar, ueber den Notschalter oder `ampelctl not an`.
 
 ## 12. Tests
 
-Die gesamte Domaene ist ohne Hardware testbar, weil Zeit und Ein-Ausgabe hinter Interfaces liegen.
+Die gesamte Regelung ist ohne Hardware testbar, weil zwei Dinge uebergeben statt fest verdrahtet werden: die Zeit als Zahl an `step`, und die Lampen als Objekt mit einer `write`-Methode. In den Tests steht dort eine Attrappe, die ihre Aufrufe mitschreibt.
 
-```go
+```python
 
-type Clock interface {
+class Lamps:
 
-    Now() time.Time
+    def __init__(self):
 
-    After(d time.Duration) <-chan time.Time
+        self.frames = []
 
-    Ticker(d time.Duration) Ticker
 
-}
+
+    def write(self, state):
+
+        self.frames.append(list(state))
 
 ```
 
-Testumfang:
+Testumfang, je eine Datei in `ampel/tests/`:
 
-- `light`: deutsche Signalfolge, korrekte Bitmuster, Rot und Gelb gleichzeitig.
+- `test_signal`: kreuzende Freigaben werden abgewiesen, gegenueberliegende nicht, ein dunkler Kopf neben einer Freigabe gilt als Fehler, Rot darf nicht direkt auf Gruen folgen.
 
-- `detector`: Belegung ueber Zeit, Reichweite ueber Luecken hinweg, wiederholter Pegel erzeugt kein Ereignis.
+- `test_control`: vollstaendige Phasenfolge ueber eine Minute, jedes geschriebene Muster ueber zwei Minuten zulaessig, beide Schalter, Restzeit auf der Anzeige.
 
-- `controller`: Uebergaenge komplett, kein Zustand ohne Gelb zwischen Gruen und Rot, Konfliktmatrix bei allen Phasenpaaren.
+- `test_rule`: zwei dichte Fahrzeuge verlaengern, vereinzelte nicht, die Gegenrichtung zaehlt nicht als Folge, die Hoechstgruenzeit begrenzt.
 
-- `strategy`: jedes dicht folgende Fahrzeug verlaengert um eine Stufe, die Verlaengerung stoppt bei der Hoechstgruenzeit, vereinzelter Verkehr verlaengert nicht.
+- `test_driver`: das WS2812-Bitmuster wird zurueckdekodiert und gegen Pixel und Farbe geprueft, Helligkeit skaliert, dunkle Lampen bleiben schwarz.
 
-- `display`: die Anordnung ist ein Kreuz, nur geaenderte Zahlen werden neu gezeichnet, Sekunden werden gerundet.
+- `test_display`: Kreuz-Layout, nur geaenderte Felder werden neu gezeichnet.
 
-- Integrationstest: kompletter Lauf mit Mock-HAL und Fake-Clock ueber simulierte Minuten, mit erzeugtem Verkehr auf den Sensoren. Geprueft werden Signalfolge, Konfliktfreiheit und die Verlaengerung.
+- `test_config`: doppelte Pins und Pins auf SPI-Leitungen werden abgewiesen.
 
-## 13. Build und Deployment
+- `test_api`: der Zustand kommt vollstaendig als JSON heraus.
+
+`make test` laeuft alle 25 in unter einer Sekunde.
+
+## 13. Deployment
+
+Es wird nichts uebersetzt. Der Code laeuft auf dem Pi, wie er im Repo liegt.
 
 Makefile mit den Zielen:
 
-- `make build` fuer die lokale Architektur.
+- `make test` fuer alle Tests.
 
-- `make pi` fuer `GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w"`.
+- `make validate` prueft die Konfiguration und beendet.
 
-- `make deploy` fuer Kopieren nach `PI_HOST` und Dienstneustart.
+- `make run` startet die Anlage im Vordergrund.
 
-- `make test`, `make lint`, `make fmt`.
+- `make install` laeuft die Tests und ruft dann `deploy/install.sh`.
+
+- `make deploy PI=pi@raspberrypi.local` zieht auf dem Pi den neuen Stand und startet den Dienst neu.
 
 Systemd-Unit `deploy/ampel.service`:
 
 - `Restart=always`, `RestartSec=2`.
 
-- Start als eigener Nutzer `ampel`, Mitglied der Gruppe `gpio`, nicht als root.
+- Start als eigener Nutzer `ampel`, Mitglied der Gruppen `gpio` und `spi`, nicht als root.
 
-- `ReadWritePaths` fuer `/var/log/ampel` und `/var/lib/ampel`.
+- `RuntimeDirectory=ampel` fuer den Socket der Schnittstelle.
 
 - Logs nach journald, Diagnose ueber `journalctl -u ampel -f`.
 
-`deploy/install.sh` legt Nutzer, Gruppen und Verzeichnisse an und installiert die Unit.
+`deploy/install.sh` legt Nutzer und Gruppen an, installiert `python3-gpiozero`, kopiert den Code nach `/usr/local/lib/ampel`, installiert `ampelctl` und die Unit und traegt `dtparam=spi=on` sowie `dtoverlay=spi1-1cs` in die `config.txt` des Bootverzeichnisses ein.
 
 ## 14. Arbeitspakete
 
-Jedes Paket ist abgeschlossen, wenn Tests gruen sind und `go vet` sauber laeuft. Nicht mit dem naechsten beginnen, bevor das aktuelle steht.
+Jedes Paket ist abgeschlossen, wenn `make test` gruen laeuft. Nicht mit dem naechsten beginnen, bevor das aktuelle steht.
 
-**AP1 Geruest.** Modul, Verzeichnisbaum, Makefile, Konfigurationsstrukturen mit Laden und Validierung, `clock`-Interface mit echter und Fake-Implementierung.
+**AP1 Geruest.** Verzeichnisbaum, Makefile, Konfiguration mit Laden und Pinpruefung.
 
-Fertig, wenn `ampel -config configs/config.yaml -validate` die Konfiguration prueft und beendet.
+Fertig, wenn `make validate` die Konfiguration prueft und beendet.
 
-**AP2 HAL.** Interfaces, LED-Leitungen, Eingaenge mit Edge-Events, Mock. Ein Testprogramm laesst alle zwoelf LEDs nacheinander leuchten und gibt Sensorflanken auf der Konsole aus.
+**AP2 Treiber.** SPI, WS2812-Bitmuster, ILI9341, GPIO-Leitungen. Der Selbsttest laesst alle zwoelf Lampen nacheinander leuchten und gibt Sensorflanken auf der Konsole aus.
 
 Fertig, wenn die Hardware sichtbar reagiert.
 
-**AP3 Signalbilder.** Ampelkopf, deutsche Folge, Abbildung auf Registerbits, Sicherheitspruefung samt Konfliktmatrix.
+**AP3 Signalbilder.** Signalbilder, deutsche Folge, Konfliktmatrix, Ausgabe an die Lampenkette.
 
 Fertig, wenn alle vier Koepfe korrekte Folgen zeigen und Konfliktzustaende abgewiesen werden.
 
-**AP4 Erkennung.** Zuordnung der Pins, Belegung ueber Zeit, Erkennung der Ueberfahrt an der Haltelinie.
+**AP4 Erkennung.** Zuordnung der Pins, Ueberfahrt am Freiwerden der Haltelinie.
 
 Fertig, wenn ein von Hand ueber die Sensoren geschobenes Modellauto genau eine Ueberfahrt erzeugt.
 
-**AP5 Grundbetrieb.** Phasenautomat, Zwischenzeiten, Strategie-Interface, geordnetes Herunterfahren.
+**AP5 Grundbetrieb.** Phasenautomat, Zwischenzeiten, geordnetes Herunterfahren.
 
 Fertig, wenn die Kreuzung dauerhaft und korrekt mit der Grundgruenzeit laeuft. Das ist der erste vorfuehrbare Stand.
 
-**AP6 Anzeige.** Displaytreiber ueber SPI, Darstellung der vier Gruenzeiten im Kreuz.
+**AP6 Adaptive Regelung.** Zaehlung dicht folgender Fahrzeuge je Zufahrt, Verlaengerung bis zur Hoechstgruenzeit.
 
-Fertig, wenn die angezeigte Zeit steigt, sobald zwei Fahrzeuge dicht hintereinander fahren.
+Fertig, wenn zwei dicht hintereinander geschobene Fahrzeuge die Freigabe sichtbar verlaengern und vereinzelte nicht.
 
-**AP7 Adaptive Steuerung.** Grundgruenzeit, Zaehlung dicht folgender Fahrzeuge je Zufahrt, Verlaengerung bis zur Hoechstgruenzeit.
+**AP7 Anzeige.** Kreuz-Layout, Ziffern aus sieben Segmenten, Farbe nach Signalbild.
 
-Fertig, wenn dichter Verkehr messbar laengeres Gruen fuer die belastete Richtung erzeugt.
+Fertig, wenn die angezeigte Restzeit herunterzaehlt und bei einem dicht folgenden Fahrzeug nach oben springt.
 
-Fertig, wenn der Notschalter die Anlage anhaelt und das Zuruecklegen sie bei Allrot neu beginnen laesst.
+**AP8 Bedienung.** Hauptschalter, Notschalter, Notzustand mit Gelbblinken.
 
-Fertig, wenn Aus- und Einschalten nie ein unzulaessiges Signalbild erzeugt und aus dem dunklen Zustand immer Allrot folgt.
+Fertig, wenn Aus- und Einschalten nie ein unzulaessiges Signalbild erzeugt, aus dem dunklen Zustand immer Allrot folgt und der Notschalter die Anlage anhaelt.
 
-**AP11 Inbetriebnahme.** Systemd, Deployment, Dokumentation in `docs/aufbau.md`, Vorfuehrablauf.
+**AP9 Fernbedienung.** Schnittstelle ueber den Socket, `ampelctl`.
+
+Fertig, wenn `ampelctl status` den Zustand zeigt und `ampelctl not an` die Anlage in den Notzustand bringt.
+
+**AP10 Inbetriebnahme.** Systemd, Installationsskript, Dokumentation in `docs/aufbau.md`, Vorfuehrablauf.
 
 Fertig, wenn der Pi nach Kaltstart ohne Tastatur selbstaendig steuert.
 
