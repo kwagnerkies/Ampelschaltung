@@ -20,11 +20,12 @@ West.
 Repo auf den Pi holen und einspielen:
 
 ```
-git clone <repo> ampel && cd ampel
-python3 -m unittest discover -s tests
-sudo sh deploy/install.sh .
+git clone git@github.com:kwagnerkies/Ampelschaltung.git ampel && cd ampel
+make install
 sudo reboot
 ```
+
+`make install` laeuft erst die Tests und installiert dann.
 
 ## 3. Was das Skript tut
 
@@ -42,8 +43,9 @@ Eine vorhandene `/etc/ampel/config.toml` wird nie ueberschrieben.
 
 Der Neustart danach ist noetig, damit SPI wirkt. Ohne ihn bleiben Display und Lampen dunkel.
 
-Spaetere Programmstaende: `git pull`, dann `sudo sh deploy/install.sh .` und der Dienst startet
-neu. Eine vorhandene `/etc/ampel/config.toml` bleibt unangetastet.
+Spaetere Programmstaende auf dem Pi mit `git pull && make install`, vom Arbeitsrechner aus mit
+`make deploy PI=pi@raspberrypi.local`. Eine vorhandene `/etc/ampel/config.toml` bleibt
+unangetastet.
 
 ## 4. Verdrahtung pruefen
 

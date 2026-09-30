@@ -5,24 +5,49 @@ description: Betrieb der Modellkreuzung auf dem Raspberry Pi. Verwenden, wenn de
 
 # Ampelschaltung steuern
 
-Alle Befehle laufen auf dem Pi. `PI` steht fuer `pi@raspberrypi.local`.
+## Wo dieser Befehl laeuft
+
+**Auf dem Pi selbst** (Claude Code laeuft auf dem Raspberry Pi): alle Befehle unten direkt
+ausfuehren.
+
+**Auf dem Arbeitsrechner**: jeden Befehl ueber `ssh` voranstellen, oder `make deploy`
+benutzen, das genau das tut.
+
+```
+ssh pi@raspberrypi.local 'systemctl status ampel'
+```
 
 ## Erstinstallation auf einem frischen Pi
 
-Repo auf den Pi holen und installieren:
+Auf dem Pi:
 
 ```
-git clone <repo> ampel && cd ampel
-sudo sh deploy/install.sh .
+git clone git@github.com:kwagnerkies/Ampelschaltung.git ampel && cd ampel
+make install
 sudo reboot
 ```
 
-Das Skript legt Nutzer und Gruppen an, kopiert den Code nach `/usr/local/lib/ampel`,
-installiert `ampelctl` und den Dienst, traegt `dtparam=spi=on` und `dtoverlay=spi1-1cs` in
-`/boot/config.txt` ein und startet die Anlage. Der Neustart ist noetig, damit SPI wirkt.
+`make install` laeuft erst die Tests und ruft dann `deploy/install.sh`. Das Skript legt Nutzer
+und Gruppen an, installiert `python3-gpiozero`, kopiert den Code nach `/usr/local/lib/ampel`,
+installiert `ampelctl` und den Dienst, traegt `dtparam=spi=on` und `dtoverlay=spi1-1cs` in die
+`config.txt` des Bootverzeichnisses ein und startet die Anlage. Der Neustart ist noetig, damit
+SPI wirkt; ohne ihn bleiben Lampen und Display dunkel.
 
-Einzige Abhaengigkeit ausserhalb der Standardbibliothek ist `python3-gpiozero`; das Skript
-installiert es mit.
+## Neuen Stand ausrollen
+
+Auf dem Pi:
+
+```
+git pull && make install
+```
+
+Vom Arbeitsrechner aus dasselbe in einem Befehl:
+
+```
+make deploy PI=pi@raspberrypi.local
+```
+
+Eine vorhandene `/etc/ampel/config.toml` bleibt dabei unangetastet.
 
 ## Taeglicher Betrieb
 
@@ -66,9 +91,11 @@ gewinnt. Abschalten mit `enabled = false` im Abschnitt `[api]`.
 
 ```
 sudo nano /etc/ampel/config.toml
-python3 -m ampel.main -config /etc/ampel/config.toml -validate
+PYTHONPATH=/usr/local/lib/ampel python3 -m ampel.main -config /etc/ampel/config.toml -validate
 sudo systemctl restart ampel
 ```
+
+Im Repo genuegt `make validate`.
 
 Die vier Regelwerte stehen unter `[timing]`:
 
@@ -95,7 +122,7 @@ Konsole. Abbruch mit Strg-C.
 ## Tests
 
 ```
-python3 -m unittest discover -s tests
+make test
 ```
 
 ## Fehlersuche

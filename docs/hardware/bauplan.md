@@ -10,8 +10,8 @@ Werkzeug: Lotkolben, Seitenschneider, Abisolierzange, Multimeter mit Durchgangsp
 Noch bevor gebohrt wird, laeuft die Steuerung auf dem Pi.
 
 ```
-git clone <repo> ampel && cd ampel
-sudo sh deploy/install.sh .
+git clone git@github.com:kwagnerkies/Ampelschaltung.git ampel && cd ampel
+make install
 sudo systemctl stop ampel
 ```
 
