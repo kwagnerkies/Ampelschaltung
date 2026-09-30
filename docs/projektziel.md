@@ -18,8 +18,9 @@ Signalbilder.
 Gruen, Gelb, Rot. Zwei Freigabephasen: Nord mit Sued, danach Ost mit West. Zwischenzeiten
 fest: Gelb 3 s, Allrot 2 s, Rot mit Gelb 1 s.
 
-**Erkennung.** Je Zufahrt ein Reed-Kontakt an der Haltelinie, ausgeloest durch einen Magneten
-im Modellauto. Gibt ein Fahrzeug die Linie wieder frei, hat es die Kreuzung ueberfahren.
+**Erkennung.** Je Zufahrt ein Hall-Sensor A3144 an der Haltelinie, ausgeloest durch einen
+Magneten im Modellauto. Verlaesst das Fahrzeug die Linie wieder, hat es die Kreuzung
+ueberfahren.
 
 **Adaptive Regelung.** Jede Freigabe beginnt mit 5 s Grundzeit. Faehrt ein Fahrzeug innerhalb
 von 2 s hinter seinem Vorgaenger ueber dieselbe Haltelinie, verlaengert das die Freigabe um
@@ -53,7 +54,7 @@ Auswertung von Wartezeiten, Lernen eines Tagesprofils, Fernsteuerung oder Netzwe
 - Raspberry Pi 2 B oder Pi 3, Raspberry Pi OS Lite
 - 4 gedruckte Ampeln nach dem Modell 864750 von Mofantastico, je ein WS2812-Stick mit acht
   Pixeln dahinter, durchgeschleift an SPI1; genutzt werden Pixel 0, 4 und 7
-- 4 Reed-Kontakte an internen Pull-ups, gegen Masse geschaltet
+- 4 Hall-Sensoren A3144 an 5 V, Ausgang gegen Masse am internen Pull-up
 - 2 Kippschalter fuer Betrieb und Notzustand
 - 1 TFT mit ILI9341 ueber SPI
 - Kreuzungsplatte, Ampelmasten und Modellautos aus dem 3D-Drucker

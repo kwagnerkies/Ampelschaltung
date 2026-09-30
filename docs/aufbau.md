@@ -73,8 +73,9 @@ Haeufige Befunde:
 
 - Eine Lampe bleibt dunkel: LED verpolt oder Vorwiderstand nicht durchkontaktiert.
 - Alle Lampen einer Zufahrt falsch zugeordnet: `bit_order` in der Konfiguration anpassen.
-- Ein Sensor meldet dauernd geschlossen: Magnet zu nah oder Reed-Kontakt gebrochen.
-- Ein Sensor meldet nichts: Fahrbahndecke zu dick oder Magnet falsch gepolt.
+- Ein Sensor meldet dauernd geschlossen: Magnet liegt zu nah am Sensor.
+- Ein Sensor meldet nichts: Magnet falsch herum, Decke zu dick, oder der A3144 haengt an
+  3,3 V statt an 5 V.
 
 ## 5. Betrieb aufnehmen
 

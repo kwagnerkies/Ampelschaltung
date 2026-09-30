@@ -8,12 +8,12 @@ Alle Angaben in BCM-Nummern, in Klammern die Nummer auf der 40-poligen Stiftleis
                          Nord
                       [R][G][Gr]
                           |
-                     Reed Nord
+                     Hall Nord
                           |
    West                   |                   Ost
-[R][G][Gr] --- Reed West --+-- Reed Ost --- [R][G][Gr]
+[R][G][Gr] --- Hall West --+-- Hall Ost --- [R][G][Gr]
                           |
-                     Reed Sued
+                     Hall Sued
                           |
                       [R][G][Gr]
                          Sued
@@ -22,7 +22,7 @@ Alle Angaben in BCM-Nummern, in Klammern die Nummer auf der 40-poligen Stiftleis
         |          Raspberry Pi              |
         |                                    |
         |  12 x GPIO ---[330]--->|--- GND    |  Ampel-LEDs
-        |   4 x GPIO ----o/ o---- GND        |  Reed-Kontakte
+        |   4 x A3144 ---- OUT -------- GPIO |  Magnetsensoren
         |   2 x GPIO ----o/ o---- GND        |  Schalter
         |   SPI0 + DC ----------------- TFT  |  Anzeige
         +------------------------------------+
@@ -44,17 +44,29 @@ BCM 20 (38) ----------> DI [Stick Nord] DO ---> DI [Stick Ost] DO ---.
 GND   (6) ---+---+---+---+
 ```
 
-## Reed-Kontakte
+## Hall-Sensoren A3144
 
-Schliesser gegen Masse, ohne Vorwiderstand. Der interne Pull-up des Pi haelt die Leitung hoch,
-der geschlossene Kontakt zieht sie auf Masse.
+Offener Kollektor gegen Masse, kein Vorwiderstand. Der interne Pull-up des Pi haelt die
+Leitung hoch, der Sensor zieht sie bei Magnet auf Masse.
 
 ```
-BCM 23 (16) ----o/ o---- GND     Nord, Haltelinie
-BCM 24 (18) ----o/ o---- GND     Ost,  Haltelinie
-BCM 25 (22) ----o/ o---- GND     Sued, Haltelinie
-BCM  3 ( 5) ----o/ o---- GND     West, Haltelinie
+        5 V (2) ----+-------+-------+-------+
+                    |       |       |       |
+                  [VCC]   [VCC]   [VCC]   [VCC]
+                  A3144   A3144   A3144   A3144
+                  [OUT]   [OUT]   [OUT]   [OUT]
+                    |       |       |       |
+        BCM 23 (16)-+       |       |       |    Nord
+        BCM 24 (18)---------+       |       |    Ost
+        BCM 25 (22)-----------------+       |    Sued
+        BCM  3 ( 5)-------------------------+    West
+                    |       |       |       |
+                  [GND]   [GND]   [GND]   [GND]
+        GND (6) ----+-------+-------+-------+
 ```
+
+Kein eigener Pull-up von OUT nach 5 V. Der Ausgang treibt nie hoch, deshalb liegen am
+GPIO-Pin hoechstens die 3,3 V des internen Pull-ups.
 
 ## Schalter
 

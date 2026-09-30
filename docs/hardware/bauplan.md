@@ -28,7 +28,7 @@ Sensorflanke.
 ## Schritt 1: Masse und Stromversorgung
 
 Breakout auf die Lochrasterplatine stecken, eine durchgehende Masseschiene loeten. Alle
-Rueckleitungen von LEDs, Reed-Kontakten und Schaltern gehen spaeter hierhin.
+Rueckleitungen von Sticks, Sensoren und Schaltern gehen spaeter hierhin.
 
 Pruefen: Durchgang zwischen Masseschiene und Pin 6 der Stiftleiste.
 
@@ -63,28 +63,33 @@ Pruefen: der Selbsttest laeuft alle zwoelf Lampen einzeln durch, Stick fuer Stic
 der falsche Kopf, ist die Kette in anderer Reihenfolge gesteckt; dann entweder umstecken oder
 die Zufahrten in der Konfiguration tauschen.
 
-## Schritt 4: Die vier Reed-Kontakte
+## Schritt 4: Die vier Hall-Sensoren
 
-Ein Kontakt je Zufahrt, unmittelbar an der Haltelinie, quer zur Fahrtrichtung in den Kanal
-unter der Platte. Eine Seite an die GPIO-Leitung, die andere an Masse. Kein Widerstand, der
-interne Pull-up macht das.
+Ein A3144 je Zufahrt, unmittelbar an der Haltelinie, flach in den Kanal unter der Platte, die
+beschriftete Seite nach oben zur Fahrbahn.
 
-| Zufahrt | BCM | Pin der Leiste |
+Drei Leitungen je Sensor: VCC an 5 V, GND an die Masseschiene, OUT an die GPIO-Leitung.
+
+| Zufahrt | OUT an BCM | Pin der Leiste |
 |---|---|---|
 | Nord | 23 | 16 |
 | Ost | 24 | 18 |
 | Sued | 25 | 22 |
 | West | 3 | 5 |
 
-Beim Loeten: das Glas nicht in der Naehe des Koerpers greifen, die Draehte mit einer Zange als
-Waermeableiter halten. Vor dem Kleben mit Kaptonband fixieren und mit einem Testfahrzeug
-pruefen.
+Keinen Widerstand von OUT nach 5 V setzen. Der Ausgang zieht nur nach Masse, den Rest macht
+der interne Pull-up des Pi; ein eigener Pull-up gegen 5 V wuerde den Pin beschaedigen.
 
-Die Fahrbahndecke ueber dem Kontakt duenn halten, 1,2 bis 1,6 mm. Alle Magnete gleich herum
-einlegen, sonst spricht ein Teil der Fahrzeuge nicht an.
+Beim Loeten die Draehte mit einer Zange als Waermeableiter halten. Vor dem Kleben mit
+Kaptonband fixieren und mit einem Testfahrzeug pruefen.
 
-Pruefen: Fahrzeug ueber jede Haltelinie schieben. Der Selbsttest muss `Nord Haltelinie`,
-`Ost Haltelinie` und so weiter melden, jeweils geschlossen und wieder offen.
+Die Fahrbahndecke ueber dem Sensor duenn halten, 1,2 bis 1,6 mm. **Alle Magnete gleich herum
+einlegen**: der A3144 reagiert nur auf einen Pol. Erst ein Testfahrzeug bauen, beide Seiten
+ausprobieren, dann die Serie drucken.
+
+Pruefen: Fahrzeug ueber jede Haltelinie schieben. Der Selbsttest muss die passende BCM-Nummer
+melden, geschlossen beim Darueberfahren und offen danach. Meldet ein Sensor nie, ist meist der
+Magnet falsch herum.
 
 ## Schritt 5: Die beiden Schalter
 
@@ -147,8 +152,8 @@ solchen Aufbauten ist eine abgerissene Litze, nicht der Code.
 | Nur der erste Stick leuchtet | DO zu DI der Kette nicht verbunden |
 | Erste LED flackert oder falsche Farbe | Pegel der Datenleitung, Pegelwandler noetig |
 | Falscher Kopf leuchtet | Kette in anderer Reihenfolge gesteckt |
-| Ein Sensor meldet dauernd geschlossen | Magnet zu nah oder Kontakt gebrochen |
-| Ein Sensor meldet nie | Decke zu dick, Magnet falsch herum oder Litze ab |
+| Ein Sensor meldet dauernd geschlossen | Magnet liegt zu nah am Sensor |
+| Ein Sensor meldet nie | Magnet falsch herum, Decke zu dick, oder Sensor an 3,3 V statt 5 V |
 | Display bleibt dunkel | SPI nicht aktiv, oder Nutzer `ampel` nicht in der Gruppe `spi` |
 | Alles blinkt gelb | Notschalter liegt um, oder die Sicherheitspruefung hat angeschlagen |
 | `device or resource busy` | der Dienst laeuft noch, erst `systemctl stop ampel` |

@@ -45,9 +45,9 @@ eine Diode in der 5-V-Zuleitung des ersten Sticks.
 
 ## Sensoren
 
-Ein Reed-Kontakt je Zufahrt, unmittelbar an der Haltelinie. Alle Eingaenge liegen am internen
-Pull-up und schalten gegen Masse; geschlossener Kontakt ist der Low-Pegel. Entprellt wird im
-Kernel mit 15 ms.
+Ein Hall-Sensor A3144 je Zufahrt, unmittelbar an der Haltelinie. Er schaltet seinen Ausgang
+gegen Masse, sobald ein Magnet in Reichweite ist; der interne Pull-up des Pi haelt die Leitung
+sonst hoch. Magnet erkannt ist also der Low-Pegel.
 
 | Zufahrt | BCM | Pin der Leiste |
 |---|---|---|
@@ -56,9 +56,36 @@ Kernel mit 15 ms.
 | Sued | 25 | 22 |
 | West | 3 | 5 |
 
-Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt: ein stehendes Fahrzeug haelt ihn
-geschlossen. Das Freiwerden der Linie ist deshalb das Ereignis, an dem die Steuerung eine
-Ueberfahrt erkennt.
+Der A3144 hat drei Beine. Bei Blick auf die beschriftete Vorderseite, Beine nach unten:
+
+```
+  A3144, Vorderseite
+  +--------+
+  |        |
+  +--------+
+   |  |  |
+   1  2  3      1 = VCC (5 V), 2 = GND, 3 = OUT
+```
+
+Drei Punkte, die ueber Funktionieren oder Nichtfunktionieren entscheiden:
+
+**Versorgung mit 5 V.** Der A3144 ist fuer 4,5 bis 24 V spezifiziert. An 3,3 V arbeitet er
+unzuverlaessig oder gar nicht.
+
+**Keinen zusaetzlichen Pull-up gegen 5 V.** Der Ausgang ist ein offener Kollektor: er zieht nur
+nach Masse und treibt nie aktiv hoch. Mit dem internen Pull-up des Pi sieht die GPIO-Leitung
+damit hoechstens 3,3 V. Haengst du einen eigenen Widerstand von OUT nach 5 V, liegen 5 V am
+Pin und der Pi nimmt Schaden. Fertige Module wie das KY-003 haben so einen Widerstand oft
+schon drauf; dann entweder das Modul mit 3,3 V versorgen und hoffen, oder den nackten Sensor
+im TO-92-Gehaeuse nehmen. Ich rate zum nackten Sensor.
+
+**Magnetpolung.** Der A3144 ist unipolar: er schaltet nur bei einem Pol, der andere loest gar
+nichts aus. Alle Fahrzeugmagnete muessen deshalb mit derselben Seite nach unten eingelegt
+werden. Vor der Serie ein Testfahrzeug bauen und beide Seiten ausprobieren.
+
+Anders als ein Reed-Kontakt zieht der A3144 dauerhaft Strom, etwa 5 bis 9 mA je Sensor, zusammen
+rund 25 mA aus der 5-V-Schiene. Dafuer ist er unempfindlich gegen Erschuetterung, prellt nicht
+und geht nicht kaputt, wenn man ihn falsch anfasst.
 
 ## Anzeige
 
@@ -94,7 +121,7 @@ braucht dreizehn Leitungen, die hier nicht frei sind.
 | Notschalter | 18 | 12 | geschlossen blinken alle Lichter gelb, offen beginnt die Anlage bei Allrot |
 
 Er schaltet wie die Sensoren gegen Masse und wird zyklisch abgefragt, entprellt mit 100 ms,
-weil ein mechanischer Schalter laenger prellt als ein Reed-Kontakt.
+weil ein mechanischer Schalter prellt, ein Hall-Sensor dagegen nicht.
 
 ## Masse und Versorgung
 

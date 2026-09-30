@@ -5,7 +5,7 @@ erklaeren, und nennt zu jeder die Stelle.
 
 ## Die Idee in fuenf Saetzen
 
-Reed-Kontakte an den Haltelinien melden, wann ein Fahrzeug die Kreuzung ueberfaehrt. Faehrt
+Hall-Sensoren an den Haltelinien melden, wann ein Fahrzeug die Kreuzung ueberfaehrt. Faehrt
 eines dicht hinter seinem Vorgaenger ueber dieselbe Linie, verlaengert das die laufende
 Freigabe um eine feste Stufe, begrenzt durch die Hoechstgruenzeit. Ein Phasenautomat setzt die
 Freigaben in Signalbilder um, die unmittelbar vor der Hardware gegen eine Konfliktmatrix
@@ -44,7 +44,7 @@ Fahrzeug, das binnen der Folgezeit auf seinen Vorgaenger folgt, gedeckelt durch 
 Hoechstgruenzeit. Gezaehlt wird je Zufahrt, nicht je Phase: die gegenueberliegende Zufahrt
 faehrt gleichzeitig ab, ihre Abfahrten sind keine Fahrzeugfolge.
 
-**4. Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt.** Deshalb ist das **Freiwerden**
+**4. Ein Magnetsensor meldet Anwesenheit, nicht Durchfahrt.** Deshalb ist das **Freiwerden**
 der Haltelinie das Ereignis, an dem `Controller.crossing` eine Ueberfahrt erkennt.
 
 **5. Aus dem Dunkeln kommt immer Allrot.** `Controller.restart` setzt den Automaten zurueck.
