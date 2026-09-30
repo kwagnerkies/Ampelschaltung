@@ -20,11 +20,13 @@ Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 | `ampel/phase.py` | 93 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
 | `ampel/rule.py` | 11 | die ganze adaptive Regel |
 | `ampel/control.py` | 166 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
-| `ampel/driver.py` | 121 | SPI, WS2812-Frame, ILI9341 |
+| `ampel/driver/spi.py` | 23 | SPI-Zugriff ueber ioctl |
+| `ampel/driver/ws2812.py` | 40 | Lampenkette, drei SPI-Bits je WS2812-Bit |
+| `ampel/driver/tft.py` | 62 | ILI9341 mit Startfolge und Rechteckfuellung |
+| `ampel/driver/gpio.py` | 36 | sechs Leitungen ueber gpiozero |
 | `ampel/display.py` | 89 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
 | `ampel/api.py` | 64 | Schnittstelle ueber einen Unix-Socket |
 | `ampel/config.py` | 58 | TOML laden, Pins pruefen |
-| `ampel/gpio.py` | 36 | sechs Leitungen ueber gpiozero |
 | `ampel/main.py` | 163 | Verdrahtung, Selbsttest, Kommandozeile |
 | `ampelctl` | 77 | Bedienung von der Kommandozeile |
 
@@ -67,7 +69,7 @@ Verdrahtungsfehler gefunden, bevor geloetet wurde.
 2. `ampel/phase.py` — der Automat
 3. `ampel/rule.py` — die Regel, elf Zeilen
 4. `ampel/control.py` — `step` verbindet alles
-5. `ampel/driver.py` — wie aus drei Wahrheitswerten ein WS2812-Frame wird
+5. `ampel/driver/ws2812.py` — wie aus drei Wahrheitswerten ein WS2812-Frame wird
 
 Wer nur fuenf Minuten hat, liest `Controller.step` und `Following.target`.
 
@@ -83,7 +85,7 @@ Wer nur fuenf Minuten hat, liest `Controller.step` und `Following.target`.
 
 ## Tests
 
-`tests/test_control.py`, 25 Tests: Konfliktmatrix, Signalfolge, vollstaendige Phasenfolge,
+Sieben Dateien in `tests/`, 25 Tests: Konfliktmatrix, Signalfolge, vollstaendige Phasenfolge,
 jedes geschriebene Muster ueber zwei Minuten, die Regel mit dichtem und vereinzeltem Verkehr,
 beide Schalter, das WS2812-Frame zurueckdekodiert, das Kreuz-Layout, die Pinpruefung.
 

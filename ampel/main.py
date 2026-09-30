@@ -69,7 +69,7 @@ def open_screen(settings, lines):
 
 
 def run(settings):
-    from .gpio import Lines
+    from .driver.gpio import Lines
     lines = Lines()
     controller, strip = build(settings, lines)
     screen, panel = open_screen(settings, lines)
@@ -125,7 +125,7 @@ def run(settings):
 
 
 def selftest(settings):
-    from .gpio import Lines
+    from .driver.gpio import Lines
     lines = Lines()
     controller, strip = build(settings, lines)
     screen, panel = open_screen(settings, lines)
