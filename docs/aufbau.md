@@ -106,7 +106,7 @@ ls -l /var/log/ampel
 ```
 
 Faellt das Programm aus, startet systemd es nach zwei Sekunden neu. Beim geordneten Beenden
-gehen alle Signale auf Rot und die CSV-Puffer werden geleert.
+gehen alle Signale auf Rot.
 
 ## 7. Wenn nichts leuchtet
 
