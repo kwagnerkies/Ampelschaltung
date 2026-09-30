@@ -13,7 +13,6 @@ type Mock struct {
 	mu      sync.Mutex
 	pattern []bool
 	history [][]bool
-	closed  bool
 	levels  map[int]bool
 	events  chan driver.InputEvent
 }
@@ -49,7 +48,6 @@ func (m *Mock) Clear() error {
 func (m *Mock) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.closed = true
 	return nil
 }
 
@@ -83,20 +81,10 @@ func (m *Mock) Writes() int {
 	return len(m.history)
 }
 
-func (m *Mock) Closed() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.closed
-}
-
-func (m *Mock) SetLevel(pin int, active bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.levels[pin] = active
-}
-
 func (m *Mock) Emit(pin int, active bool, at time.Time) error {
-	m.SetLevel(pin, active)
+	m.mu.Lock()
+	m.levels[pin] = active
+	m.mu.Unlock()
 	select {
 	case m.events <- driver.InputEvent{Pin: pin, Active: active, Time: at}:
 		return nil

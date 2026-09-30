@@ -77,12 +77,7 @@ func openLamps(cfg *config.Config) (driver.LampDriver, error) {
 	if err != nil {
 		return nil, err
 	}
-	strip, err := ws2812.New(bus, light.DirectionCount, byte(cfg.Hardware.Lamps.Brightness), cfg.Hardware.Lamps.Pixels)
-	if err != nil {
-		_ = bus.Close()
-		return nil, err
-	}
-	return strip, nil
+	return ws2812.New(bus, light.DirectionCount, byte(cfg.Hardware.Lamps.Brightness), cfg.Hardware.Lamps.Pixels), nil
 }
 
 func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, pixels [3]int, dwell time.Duration) error {

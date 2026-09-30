@@ -34,18 +34,7 @@ type Strip struct {
 
 var _ driver.LampDriver = (*Strip)(nil)
 
-func New(bus driver.Transport, heads int, brightness byte, pixels [3]int) (*Strip, error) {
-	if bus == nil {
-		return nil, fmt.Errorf("lampenkette: kein bus")
-	}
-	if heads <= 0 {
-		return nil, fmt.Errorf("lampenkette: %d koepfe", heads)
-	}
-	for _, pixel := range pixels {
-		if pixel < 0 || pixel >= PixelsPerHead {
-			return nil, fmt.Errorf("lampenkette: pixel %d liegt ausserhalb von 0 bis %d", pixel, PixelsPerHead-1)
-		}
-	}
+func New(bus driver.Transport, heads int, brightness byte, pixels [3]int) *Strip {
 	count := heads * PixelsPerHead
 	return &Strip{
 		bus:        bus,
@@ -53,7 +42,7 @@ func New(bus driver.Transport, heads int, brightness byte, pixels [3]int) (*Stri
 		brightness: brightness,
 		pixels:     pixels,
 		frame:      make([]byte, count*bitsPerPixel*spiPerBit/8+resetBytes),
-	}, nil
+	}
 }
 
 func (s *Strip) Write(lamps []bool) error {

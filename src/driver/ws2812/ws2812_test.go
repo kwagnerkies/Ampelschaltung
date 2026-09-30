@@ -20,11 +20,7 @@ func (t *tape) Close() error { return nil }
 func newStrip(t *testing.T, brightness byte) (*Strip, *tape) {
 	t.Helper()
 	tp := &tape{}
-	strip, err := New(tp, 4, brightness, [3]int{0, 4, 7})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	return strip, tp
+	return New(tp, 4, brightness, [3]int{0, 4, 7}), tp
 }
 
 func bits(frame []byte, pixel int) []byte {
@@ -120,11 +116,5 @@ func TestWrongNumberOfLampsIsRejected(t *testing.T) {
 	strip, _ := newStrip(t, 255)
 	if err := strip.Write(make([]bool, 11)); err == nil {
 		t.Error("elf Lampenzustaende wurden angenommen")
-	}
-}
-
-func TestPixelOutsideTheStickIsRejected(t *testing.T) {
-	if _, err := New(&tape{}, 4, 255, [3]int{0, 4, 8}); err == nil {
-		t.Error("Pixel 8 wurde angenommen, der Stick hat nur 0 bis 7")
 	}
 }

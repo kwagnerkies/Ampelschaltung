@@ -67,10 +67,9 @@ type Server struct {
 	inputs   chan<- controller.Input
 	powerPin int
 	faultPin int
+	mu       sync.Mutex
 	powerOn  bool
 	faultOn  bool
-	mu       sync.Mutex
-	now      func() time.Time
 }
 
 func NewServer(store *Store, inputs chan<- controller.Input, powerPin, faultPin int, powerOn, faultOn bool) *Server {
@@ -81,7 +80,6 @@ func NewServer(store *Store, inputs chan<- controller.Input, powerPin, faultPin 
 		faultPin: faultPin,
 		powerOn:  powerOn,
 		faultOn:  faultOn,
-		now:      time.Now,
 	}
 }
 
@@ -121,7 +119,7 @@ func (s *Server) switchTo(w http.ResponseWriter, r *http.Request, pin int, state
 		return
 	}
 	select {
-	case s.inputs <- controller.Input{Pin: pin, Active: on, Time: s.now()}:
+	case s.inputs <- controller.Input{Pin: pin, Active: on, Time: time.Now()}:
 	default:
 		http.Error(w, "die anlage nimmt gerade nichts an", http.StatusServiceUnavailable)
 		return
