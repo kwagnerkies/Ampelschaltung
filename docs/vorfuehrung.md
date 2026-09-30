@@ -5,7 +5,7 @@ Steuerung.
 
 ## Vorbereitung am Tag davor
 
-- `python3 -m unittest discover -s tests` und `sudo sh deploy/install.sh .` laufen lassen,
+- `make test` und `sudo sh deploy/install.sh .` laufen lassen,
   danach `sudo reboot` und pruefen, ob die Kreuzung ohne Tastatur wieder steuert.
 - Selbsttest fahren, alle zwoelf Lampen und alle zwoelf Sensoren einmal ausloesen.
 - Mindestens zwoelf Modellautos bereitlegen, alle mit gleich gepoltem Magneten.

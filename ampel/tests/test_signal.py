@@ -1,6 +1,6 @@
 import unittest
 
-from ampel.signal import Aspect, ConflictError, check
+from ..signal import Aspect, ConflictError, check
 
 
 class SafetyTest(unittest.TestCase):

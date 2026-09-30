@@ -1,10 +1,10 @@
 import unittest
 
-from support import Lamps, aspects_of, run
-from ampel.control import Controller, Timing
-from ampel.phase import Stage
-from ampel.rule import Following
-from ampel.signal import Aspect, DIRECTIONS, check
+from .support import Lamps, aspects_of, run
+from ..control import Controller, Timing
+from ..phase import Stage
+from ..rule import Following
+from ..signal import Aspect, DIRECTIONS, check
 
 
 class SequenceTest(unittest.TestCase):

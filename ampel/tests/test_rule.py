@@ -1,9 +1,9 @@
 import unittest
 
-from support import Lamps
-from ampel.control import Controller, Timing
-from ampel.phase import Stage
-from ampel.rule import Following
+from .support import Lamps
+from ..control import Controller, Timing
+from ..phase import Stage
+from ..rule import Following
 
 
 class RuleTest(unittest.TestCase):

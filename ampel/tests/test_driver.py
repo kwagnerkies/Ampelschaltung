@@ -4,7 +4,7 @@ import unittest
 
 class DriverTest(unittest.TestCase):
     def setUp(self):
-        from ampel.driver import Strip
+        from ..driver import Strip
 
         class Tape:
             def __init__(self):
@@ -50,7 +50,7 @@ class DriverTest(unittest.TestCase):
             self.assertEqual(self.decode(self.tape.frames[0], pixel), [0, 0, 0])
 
     def test_brightness_scales(self):
-        from ampel.driver import Strip
+        from ..driver import Strip
         strip = Strip(self.tape, 4, 51, (0, 4, 7))
         lamps = [False] * 12
         lamps[0] = True

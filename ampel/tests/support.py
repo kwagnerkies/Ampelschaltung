@@ -1,9 +1,9 @@
 import unittest
 
-from ampel.control import Controller, Timing
-from ampel.phase import Stage
-from ampel.rule import Following
-from ampel.signal import Aspect, DIRECTIONS, ConflictError, check
+from ..control import Controller, Timing
+from ..phase import Stage
+from ..rule import Following
+from ..signal import Aspect, DIRECTIONS, ConflictError, check
 
 
 class Lamps:

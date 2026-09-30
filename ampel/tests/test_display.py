@@ -4,7 +4,7 @@ import unittest
 
 class ScreenTest(unittest.TestCase):
     def setUp(self):
-        from ampel.display import Screen
+        from ..display import Screen
 
         class Canvas:
             def __init__(self):
@@ -20,12 +20,12 @@ class ScreenTest(unittest.TestCase):
         self.screen = Screen(self.canvas)
 
     def test_first_update_draws_everything(self):
-        from ampel.display import GREEN, RED
+        from ..display import GREEN, RED
         self.screen.update({0: (18, GREEN), 1: (5, RED), 2: (18, GREEN), 3: (5, RED)})
         self.assertEqual(len(self.canvas.fills), 1 + 4 * 2 * 7)
 
     def test_only_changed_fields_are_redrawn(self):
-        from ampel.display import GREEN, RED
+        from ..display import GREEN, RED
         self.screen.update({0: (18, GREEN), 1: (5, RED), 2: (18, GREEN), 3: (5, RED)})
         self.canvas.fills.clear()
         self.screen.update({0: (18, GREEN), 1: (12, RED), 2: (18, GREEN), 3: (12, RED)})

@@ -85,10 +85,10 @@ Wer nur fuenf Minuten hat, liest `Controller.step` und `Following.target`.
 
 ## Tests
 
-Sieben Dateien in `tests/`, 25 Tests: Konfliktmatrix, Signalfolge, vollstaendige Phasenfolge,
+Sieben Dateien in `ampel/tests/`, 25 Tests: Konfliktmatrix, Signalfolge, vollstaendige Phasenfolge,
 jedes geschriebene Muster ueber zwei Minuten, die Regel mit dichtem und vereinzeltem Verkehr,
 beide Schalter, das WS2812-Frame zurueckdekodiert, das Kreuz-Layout, die Pinpruefung.
 
 ```
-python3 -m unittest discover -s tests
+make test
 ```

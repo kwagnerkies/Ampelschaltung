@@ -3,7 +3,7 @@
 PI ?= pi@raspberrypi.local
 
 test:
-	python3 -m unittest discover -s tests
+	python3 -m unittest discover -s ampel/tests -t .
 
 validate:
 	python3 -m ampel.main -config config.toml -validate
