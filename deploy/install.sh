@@ -1,82 +1,39 @@
 #!/bin/sh
-# Legt Nutzer, Verzeichnisse und Dienst an. Aufruf auf dem Pi als root:
-#   sudo sh install.sh [quellverzeichnis]
 set -eu
 
-SRC=${1:-$(dirname "$0")}
-if [ -f "$SRC/configs/config.yaml" ]; then
-	REPO=$SRC
-	SRC=$SRC/deploy
-	[ -f "$REPO/bin/ampel" ] && BINARY=$REPO/bin/ampel
-	[ -f "$REPO/bin/ampelctl" ] && CTL=$REPO/bin/ampelctl
-	CONFIGSRC=$REPO/configs/config.yaml
-	DOCSRC=$REPO/docs
-fi
-BIN=/usr/local/bin/ampel
-CONFIG=/etc/ampel/config.yaml
-UNIT=/etc/systemd/system/ampel.service
-DOCS=/usr/local/share/doc/ampel
+SRC=${1:-$(dirname "$0")/..}
+LIB=/usr/local/lib/ampel
+CONFIG=/etc/ampel/config.toml
 
 if [ "$(id -u)" -ne 0 ]; then
 	echo "Dieses Skript braucht root-Rechte." >&2
 	exit 1
 fi
 
-binary=${BINARY:-$SRC/ampel-armv7}
-[ -f "$binary" ] || binary=$SRC/ampel
-if [ ! -f "$binary" ]; then
-	echo "Kein Programm in $SRC gefunden, erwartet ampel-armv7 oder ampel." >&2
-	exit 1
-fi
+apt-get install -y python3-gpiozero >/dev/null 2>&1 || true
 
-# Die Gruppe gpio bringt Raspberry Pi OS mit. Fehlt sie, gehoert /dev/gpiochip0 niemandem,
-# den der Dienst erreichen kann.
 for group in gpio spi; do
-	if ! getent group "$group" >/dev/null; then
-		groupadd --system "$group"
-	fi
+	getent group "$group" >/dev/null || groupadd --system "$group"
 done
-if ! getent passwd ampel >/dev/null; then
-	useradd --system --no-create-home --shell /usr/sbin/nologin --gid gpio ampel
-fi
+getent passwd ampel >/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin --gid gpio ampel
 usermod --append --groups gpio,spi ampel
 
-install -d -m 0755 /etc/ampel "$DOCS"
-install -m 0755 "$binary" "$BIN"
+install -d -m 0755 /etc/ampel "$LIB/ampel"
+install -m 0644 "$SRC"/ampel/*.py "$LIB/ampel/"
+install -m 0755 "$SRC/ampelctl" /usr/local/bin/ampelctl
+install -m 0644 "$SRC/deploy/ampel.service" /etc/systemd/system/ampel.service
+[ -f "$CONFIG" ] || install -m 0644 "$SRC/config.toml" "$CONFIG"
 
-ctl=${CTL:-$SRC/ampelctl-armv7}
-[ -f "$ctl" ] || ctl=$SRC/ampelctl
-if [ -f "$ctl" ]; then
-	install -m 0755 "$ctl" /usr/local/bin/ampelctl
-fi
-
-
-if [ -f "$CONFIG" ]; then
-	echo "$CONFIG bleibt unveraendert, neue Vorlage liegt als $CONFIG.neu"
-	install -m 0644 "${CONFIGSRC:-$SRC/config.yaml}" "$CONFIG.neu"
-else
-	install -m 0644 "${CONFIGSRC:-$SRC/config.yaml}" "$CONFIG"
-fi
-install -m 0644 "$SRC/ampel.service" "$UNIT"
-for doc in aufbau.md vorfuehrung.md architektur.md projektziel.md; do
-	src=${DOCSRC:-$SRC}/$doc
-	if [ -f "$src" ]; then
-		install -m 0644 "$src" "$DOCS/$doc"
-	fi
-done
-
-# Die Anzeige haengt an SPI. Ohne diese Zeile in /boot/config.txt gibt es kein spidev.
 if [ -e /boot/config.txt ]; then
 	for line in "dtparam=spi=on" "dtoverlay=spi1-1cs"; do
-		if ! grep -q "^$line" /boot/config.txt; then
+		grep -q "^$line" /boot/config.txt || {
 			echo "$line" >> /boot/config.txt
 			echo "$line eingetragen, wirksam nach einem Neustart."
-		fi
+		}
 	done
 fi
 
-"$BIN" -config "$CONFIG" -validate
-
+PYTHONPATH=$LIB python3 -m ampel.main -config "$CONFIG" -validate
 systemctl daemon-reload
 systemctl enable --now ampel.service
 systemctl --no-pager --lines=5 status ampel.service

@@ -5,46 +5,45 @@ ohne Tastatur und ohne Bildschirm selbstaendig steuert.
 
 ## 1. Voraussetzungen
 
-- Raspberry Pi 2 Model B oder Pi 3 mit Raspberry Pi OS Lite. Bei 32 Bit gilt `make pi`, bei
-  64 Bit auf einem Pi 3 stattdessen `make pi64`. Pinbelegung, `gpiochip0` und SPI sind bei
-  beiden gleich.
+- Raspberry Pi 2 Model B oder Pi 3 mit Raspberry Pi OS Lite, 32 oder 64 Bit. Pinbelegung und
+  SPI sind bei beiden gleich.
 - Netzwerk ueber Ethernet. Der Pi 2 hat kein WLAN an Bord.
 - SSH aktiviert, ein Nutzer mit sudo-Recht.
-- Auf dem Arbeitsrechner Go und `make`. Auf dem Pi wird kein Go installiert.
+- Auf dem Pi Python 3.11 oder neuer, das bringt Raspberry Pi OS mit.
 
 Die Verdrahtung steht in `docs/hardware/pinout.md`. Vor dem ersten Start pruefen: gemeinsame
-Masse, `OE` des 595 auf Masse, `SRCLR` auf High, Vorwiderstaende bestueckt.
+Masse, 5 V und Datenleitung an allen vier Sticks, Kette in der Reihenfolge Nord, Ost, Sued,
+West.
 
-## 2. Programm uebersetzen
+## 2. Installieren
 
-```
-make test
-make pi
-```
-
-`make pi` erzeugt `bin/ampel-armv7` fuer ARMv7. Schlaegt `make test` fehl, wird nichts
-ausgeliefert; die Tests sind die einzige Absicherung der Signalfolge.
-
-## 3. Installieren
+Repo auf den Pi holen und einspielen:
 
 ```
-make install-pi PI_HOST=pi@raspberrypi.local
+git clone <repo> ampel && cd ampel
+python3 -m unittest discover -s tests
+sudo sh deploy/install.sh .
+sudo reboot
 ```
 
-Das Ziel kopiert Programm, Konfiguration, Dienst und Dokumentation auf den Pi und ruft dort
-`deploy/install.sh` auf. Das Skript
+## 3. Was das Skript tut
 
-- legt den Systemnutzer `ampel` in der Gruppe `gpio` an,
-- legt `/etc/ampel` und `/var/log/ampel` an,
-- installiert `/usr/local/bin/ampel` und `/etc/systemd/system/ampel.service`,
-- prueft die Konfiguration mit `ampel -validate`,
+Das Skript
+
+- installiert `python3-gpiozero`, die einzige Abhaengigkeit,
+- legt den Systemnutzer `ampel` in den Gruppen `gpio` und `spi` an,
+- legt `/etc/ampel` an,
+- installiert den Code nach `/usr/local/lib/ampel`, `ampelctl` und den Dienst,
+- prueft die Konfiguration mit `-validate`,
+- traegt `dtparam=spi=on` und `dtoverlay=spi1-1cs` in `/boot/config.txt` ein,
 - aktiviert den Dienst und startet ihn.
 
-Eine vorhandene `/etc/ampel/config.yaml` wird nie ueberschrieben. Die neue Vorlage liegt
-daneben als `config.yaml.neu`.
+Eine vorhandene `/etc/ampel/config.toml` wird nie ueberschrieben.
 
-Spaetere Programmstaende gehen schneller ueber `make deploy`: nur das Programm wird ersetzt
-und der Dienst neu gestartet.
+Der Neustart danach ist noetig, damit SPI wirkt. Ohne ihn bleiben Display und Lampen dunkel.
+
+Spaetere Programmstaende: `git pull`, dann `sudo sh deploy/install.sh .` und der Dienst startet
+neu. Eine vorhandene `/etc/ampel/config.toml` bleibt unangetastet.
 
 ## 4. Verdrahtung pruefen
 
@@ -53,7 +52,8 @@ streiten sich zwei Prozesse um dieselben Leitungen.
 
 ```
 sudo systemctl stop ampel
-sudo -u ampel /usr/local/bin/ampel -config /etc/ampel/config.yaml -selftest
+sudo -u ampel PYTHONPATH=/usr/local/lib/ampel python3 -m ampel.main \
+  -config /etc/ampel/config.toml -selftest
 ```
 
 Der Selbsttest prueft auch die Anzeige: alle vier Felder zeigen 88 in Gruen, Rot, Gelb und
@@ -126,7 +126,8 @@ gehen alle Signale auf Rot und die CSV-Puffer werden geleert.
 
 | Programm | Zweck |
 |---|---|
-| `ampel` | Steuerung auf der Hardware, `-validate` und `-selftest` fuer die Inbetriebnahme |
+| `python3 -m ampel.main` | Steuerung auf der Hardware, `-validate` und `-selftest` fuer die Inbetriebnahme |
+| `ampelctl` | Zustand anzeigen und schalten, ueber den lokalen Socket |
 
 Der Ablauf der Vorfuehrung steht in `vorfuehrung.md`, der Lesepfad durch den Code in
 `architektur.md`.

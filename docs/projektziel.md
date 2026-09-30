@@ -60,13 +60,12 @@ Auswertung von Wartezeiten, Lernen eines Tagesprofils, Fernsteuerung oder Netzwe
 
 ## Software
 
-Go, ohne Fremdbibliothek ausser dem GPIO-Zugriff und dem YAML-Leser. Vier Schichten:
-Hardwarezugriff, Domaene ohne Hardwarekenntnis, Regelkreis, Konfiguration und Anzeige. Der
-gesamte Regelkreis ist ohne Kreuzung testbar, weil Zeit und Ein-Ausgabe hinter Schnittstellen
-liegen.
+Python 3, Standardbibliothek plus `gpiozero` fuer die sechs GPIO-Leitungen. SPI, das
+WS2812-Bitmuster und der Displaycontroller sind selbst geschrieben. Der gesamte Regelkreis ist
+ohne Kreuzung testbar, weil Zeit und Ausgabe uebergeben werden statt fest verdrahtet zu sein.
 
-Umfang rund 2700 Zeilen Programmcode und 2000 Zeilen Tests in neun Paketen. Die Anlage laeuft
-als systemd-Dienst und startet nach einem Stromausfall selbstaendig.
+Umfang rund 950 Zeilen Programmcode und 300 Zeilen Tests. Die Anlage laeuft als systemd-Dienst
+und startet nach einem Stromausfall selbstaendig.
 
 ## Abnahmekriterien
 
@@ -81,6 +80,6 @@ als systemd-Dienst und startet nach einem Stromausfall selbstaendig.
 
 ## Nachweis
 
-Kriterien 1 bis 5 werden an der Kreuzung vorgefuehrt und sind zusaetzlich durch automatische
-Tests abgedeckt, die den Regelkreis mit gefaelschter Uhr und Mock-Hardware durchfahren.
+Kriterien 1 bis 5 werden an der Kreuzung vorgefuehrt und sind zusaetzlich durch 25 Tests
+abgedeckt, die den Regelkreis mit uebergebener Zeit und einer Attrappe der Lampen durchfahren.
 Kriterium 6 wird durch einen Neustart des Pi gezeigt.

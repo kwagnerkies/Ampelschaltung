@@ -5,8 +5,8 @@ Steuerung.
 
 ## Vorbereitung am Tag davor
 
-- `make test` und `make install-pi` laufen lassen, danach `sudo reboot` und pruefen, ob die
-  Kreuzung ohne Tastatur wieder steuert.
+- `python3 -m unittest discover -s tests` und `sudo sh deploy/install.sh .` laufen lassen,
+  danach `sudo reboot` und pruefen, ob die Kreuzung ohne Tastatur wieder steuert.
 - Selbsttest fahren, alle zwoelf Lampen und alle zwoelf Sensoren einmal ausloesen.
 - Mindestens zwoelf Modellautos bereitlegen, alle mit gleich gepoltem Magneten.
 - Ersatz mitnehmen: geladenes Netzteil, zweite SD-Karte, Ersatz-LEDs und ein zweites Modellauto.

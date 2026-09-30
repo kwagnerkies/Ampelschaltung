@@ -10,15 +10,16 @@ Werkzeug: Lotkolben, Seitenschneider, Abisolierzange, Multimeter mit Durchgangsp
 Noch bevor gebohrt wird, laeuft die Steuerung auf dem Pi.
 
 ```
-make install-pi PI_HOST=pi@raspberrypi.local
-ssh pi@raspberrypi.local
+git clone <repo> ampel && cd ampel
+sudo sh deploy/install.sh .
 sudo systemctl stop ampel
 ```
 
 Der Dienst wird fuer die Bauschritte angehalten. Gearbeitet wird mit
 
 ```
-sudo -u ampel /usr/local/bin/ampel -config /etc/ampel/config.yaml -selftest
+sudo -u ampel PYTHONPATH=/usr/local/lib/ampel python3 -m ampel.main \
+  -config /etc/ampel/config.toml -selftest
 ```
 
 Dieser Befehl ist ab jetzt dein Messgeraet: er zeigt jede Lampe einzeln und druckt jede
@@ -51,7 +52,7 @@ sudo reboot
 Pruefen: `-selftest` laufen lassen. Im ersten Gehaeuse muss nacheinander das obere Fenster rot,
 das mittlere gelb und das untere gruen leuchten. Erscheint ein Licht neben dem Fenster statt
 darin, passt die Pixelzuordnung nicht zu deinem Druck: dann in der Konfiguration
-`hardware.lamps.pixels` auf die Nummern setzen, die tatsaechlich hinter den Fenstern sitzen. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI1 aktiv ist.
+`pixels` im Abschnitt `[lamps]` auf die Nummern setzen, die tatsaechlich hinter den Fenstern sitzen. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI1 aktiv ist.
 
 ## Schritt 3: Die restlichen drei Koepfe
 
@@ -122,7 +123,7 @@ sudo reboot
 ```
 
 Pruefen: der Selbsttest zeigt zuerst ein Testbild mit vier mal **88** in Gruen, Rot, Gelb und
-Weiss. Steht die Zahl auf dem Kopf, `display.rotation` auf `hoch` stellen. Ist Rot blau, sind
+Weiss. Steht die Zahl auf dem Kopf, `rotation = "hoch"` im Abschnitt `[display]` stellen. Ist Rot blau, sind
 die Farbkanaele des Moduls vertauscht; dann meldest du dich, das sind zwei Zeilen im Treiber.
 
 ## Abschluss

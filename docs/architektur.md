@@ -1,101 +1,92 @@
 # Architektur, Lesepfad durch den Code
 
-Diese Seite ist zum Erklaeren gedacht, nicht zum Nachschlagen. Sie fuehrt in einer halben
-Stunde durch die Entscheidungen, die den Code erklaeren, und nennt zu jeder die Stelle, an
-der sie steht.
+Diese Seite ist zum Erklaeren gedacht. Sie fuehrt durch die Entscheidungen, die den Code
+erklaeren, und nennt zu jeder die Stelle.
 
 ## Die Idee in fuenf Saetzen
 
-Reed-Kontakte unter der Fahrbahn melden, wo Fahrzeuge stehen und wann sie abfahren. Faehrt
-ein Fahrzeug dicht hinter seinem Vorgaenger ueber dieselbe Haltelinie, verlaengert das die
-laufende Freigabe um eine feste Stufe, begrenzt durch die Hoechstgruenzeit. Ein Phasenautomat
-setzt die Freigaben in Signalbilder um, die unmittelbar vor der Hardware gegen eine
-Konfliktmatrix geprueft werden. Ein Display zeigt die vier Gruenzeiten im Kreuz, und zwei
-Kippschalter schalten die Anlage und den Notzustand.
+Reed-Kontakte an den Haltelinien melden, wann ein Fahrzeug die Kreuzung ueberfaehrt. Faehrt
+eines dicht hinter seinem Vorgaenger ueber dieselbe Linie, verlaengert das die laufende
+Freigabe um eine feste Stufe, begrenzt durch die Hoechstgruenzeit. Ein Phasenautomat setzt die
+Freigaben in Signalbilder um, die unmittelbar vor der Hardware gegen eine Konfliktmatrix
+geprueft werden. Ein Display zeigt die vier Gruenzeiten im Kreuz, zwei Kippschalter schalten
+Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 
-## Die zehn Entscheidungen
+## Die Dateien
 
-**1. Vier Schichten, die Domaene ohne Hardware.** `internal/hal` kennt Pins und Register,
-aber keine Ampeln. `internal/light`, `detector`, `traffic`, `controller`, `strategy`,
-`learning` kennen keine Hardware, nur Interfaces. Deshalb laeuft die gesamte Regelungslogik
-im Test ohne Aufbau. Wer das pruefen will: in keiner Datei unter `internal` ausser `hal`
-steht ein Import von `gpiocdev`.
-
-**2. Ein Besitzer des Zustands.** Der Regelkreis laeuft in einer einzigen Goroutine,
-`Controller.Run` in `internal/controller/controller.go`. Flanken kommen ueber einen Kanal
-herein, Logzeilen gehen ueber einen Kanal hinaus. Keine geteilte Struktur mit Mutex, keine
-Takt selbst sitzt und nicht in einem zweiten Waechter.
-
-**3. Zeit hinter einem Interface.** `internal/clock` hat eine echte und eine gefaelschte
-Uhr. `clock.Fake` laesst dreissig simulierte Minuten in Millisekunden vergehen. Ohne diese
-Entscheidung waere keiner der Zeittests moeglich.
-
-**4. Sicherheit unmittelbar vor der Ausgabe.** `controller.Check` in `safety.go` prueft jedes
-Signalbild gegen die Konfliktmatrix, und `Output.Show` in `output.go` ist der einzige Weg zur
-Lampenhardware. Die Pruefung liegt bewusst nicht in der Strategie: eine fehlerhafte Strategie
-soll nicht gefaehrlich werden koennen. Zusaetzlich prueft `light.Head.Set` die deutsche
-Signalfolge, ein Sprung von Gruen auf Rot ohne Gelb wird abgewiesen.
-
-**5. Zwischenzeiten sind keine Stellgroesse.** `Machine.Advance` in `statemachine.go` kennt
-Gelb, Allrot und RotGelb mit festen Dauern. Die Strategie darf nur eines sagen: ob die
-laufende Freigabe jetzt endet. Alles andere gehoert der Sicherheit.
-
-**6. Nur eine Regel.** `strategy/following.go` ist vierzig Zeilen: Grundzeit plus eine
-Verlaengerung je Fahrzeug, das binnen der Folgezeit auf seinen Vorgaenger folgt, gedeckelt
-durch die Hoechstgruenzeit. Gezaehlt wird je Zufahrt, nicht je Phase: die gegenueberliegende
-Zufahrt faehrt gleichzeitig ab, ihre Abfahrten sind keine Fahrzeugfolge.
-
-**7. Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt.** Genau daraus entsteht die
-Rueckstaumessung: ein stehendes Fahrzeug haelt den Kontakt geschlossen. `detector/occupancy.go`
-fuehrt die Belegung ueber die Zeit und rechnet ueber Luecken hinweg bis zum hintersten
-belegten Kontakt.
-
-**8. Die Anzeige haengt am Beobachter.** `internal/display` bekommt denselben Zustand wie das
-CSV-Logging, ueber dasselbe `Observer`-Interface. Der Regelkreis kennt kein Display. Gezeichnet
-wird nur, was sich geaendert hat, und die Zahl der freigegebenen Richtung waechst live mit
-jedem dicht folgenden Fahrzeug.
-
-**9. Der Moduswechsel wartet auf die Phasengrenze.** `Controller.applyMode` in `panel.go`
-wirkt erst beim Eintritt in eine Freigabe. Waehrend Gelb oder Allrot umzuschalten koennte ein
-unzulaessiges Signalbild erzeugen. Dieselbe Datei haelt die Blinkquittung des Resets, die nur
-aus Allrot heraus laeuft.
-
-**10. Alles Physikalische steht in der Konfiguration.** Pins, Bitreihenfolge, alle Zeiten. `config/validate.go` bricht den Start bei fehlerhaften Werten
-ab. Ein Verdrahtungsfehler ist damit eine Zeile YAML, keine Codeaenderung, und die Anzahl der
-Sensoren je Zufahrt ist frei waehlbar.
-
-## Lesepfad in dieser Reihenfolge
-
-| Schritt | Datei | Warum hier |
+| Datei | Zeilen | Aufgabe |
 |---|---|---|
-| 1 | `internal/light/aspect.go` | Signalbilder und die deutsche Folge, 90 Zeilen, kein Zustand |
-| 2 | `internal/controller/phase.go` | Phasen, Abschnitte, welches Bild ein Zustand zeigt |
-| 3 | `internal/controller/statemachine.go` | der Automat, 80 Zeilen, hier passiert der Wechsel |
-| 4 | `internal/controller/safety.go` | die Konfliktmatrix, 51 Zeilen |
-| 5 | `internal/strategy/strategy.go` | was eine Strategie sehen darf, und mehr nicht |
-| 6 | `internal/strategy/following.go` | die ganze adaptive Regel, vierzig Zeilen |
-| 7 | `internal/controller/controller.go` | `Step` verbindet alles, ein Bildschirm voll |
-| 8 | `internal/controller/switches.go` | Hauptschalter, Notschalter, Neustart bei Allrot |
-| 9 | `internal/display/screen.go` | die vier Zahlen im Kreuz |
+| `ampel/signal.py` | 73 | Signalbilder, deutsche Folge, Konfliktmatrix |
+| `ampel/phase.py` | 93 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
+| `ampel/rule.py` | 11 | die ganze adaptive Regel |
+| `ampel/control.py` | 166 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
+| `ampel/driver.py` | 121 | SPI, WS2812-Frame, ILI9341 |
+| `ampel/display.py` | 89 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
+| `ampel/api.py` | 64 | Schnittstelle ueber einen Unix-Socket |
+| `ampel/config.py` | 58 | TOML laden, Pins pruefen |
+| `ampel/gpio.py` | 36 | sechs Leitungen ueber gpiozero |
+| `ampel/main.py` | 163 | Verdrahtung, Selbsttest, Kommandozeile |
+| `ampelctl` | 77 | Bedienung von der Kommandozeile |
 
-Wer nur fuenf Minuten hat, liest `Controller.Step` und `Following.TargetGreen`. Diese beiden
-Funktionen sind die Regelung.
+## Die acht Entscheidungen
 
-## Fragen, die kommen, und wo die Antwort steht
+**1. Sicherheit unmittelbar vor der Ausgabe.** `signal.check` prueft jedes Signalbild gegen die
+Konfliktmatrix, `Output.show` in `control.py` ist der einzige Weg zu den Lampen. Die Pruefung
+liegt bewusst nicht in der Regel: eine fehlerhafte Regel soll nicht gefaehrlich werden koennen.
+Zusaetzlich prueft `Aspect.can_follow` die deutsche Signalfolge, ein Sprung von Gruen auf Rot
+ohne Gelb wird abgewiesen.
+
+**2. Zwischenzeiten sind keine Stellgroesse.** `Machine.advance` kennt Gelb, Allrot und RotGelb
+mit festen Dauern. Die Regel sagt nur, ob die laufende Freigabe endet.
+
+**3. Nur eine Regel.** `rule.py` sind elf Zeilen: Grundzeit plus eine Verlaengerung je
+Fahrzeug, das binnen der Folgezeit auf seinen Vorgaenger folgt, gedeckelt durch die
+Hoechstgruenzeit. Gezaehlt wird je Zufahrt, nicht je Phase: die gegenueberliegende Zufahrt
+faehrt gleichzeitig ab, ihre Abfahrten sind keine Fahrzeugfolge.
+
+**4. Ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt.** Deshalb ist das **Freiwerden**
+der Haltelinie das Ereignis, an dem `Controller.crossing` eine Ueberfahrt erkennt.
+
+**5. Aus dem Dunkeln kommt immer Allrot.** `Controller.restart` setzt den Automaten zurueck.
+Nach dem Einschalten und nach dem Notzustand darf nie unmittelbar eine Freigabe folgen.
+
+**6. Die Anzeige haengt als Beobachter dran.** `control.py` kennt kein Display; `main.py` holt
+sich jeden Takt einen Abtastwert und gibt ihn an `display.Screen`. Gezeichnet wird nur, was
+sich geaendert hat. Faellt die Anzeige aus, steuert die Kreuzung weiter.
+
+**7. Die Schnittstelle ist ein zweiter Satz Schalter.** `api.py` ruft dieselbe Funktion wie
+eine Flanke am Kippschalter. Sie hoert auf einem Unix-Socket, nicht auf einem Port.
+
+**8. Alles Physikalische steht in der Konfiguration.** Pins, Pixelzuordnung, Zeiten.
+`config.validate` weist doppelte Pins und Pins auf SPI-Leitungen ab; genau das hat einen
+Verdrahtungsfehler gefunden, bevor geloetet wurde.
+
+## Lesepfad
+
+1. `ampel/signal.py` — Signalbilder und die Konfliktmatrix, kein Zustand
+2. `ampel/phase.py` — der Automat
+3. `ampel/rule.py` — die Regel, elf Zeilen
+4. `ampel/control.py` — `step` verbindet alles
+5. `ampel/driver.py` — wie aus drei Wahrheitswerten ein WS2812-Frame wird
+
+Wer nur fuenf Minuten hat, liest `Controller.step` und `Following.target`.
+
+## Fragen, die kommen
 
 | Frage | Antwort im Code |
 |---|---|
-| Koennen zwei kreuzende Richtungen gleichzeitig gruen werden? | `safety.go:Check`, geprueft in `safety_test.go` und am geschriebenen Bitmuster in `controller_test.go` |
-| Was passiert bei einem Softwarefehler? | `signals.go:enterFault`, alles blinkt gelb, zurueck nur ueber Neustart |
-| Wann gilt ein Fahrzeug als ueberfahren? | `controller/events.go`, die Haltelinie wird wieder frei |
-| Verhungert eine Richtung? | `following.go`, die Hoechstgruenzeit begrenzt jede Freigabe |
-| Wie prueft ihr ohne Hardware? | Die Tests fahren den Regelkreis mit Mock-Lampen und gefaelschter Uhr |
-| Traegt der Pi zwoelf LEDs? | Ja, es leuchten nie mehr als sechs, siehe `docs/hardware/pinout.md` |
+| Koennen zwei kreuzende Richtungen gleichzeitig gruen werden? | `signal.check`, geprueft in `tests/test_control.py` |
+| Was passiert bei einem Fehler? | `Controller.enter_fault`, alles blinkt gelb |
+| Wann gilt ein Fahrzeug als ueberfahren? | `Controller.crossing`, die Haltelinie wird wieder frei |
+| Warum acht Pixel je Ampel, aber nur drei genutzt? | Ein WS2812 ist ein RGB-Pixel; 0, 4 und 7 sitzen hinter den drei Fenstern |
+| Traegt der Pi die Lampen? | Nie mehr als sechs Pixel leuchten, siehe `docs/hardware/pinout.md` |
 
-## Wo die Tests liegen
+## Tests
 
-Zu jeder Datei liegt der Test daneben. Die wichtigsten drei: `controller_test.go` faehrt
-komplette Laeufe und prueft jedes geschriebene Bitmuster gegen Konfliktmatrix und
-Signalfolge, `adaptive_test.go` erzeugt dichten Verkehr auf einer Achse und erwartet dort laengere
-Gruenzeiten, `switches_test.go` prueft Hauptschalter,
-Notzustand und den Neustart bei Allrot.
+`tests/test_control.py`, 25 Tests: Konfliktmatrix, Signalfolge, vollstaendige Phasenfolge,
+jedes geschriebene Muster ueber zwei Minuten, die Regel mit dichtem und vereinzeltem Verkehr,
+beide Schalter, das WS2812-Frame zurueckdekodiert, das Kreuz-Layout, die Pinpruefung.
+
+```
+python3 -m unittest discover -s tests
+```

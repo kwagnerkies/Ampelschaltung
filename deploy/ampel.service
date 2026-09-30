@@ -1,11 +1,12 @@
 [Unit]
 Description=Adaptive Ampelsteuerung der Modellkreuzung
-Documentation=file:/usr/local/share/doc/ampel/aufbau.md
 After=local-fs.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/ampel -config /etc/ampel/config.yaml
+ExecStart=/usr/bin/python3 -m ampel.main -config /etc/ampel/config.toml
+WorkingDirectory=/usr/local/lib/ampel
+Environment=PYTHONPATH=/usr/local/lib/ampel
 User=ampel
 Group=gpio
 SupplementaryGroups=spi
@@ -13,17 +14,8 @@ Restart=always
 RestartSec=2
 KillSignal=SIGTERM
 TimeoutStopSec=10
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-PrivateTmp=true
-DevicePolicy=closed
-DeviceAllow=/dev/gpiochip0 rw
-DeviceAllow=/dev/spidev0.0 rw
-DeviceAllow=/dev/spidev1.0 rw
 RuntimeDirectory=ampel
 RuntimeDirectoryMode=0750
-PrivateNetwork=true
 StandardOutput=journal
 StandardError=journal
 

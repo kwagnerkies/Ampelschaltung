@@ -1,7 +1,7 @@
 # Anschlussplan
 
 Alle Nummern sind BCM-Nummern, nicht die Nummern der Stiftleiste. Massgeblich ist immer
-`configs/config.yaml`; dieses Dokument beschreibt den Stand, mit dem die Steuerung
+`config.toml`; dieses Dokument beschreibt den Stand, mit dem die Steuerung
 ausgeliefert wird.
 
 ## Ampelkoepfe
@@ -20,7 +20,7 @@ also nicht, welche Farbe eine LED hat, sondern welches Pixel hinter welchem Fens
 Gehaeuses sitzt. Die fuenf uebrigen liegen hinter der Wand und bleiben dunkel.
 
 Passt die Zuordnung bei deinem Druck nicht, ist das eine Zeile in der Konfiguration:
-`hardware.lamps.pixels: [0, 4, 7]` in der Reihenfolge rot, gelb, gruen.
+`pixels = [0, 4, 7]` im Abschnitt `[lamps]` in der Reihenfolge rot, gelb, gruen.
 
 Die vier Sticks haengen in einer Kette: die Steuerung schickt eine Datenleitung an den ersten
 Stick, dessen DO geht an DI des naechsten. Reihenfolge Nord, Ost, Sued, West.
