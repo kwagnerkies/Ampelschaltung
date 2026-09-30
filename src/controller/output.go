@@ -22,8 +22,6 @@ func NewOutput(writer LampWriter) *Output {
 	return &Output{heads: light.NewHeads(), writer: writer}
 }
 
-func (o *Output) Aspects() [light.DirectionCount]light.Aspect { return o.heads.Aspects() }
-
 func (o *Output) Show(aspects [light.DirectionCount]light.Aspect) error {
 	if err := Check(aspects); err != nil {
 		return err
@@ -35,14 +33,6 @@ func (o *Output) Show(aspects [light.DirectionCount]light.Aspect) error {
 		return fmt.Errorf("lampen schreiben: %w", err)
 	}
 	return nil
-}
-
-func (o *Output) Dark() error {
-	var off [light.DirectionCount]light.Aspect
-	for i := range off {
-		off[i] = light.AspectOff
-	}
-	return o.Show(off)
 }
 
 func pattern(aspects [light.DirectionCount]light.Aspect) []bool {

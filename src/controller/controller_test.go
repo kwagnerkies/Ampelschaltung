@@ -467,9 +467,9 @@ func TestShowRejectsConflictBeforeWriting(t *testing.T) {
 	if mock.Writes() != writes {
 		t.Error("der Konflikt wurde in die Hardware geschrieben")
 	}
-	for i, aspect := range output.Aspects() {
-		if aspect != light.AspectRed {
-			t.Errorf("Zufahrt %s zeigt %s, erwartet unveraendert Rot", light.Direction(i), aspect)
+	for bit, lit := range mock.Pattern() {
+		if lit != (bit%3 == 0) {
+			t.Errorf("Lampe %d ist %v, erwartet unveraendert Allrot", bit, lit)
 		}
 	}
 }
@@ -513,22 +513,6 @@ func TestShowWritesPattern(t *testing.T) {
 	}
 	if mock.Writes() != len(steps) {
 		t.Errorf("%d Schreibzugriffe, erwartet %d", mock.Writes(), len(steps))
-	}
-}
-
-func TestDarkTurnsEverythingOff(t *testing.T) {
-	output, mock := newOutput(t)
-	if err := output.Show([light.DirectionCount]light.Aspect{
-		light.AspectRed, light.AspectRed, light.AspectRed, light.AspectRed}); err != nil {
-		t.Fatalf("alles auf Rot: %v", err)
-	}
-	if err := output.Dark(); err != nil {
-		t.Fatalf("Dark: %v", err)
-	}
-	for bit, lit := range mock.Pattern() {
-		if lit {
-			t.Errorf("bit %d leuchtet nach Dark", bit)
-		}
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"ampel/src/strategy"
 	"context"
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -15,21 +14,6 @@ type Input struct {
 	Pin    int
 	Active bool
 	Time   time.Time
-}
-
-type Options struct {
-	Timing    Timing
-	Tick      time.Duration
-	Sample    time.Duration
-	Detector  *detector.Detector
-	Output    *Output
-	Strategy  strategy.Strategy
-	Clock     clock.Clock
-	Inputs    <-chan Input
-	Observer  Observer
-	FlashHalf time.Duration
-	Switches  *Switches
-	Follow    time.Duration
 }
 
 type Controller struct {
@@ -55,45 +39,6 @@ type Controller struct {
 	begun        bool
 	flashOn      bool
 	fault        error
-}
-
-func New(options Options) (*Controller, error) {
-	if options.Detector == nil || options.Output == nil || options.Strategy == nil || options.Clock == nil {
-		return nil, errors.New("regelkreis: detektor, ausgabe, strategie und uhr sind pflicht")
-	}
-	if options.Tick <= 0 {
-		return nil, fmt.Errorf("regelkreis: takt %s", options.Tick)
-	}
-	if options.Observer == nil {
-		options.Observer = NopObserver{}
-	}
-	if options.Follow <= 0 {
-		options.Follow = DefaultFollow
-	}
-	if options.FlashHalf <= 0 {
-		options.FlashHalf = 500 * time.Millisecond
-	}
-	now := options.Clock.Now()
-	c := &Controller{
-		timing:     options.Timing,
-		tick:       options.Tick,
-		sample:     options.Sample,
-		flashHalf:  options.FlashHalf,
-		machine:    NewMachine(options.Timing, now),
-		detect:     options.Detector,
-		output:     options.Output,
-		strategy:   options.Strategy,
-		follow:     options.Follow,
-		clk:        options.Clock,
-		inputs:     options.Inputs,
-		observer:   options.Observer,
-		started:    now,
-		lastSample: now,
-	}
-	if options.Switches != nil {
-		c.switches = newSwitches(*options.Switches, now)
-	}
-	return c, nil
 }
 
 func (c *Controller) State() State { return c.machine.State() }
@@ -174,6 +119,8 @@ const DefaultTick = 50 * time.Millisecond
 
 const DefaultFollow = 2 * time.Second
 
+const flashHalf = 500 * time.Millisecond
+
 type Setup struct {
 	Sensors [light.DirectionCount]int
 	Follow  time.Duration
@@ -197,19 +144,33 @@ func Build(setup Setup) (*Controller, error) {
 	if setup.Tick <= 0 {
 		setup.Tick = DefaultTick
 	}
-	return New(Options{
-		Timing:   setup.Timing,
-		Tick:     setup.Tick,
-		Sample:   setup.Sample,
-		Detector: detect,
-		Output:   NewOutput(setup.Writer),
-		Strategy: setup.Strategy,
-		Follow:   setup.Follow,
-		Clock:    setup.Clock,
-		Inputs:   setup.Inputs,
-		Observer: setup.Observer,
-		Switches: setup.Switches,
-	})
+	if setup.Follow <= 0 {
+		setup.Follow = DefaultFollow
+	}
+	if setup.Observer == nil {
+		setup.Observer = NopObserver{}
+	}
+	now := setup.Clock.Now()
+	c := &Controller{
+		timing:     setup.Timing,
+		tick:       setup.Tick,
+		sample:     setup.Sample,
+		flashHalf:  flashHalf,
+		machine:    NewMachine(setup.Timing, now),
+		detect:     detect,
+		output:     NewOutput(setup.Writer),
+		strategy:   setup.Strategy,
+		follow:     setup.Follow,
+		clk:        setup.Clock,
+		inputs:     setup.Inputs,
+		observer:   setup.Observer,
+		started:    now,
+		lastSample: now,
+	}
+	if setup.Switches != nil {
+		c.switches = newSwitches(*setup.Switches, now)
+	}
+	return c, nil
 }
 
 func (c *Controller) Feed(input Input) {
