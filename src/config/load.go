@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
+	"ampel/src/driver/ws2812"
 	"io"
 	"os"
 
@@ -78,6 +80,18 @@ func (l Lamps) validate() []error {
 	}
 	if l.Brightness < 1 || l.Brightness > 255 {
 		errs = append(errs, fmt.Errorf("hardware.lamps.brightness ist %d, erlaubt sind 1 bis 255", l.Brightness))
+	}
+	seen := map[int]bool{}
+	for i, pixel := range l.Pixels {
+		if pixel < 0 || pixel >= ws2812.PixelsPerHead {
+			errs = append(errs, fmt.Errorf("hardware.lamps.pixels[%d] ist %d, erlaubt sind 0 bis %d",
+				i, pixel, ws2812.PixelsPerHead-1))
+			continue
+		}
+		if seen[pixel] {
+			errs = append(errs, fmt.Errorf("hardware.lamps.pixels nennt %d zweimal", pixel))
+		}
+		seen[pixel] = true
 	}
 	return errs
 }

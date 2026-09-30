@@ -5,6 +5,8 @@ hardware:
     spi: /dev/spidev1.0
     speed_hz: 2400000
     brightness: 60
+    # Welches Pixel des Sticks hinter welchem Fenster sitzt: rot, gelb, gruen.
+    pixels: [0, 4, 7]
   # Je Zufahrt der Reed-Kontakt an der Haltelinie.
   sensors:
     north: 23

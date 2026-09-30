@@ -57,7 +57,7 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	go printEvents(ctx, out, inputs.Events(), labels)
 
 	fmt.Fprintln(out, "Lampentest, jede Lampe leuchtet einzeln:")
-	if err := walkLamps(ctx, out, driver, lampDwell); err != nil {
+	if err := walkLamps(ctx, out, driver, cfg.Hardware.Lamps.Pixels, lampDwell); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ func openLamps(cfg *config.Config) (driver.LampDriver, error) {
 	if err != nil {
 		return nil, err
 	}
-	strip, err := ws2812.New(bus, light.DirectionCount, byte(cfg.Hardware.Lamps.Brightness))
+	strip, err := ws2812.New(bus, light.DirectionCount, byte(cfg.Hardware.Lamps.Brightness), cfg.Hardware.Lamps.Pixels)
 	if err != nil {
 		_ = bus.Close()
 		return nil, err
@@ -85,7 +85,7 @@ func openLamps(cfg *config.Config) (driver.LampDriver, error) {
 	return strip, nil
 }
 
-func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, dwell time.Duration) error {
+func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, pixels [3]int, dwell time.Duration) error {
 	for index := 0; index < controller.LampCount; index++ {
 		pattern := make([]bool, controller.LampCount)
 		pattern[index] = true
@@ -93,7 +93,7 @@ func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, dwe
 			return fmt.Errorf("lampe %d schalten: %w", index, err)
 		}
 		fmt.Fprintf(out, "  Stick %d Pixel %d  %s %s\n",
-			index/3, ws2812.Pixels[index%3], approachNames[index/3], lampNames[index%3])
+			index/3, pixels[index%3], approachNames[index/3], lampNames[index%3])
 		select {
 		case <-ctx.Done():
 			return driver.Clear()

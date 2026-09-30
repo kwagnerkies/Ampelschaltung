@@ -30,6 +30,7 @@ type Lamps struct {
 	Device     string `yaml:"spi"`
 	SpeedHz    int    `yaml:"speed_hz"`
 	Brightness int    `yaml:"brightness"`
+	Pixels     [3]int `yaml:"pixels"`
 }
 
 type Sensors struct {
@@ -79,6 +80,7 @@ func Default() Config {
 				Device:     "/dev/spidev1.0",
 				SpeedHz:    2400000,
 				Brightness: 60,
+				Pixels:     [3]int{0, 4, 7},
 			},
 			Sensors: Sensors{
 				North: 23,

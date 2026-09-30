@@ -13,7 +13,6 @@ import (
 	"ampel/src/driver/gpio"
 	"ampel/src/driver/spi"
 	"ampel/src/driver/tft"
-	"ampel/src/driver/ws2812"
 	"context"
 	"errors"
 	"flag"
@@ -200,7 +199,7 @@ func printSummary(w io.Writer, cfg *config.Config, source string) {
 	fmt.Fprintf(w, "Konfiguration in Ordnung (%s)\n", source)
 	fmt.Fprintf(w, "  GPIO-Chip          %s\n", cfg.Hardware.Chip)
 	fmt.Fprintf(w, "  Lampen             %s, %d Hz, Helligkeit %d, Pixel %v je Stick\n",
-		cfg.Hardware.Lamps.Device, cfg.Hardware.Lamps.SpeedHz, cfg.Hardware.Lamps.Brightness, ws2812.Pixels)
+		cfg.Hardware.Lamps.Device, cfg.Hardware.Lamps.SpeedHz, cfg.Hardware.Lamps.Brightness, cfg.Hardware.Lamps.Pixels)
 	for i, pin := range cfg.Hardware.Sensors.Approaches() {
 		fmt.Fprintf(w, "  Haltelinie %-5s   BCM %d\n", approachNames[i], pin)
 	}

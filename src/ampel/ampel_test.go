@@ -17,7 +17,7 @@ import (
 func TestWalkLampsLightsEachLampAlone(t *testing.T) {
 	driver := mock.NewMock(controller.LampCount, 1)
 
-	if err := walkLamps(context.Background(), io.Discard, driver, 0); err != nil {
+	if err := walkLamps(context.Background(), io.Discard, driver, [3]int{0, 4, 7}, 0); err != nil {
 		t.Fatalf("walkLamps: %v", err)
 	}
 

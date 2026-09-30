@@ -9,11 +9,18 @@ ausgeliefert wird.
 Vier gedruckte Ampeln nach dem Modell von Mofantastico, je ein WS2812-Stick mit acht Pixeln
 dahinter. Von den acht Pixeln werden drei genutzt, so wie es das Modell vorsieht:
 
-| Pixel | Farbe |
+| Pixel | Fenster |
 |---|---|
-| 0 | rot |
-| 4 | gelb |
-| 7 | gruen |
+| 0 | oben, rot |
+| 4 | Mitte, gelb |
+| 7 | unten, gruen |
+
+Ein WS2812 ist ein RGB-Pixel, jedes der acht kann jede Farbe zeigen. Die drei Nummern sagen
+also nicht, welche Farbe eine LED hat, sondern welches Pixel hinter welchem Fenster des
+Gehaeuses sitzt. Die fuenf uebrigen liegen hinter der Wand und bleiben dunkel.
+
+Passt die Zuordnung bei deinem Druck nicht, ist das eine Zeile in der Konfiguration:
+`hardware.lamps.pixels: [0, 4, 7]` in der Reihenfolge rot, gelb, gruen.
 
 Die vier Sticks haengen in einer Kette: die Steuerung schickt eine Datenleitung an den ersten
 Stick, dessen DO geht an DI des naechsten. Reihenfolge Nord, Ost, Sued, West.

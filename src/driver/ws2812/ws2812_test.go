@@ -20,7 +20,7 @@ func (t *tape) Close() error { return nil }
 func newStrip(t *testing.T, brightness byte) (*Strip, *tape) {
 	t.Helper()
 	tp := &tape{}
-	strip, err := New(tp, 4, brightness)
+	strip, err := New(tp, 4, brightness, [3]int{0, 4, 7})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -65,9 +65,9 @@ func TestEachHeadUsesItsOwnPixels(t *testing.T) {
 
 	frame := tp.frames[0]
 	cases := map[int][3]byte{
-		0*PixelsPerHead + Pixels[0]: {0, 255, 0},
-		1*PixelsPerHead + Pixels[1]: {150, 255, 0},
-		2*PixelsPerHead + Pixels[2]: {255, 0, 0},
+		0*PixelsPerHead + 0: {0, 255, 0},
+		1*PixelsPerHead + 4: {150, 255, 0},
+		2*PixelsPerHead + 7: {255, 0, 0},
 	}
 	for pixel, want := range cases {
 		green, red, blue := colorOf(frame, pixel)
@@ -96,7 +96,7 @@ func TestBrightnessScalesTheColour(t *testing.T) {
 	if err := strip.Write(lamps); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	if _, red, _ := colorOf(tp.frames[0], Pixels[0]); red != 51 {
+	if _, red, _ := colorOf(tp.frames[0], 0); red != 51 {
 		t.Errorf("Rot mit %d Helligkeit ergibt %d, erwartet 51", 51, red)
 	}
 }
@@ -120,5 +120,11 @@ func TestWrongNumberOfLampsIsRejected(t *testing.T) {
 	strip, _ := newStrip(t, 255)
 	if err := strip.Write(make([]bool, 11)); err == nil {
 		t.Error("elf Lampenzustaende wurden angenommen")
+	}
+}
+
+func TestPixelOutsideTheStickIsRejected(t *testing.T) {
+	if _, err := New(&tape{}, 4, 255, [3]int{0, 4, 8}); err == nil {
+		t.Error("Pixel 8 wurde angenommen, der Stick hat nur 0 bis 7")
 	}
 }

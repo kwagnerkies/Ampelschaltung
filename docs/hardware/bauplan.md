@@ -48,9 +48,10 @@ grep dtoverlay=spi1-1cs /boot/config.txt || sudo sh -c 'echo dtoverlay=spi1-1cs 
 sudo reboot
 ```
 
-Pruefen: `-selftest` laufen lassen. Der erste Stick muss nacheinander Pixel 0 rot, Pixel 4
-gelb und Pixel 7 gruen zeigen. Leuchtet ein falsches Pixel, sitzt der Stick verkehrt herum im
-Gehaeuse. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI1 aktiv ist.
+Pruefen: `-selftest` laufen lassen. Im ersten Gehaeuse muss nacheinander das obere Fenster rot,
+das mittlere gelb und das untere gruen leuchten. Erscheint ein Licht neben dem Fenster statt
+darin, passt die Pixelzuordnung nicht zu deinem Druck: dann in der Konfiguration
+`hardware.lamps.pixels` auf die Nummern setzen, die tatsaechlich hinter den Fenstern sitzen. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI1 aktiv ist.
 
 ## Schritt 3: Die restlichen drei Koepfe
 

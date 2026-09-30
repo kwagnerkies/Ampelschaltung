@@ -8,8 +8,6 @@ import (
 
 const PixelsPerHead = 8
 
-var Pixels = [3]int{0, 4, 7}
-
 const (
 	bitsPerPixel = 24
 	spiPerBit    = 3
@@ -30,24 +28,31 @@ type Strip struct {
 	bus        driver.Transport
 	heads      int
 	brightness byte
+	pixels     [3]int
 	frame      []byte
 }
 
 var _ driver.LampDriver = (*Strip)(nil)
 
-func New(bus driver.Transport, heads int, brightness byte) (*Strip, error) {
+func New(bus driver.Transport, heads int, brightness byte, pixels [3]int) (*Strip, error) {
 	if bus == nil {
 		return nil, fmt.Errorf("lampenkette: kein bus")
 	}
 	if heads <= 0 {
 		return nil, fmt.Errorf("lampenkette: %d koepfe", heads)
 	}
-	pixels := heads * PixelsPerHead
+	for _, pixel := range pixels {
+		if pixel < 0 || pixel >= PixelsPerHead {
+			return nil, fmt.Errorf("lampenkette: pixel %d liegt ausserhalb von 0 bis %d", pixel, PixelsPerHead-1)
+		}
+	}
+	count := heads * PixelsPerHead
 	return &Strip{
 		bus:        bus,
 		heads:      heads,
 		brightness: brightness,
-		frame:      make([]byte, pixels*bitsPerPixel*spiPerBit/8+resetBytes),
+		pixels:     pixels,
+		frame:      make([]byte, count*bitsPerPixel*spiPerBit/8+resetBytes),
 	}, nil
 }
 
@@ -59,7 +64,7 @@ func (s *Strip) Write(lamps []bool) error {
 		s.frame[i] = 0
 	}
 	for head := 0; head < s.heads; head++ {
-		for lamp, pixel := range Pixels {
+		for lamp, pixel := range s.pixels {
 			if !lamps[head*len(colors)+lamp] {
 				continue
 			}
