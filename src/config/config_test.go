@@ -88,12 +88,12 @@ func TestParseRejectsInvalid(t *testing.T) {
 func TestValidateCollectsAllErrors(t *testing.T) {
 	cfg := Default()
 	cfg.Hardware.Chip = ""
-	cfg.Hardware.Lamps.North[0] = 99
+	cfg.Hardware.Lamps.Brightness = 0
 	err := cfg.Validate()
 	if err == nil {
 		t.Fatal("zwei Verstoesse wurden nicht gemeldet")
 	}
-	for _, want := range []string{"hardware.chip", "hardware.lamps.north.rot"} {
+	for _, want := range []string{"hardware.chip", "hardware.lamps.brightness"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("Fehler %q enthaelt nicht %q", err, want)
 		}

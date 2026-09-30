@@ -4,24 +4,37 @@ Alle Nummern sind BCM-Nummern, nicht die Nummern der Stiftleiste. Massgeblich is
 `configs/config.yaml`; dieses Dokument beschreibt den Stand, mit dem die Steuerung
 ausgeliefert wird.
 
-## Ampel-LEDs
+## Ampelkoepfe
 
-Jede der zwoelf LEDs haengt unmittelbar an einer GPIO-Leitung, mit Vorwiderstand gegen Masse.
+Vier gedruckte Ampeln nach dem Modell von Mofantastico, je ein WS2812-Stick mit acht Pixeln
+dahinter. Von den acht Pixeln werden drei genutzt, so wie es das Modell vorsieht:
 
-| Zufahrt | Rot | Gelb | Gruen |
-|---|---|---|---|
-| Nord | 17 | 27 | 22 |
-| Ost | 5 | 6 | 13 |
-| Sued | 19 | 26 | 12 |
-| West | 16 | 20 | 21 |
+| Pixel | Farbe |
+|---|---|
+| 0 | rot |
+| 4 | gelb |
+| 7 | gruen |
 
-Zum Strombudget: es leuchten nie alle zwoelf gleichzeitig. Im ungeguenstigsten Fall zeigen
-zwei Koepfe Rot mit Gelb und zwei Koepfe Rot, also sechs Lampen. Vorwiderstaende auf etwa
-5 mA auslegen, dann liegt die Summe bei 30 mA und damit unter der Empfehlung von 50 mA fuer
-alle Pins zusammen. Pro Pin sind 16 mA erlaubt, das ist reichlich Abstand.
+Die vier Sticks haengen in einer Kette: die Steuerung schickt eine Datenleitung an den ersten
+Stick, dessen DO geht an DI des naechsten. Reihenfolge Nord, Ost, Sued, West.
 
-Bei 3,3 V und einer roten LED mit 2,0 V sind 5 mA rund 270 Ohm, bei gelb und gruen mit 2,1 V
-rund 240 Ohm. Naechster Normwert nach oben ist sicherer als nach unten.
+| Signal | BCM | Pin der Leiste |
+|---|---|---|
+| Daten (DI des ersten Sticks) | 20 | 38 |
+| 5 V | 5 V | 2 oder 4 |
+| Masse | GND | 6 |
+
+Das Zeitverhalten von WS2812 laesst sich auf dem Pi nicht per GPIO takten, deshalb laeuft die
+Datenleitung ueber SPI1: jedes WS2812-Bit wird als drei SPI-Bits bei 2,4 MHz geschrieben.
+Dafuer muss `dtoverlay=spi1-1cs` in `/boot/config.txt` stehen; das Installationsskript traegt
+es ein. SPI1 belegt damit BCM 18, 19, 20 und 21.
+
+Zum Strom: 32 Pixel, aber nie mehr als sechs leuchten gleichzeitig. Bei der eingestellten
+Helligkeit von 60 von 255 sind das etwa 25 mA, die aus der 5-V-Schiene des Pi kommen.
+
+Die Datenleitung liefert 3,3 V, der Stick erwartet 5-V-Pegel. In der Praxis laeuft das
+meistens; wenn die erste LED flackert oder falsche Farben zeigt, hilft ein Pegelwandler oder
+eine Diode in der 5-V-Zuleitung des ersten Sticks.
 
 ## Sensoren
 

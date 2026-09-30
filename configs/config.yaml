@@ -1,11 +1,10 @@
 hardware:
   chip: gpiochip0
-  # Je Ampelkopf Rot, Gelb, Gruen direkt an einer GPIO-Leitung.
+  # Vier WS2812-Sticks mit je acht Pixeln, durchgeschleift an SPI1.
   lamps:
-    north: [17, 27, 22]
-    east: [5, 6, 13]
-    south: [19, 26, 12]
-    west: [16, 20, 21]
+    spi: /dev/spidev1.0
+    speed_hz: 2400000
+    brightness: 60
   # Je Zufahrt der Reed-Kontakt an der Haltelinie.
   sensors:
     north: 23
@@ -13,7 +12,7 @@ hardware:
     south: 25
     west: 3
   power_switch: 4
-  fault_switch: 18
+  fault_switch: 27
   debounce_ms: 15
 
 timing:

@@ -15,10 +15,9 @@ import (
 )
 
 func TestWalkLampsLightsEachLampAlone(t *testing.T) {
-	cfg := config.Default()
 	driver := mock.NewMock(controller.LampCount, 1)
 
-	if err := walkLamps(context.Background(), io.Discard, driver, &cfg, 0); err != nil {
+	if err := walkLamps(context.Background(), io.Discard, driver, 0); err != nil {
 		t.Fatalf("walkLamps: %v", err)
 	}
 
@@ -215,7 +214,7 @@ func TestUnitMatchesConfig(t *testing.T) {
 	unit := read(t, unitPath)
 
 	allowed := directives(unit, "DeviceAllow")
-	wanted := []string{"/dev/" + cfg.Hardware.Chip + " rw"}
+	wanted := []string{"/dev/" + cfg.Hardware.Chip + " rw", cfg.Hardware.Lamps.Device + " rw"}
 	if cfg.Display.Enabled {
 		wanted = append(wanted, cfg.Display.Device+" rw")
 	}

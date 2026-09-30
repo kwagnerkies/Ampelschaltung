@@ -11,7 +11,9 @@ import (
 	"ampel/src/display"
 	"ampel/src/driver"
 	"ampel/src/driver/gpio"
+	"ampel/src/driver/spi"
 	"ampel/src/driver/tft"
+	"ampel/src/driver/ws2812"
 	"context"
 	"errors"
 	"flag"
@@ -79,7 +81,7 @@ func runControl(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	}
 	defer func() { _ = chip.Close() }()
 
-	driver, err := openLamps(chip, cfg)
+	driver, err := openLamps(cfg)
 	if err != nil {
 		return err
 	}
@@ -197,10 +199,8 @@ func pump(ctx context.Context, events <-chan driver.InputEvent, commands <-chan 
 func printSummary(w io.Writer, cfg *config.Config, source string) {
 	fmt.Fprintf(w, "Konfiguration in Ordnung (%s)\n", source)
 	fmt.Fprintf(w, "  GPIO-Chip          %s\n", cfg.Hardware.Chip)
-	for i, head := range cfg.Hardware.Lamps.Heads() {
-		fmt.Fprintf(w, "  Lampen %-5s       Rot %d, Gelb %d, Gruen %d\n",
-			approachNames[i], head[0], head[1], head[2])
-	}
+	fmt.Fprintf(w, "  Lampen             %s, %d Hz, Helligkeit %d, Pixel %v je Stick\n",
+		cfg.Hardware.Lamps.Device, cfg.Hardware.Lamps.SpeedHz, cfg.Hardware.Lamps.Brightness, ws2812.Pixels)
 	for i, pin := range cfg.Hardware.Sensors.Approaches() {
 		fmt.Fprintf(w, "  Haltelinie %-5s   BCM %d\n", approachNames[i], pin)
 	}
@@ -234,7 +234,7 @@ func openDisplay(chip *gpio.Chip, cfg *config.Config, out io.Writer) (*display.S
 	if !cfg.Display.Enabled {
 		return nil, func() {}, nil
 	}
-	bus, err := tft.OpenSPI(cfg.Display.Device, cfg.Display.SpeedHz)
+	bus, err := spi.OpenSPI(cfg.Display.Device, cfg.Display.SpeedHz)
 	if err != nil {
 		return nil, nil, err
 	}

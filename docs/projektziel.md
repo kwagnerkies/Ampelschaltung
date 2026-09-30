@@ -14,7 +14,7 @@ Signalbilder.
 
 ## Funktionsumfang
 
-**Signalgebung.** Vier Ampelkoepfe aus je drei LEDs, deutsche Signalfolge Rot, Rot mit Gelb,
+**Signalgebung.** Vier Ampelkoepfe mit je einem WS2812-Stick, deutsche Signalfolge Rot, Rot mit Gelb,
 Gruen, Gelb, Rot. Zwei Freigabephasen: Nord mit Sued, danach Ost mit West. Zwischenzeiten
 fest: Gelb 3 s, Allrot 2 s, Rot mit Gelb 1 s.
 
@@ -51,8 +51,8 @@ Auswertung von Wartezeiten, Lernen eines Tagesprofils, Fernsteuerung oder Netzwe
 ## Hardware
 
 - Raspberry Pi 2 B oder Pi 3, Raspberry Pi OS Lite
-- 12 LEDs, je an einer GPIO-Leitung mit Vorwiderstand; nie mehr als sechs leuchten
-  gleichzeitig, also rund 30 mA
+- 4 gedruckte Ampeln nach dem Modell 864750 von Mofantastico, je ein WS2812-Stick mit acht
+  Pixeln dahinter, durchgeschleift an SPI1; genutzt werden Pixel 0, 4 und 7
 - 4 Reed-Kontakte an internen Pull-ups, gegen Masse geschaltet
 - 2 Kippschalter fuer Betrieb und Notzustand
 - 1 TFT mit ILI9341 ueber SPI

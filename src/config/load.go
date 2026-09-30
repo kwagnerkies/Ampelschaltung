@@ -68,6 +68,20 @@ func (t Timing) validate() []error {
 	return errs
 }
 
+func (l Lamps) validate() []error {
+	var errs []error
+	if l.Device == "" {
+		errs = append(errs, errors.New("hardware.lamps.spi darf nicht leer sein"))
+	}
+	if l.SpeedHz <= 0 {
+		errs = append(errs, errors.New("hardware.lamps.speed_hz muss groesser als null sein"))
+	}
+	if l.Brightness < 1 || l.Brightness > 255 {
+		errs = append(errs, fmt.Errorf("hardware.lamps.brightness ist %d, erlaubt sind 1 bis 255", l.Brightness))
+	}
+	return errs
+}
+
 func (a API) validate() []error {
 	if a.Enabled && a.Socket == "" {
 		return []error{errors.New("api.socket darf nicht leer sein")}
@@ -98,6 +112,13 @@ var approachNames = [4]string{"north", "east", "south", "west"}
 
 var lampNames = [3]string{"rot", "gelb", "gruen"}
 
+var lampSpiPins = map[int]string{
+	18: "spi1 ce0",
+	19: "spi1 miso",
+	20: "spi1 mosi",
+	21: "spi1 sclk",
+}
+
 var spiPins = map[int]string{
 	7:  "spi ce1",
 	8:  "spi ce0",
@@ -114,6 +135,7 @@ func (h Hardware) validate(display Display) []error {
 	if h.Debounce < 0 {
 		errs = append(errs, errors.New("hardware.debounce_ms darf nicht negativ sein"))
 	}
+	errs = append(errs, h.Lamps.validate()...)
 	return append(errs, h.validatePins(display)...)
 }
 
@@ -132,16 +154,14 @@ func (h Hardware) validatePins(display Display) []error {
 		used[pin] = name
 	}
 
-	for i, head := range h.Lamps.Heads() {
-		for j, pin := range head {
-			claim(pin, fmt.Sprintf("hardware.lamps.%s.%s", approachNames[i], lampNames[j]))
-		}
-	}
 	for i, pin := range h.Sensors.Approaches() {
 		claim(pin, "hardware.sensors."+approachNames[i])
 	}
 	claim(h.PowerSwitch, "hardware.power_switch")
 	claim(h.FaultSwitch, "hardware.fault_switch")
+	for pin, name := range lampSpiPins {
+		claim(pin, name)
+	}
 	if display.Enabled {
 		claim(display.DC, "display.dc")
 		if display.Reset >= 0 {

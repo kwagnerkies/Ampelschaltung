@@ -144,7 +144,11 @@ ampel/
 
       driver.go          Schnittstellen der Hardwareschicht
 
-      gpio/              Chip, Eingaenge, LED-Leitungen
+      gpio/              Chip und Eingaenge
+
+      spi/               SPI-Transport
+
+      ws2812/            Lampenkette der vier Ampelkoepfe
 
       tft/               SPI und ILI9341
 

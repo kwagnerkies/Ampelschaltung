@@ -38,31 +38,28 @@ Fehler beim Aufbau.
 
 Erst einen einzigen Kopf, nicht alle vier.
 
-Je LED: Anode ueber 330 Ohm an die GPIO-Leitung, Kathode (kurzes Bein, abgeflachte Seite) an
-Masse. Widerstaende auf die Platine, nicht in den Mast.
+Den WS2812-Stick in das gedruckte Gehaeuse schieben und drei Leitungen anloeten: 5 V an Pin 2,
+GND an die Masseschiene, DI an BCM 20 (Pin 38).
 
-| Nord | BCM | Pin der Leiste |
-|---|---|---|
-| Rot | 17 | 11 |
-| Gelb | 27 | 13 |
-| Gruen | 22 | 15 |
+SPI1 muss eingeschaltet sein, sonst passiert nichts:
 
-Pruefen: `-selftest` laufen lassen. Die drei Nord-Lampen muessen einzeln und in der richtigen
-Farbe aufleuchten. Leuchtet die falsche, sind zwei Leitungen vertauscht; leuchtet keine, ist
-die LED verpolt.
+```
+grep dtoverlay=spi1-1cs /boot/config.txt || sudo sh -c 'echo dtoverlay=spi1-1cs >> /boot/config.txt'
+sudo reboot
+```
+
+Pruefen: `-selftest` laufen lassen. Der erste Stick muss nacheinander Pixel 0 rot, Pixel 4
+gelb und Pixel 7 gruen zeigen. Leuchtet ein falsches Pixel, sitzt der Stick verkehrt herum im
+Gehaeuse. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI1 aktiv ist.
 
 ## Schritt 3: Die restlichen drei Koepfe
 
-Jetzt erst die anderen neun LEDs, Kopf fuer Kopf, nach jedem ein Selbsttest.
+Die Sticks werden durchgeschleift: DO des ersten an DI des zweiten, und so weiter. 5 V und
+Masse gehen an jeden Stick parallel. Reihenfolge Nord, Ost, Sued, West.
 
-| Zufahrt | Rot | Gelb | Gruen |
-|---|---|---|---|
-| Ost | 5 | 6 | 13 |
-| Sued | 19 | 26 | 12 |
-| West | 16 | 20 | 21 |
-
-Pruefen: alle zwoelf Lampen laufen im Selbsttest einzeln durch, danach zeigt er beide
-Freigabephasen. Achte auf die deutsche Folge: Rot, Rot mit Gelb, Gruen, Gelb, Rot.
+Pruefen: der Selbsttest laeuft alle zwoelf Lampen einzeln durch, Stick fuer Stick. Leuchtet
+der falsche Kopf, ist die Kette in anderer Reihenfolge gesteckt; dann entweder umstecken oder
+die Zufahrten in der Konfiguration tauschen.
 
 ## Schritt 4: Die vier Reed-Kontakte
 
@@ -94,7 +91,7 @@ Beide Schalter verbinden ihren Pin mit Masse.
 | Schalter | BCM | Pin der Leiste | geschlossen bedeutet |
 |---|---|---|---|
 | Hauptschalter | 4 | 7 | Anlage laeuft |
-| Notschalter | 18 | 12 | Gelbblinken |
+| Notschalter | 27 | 13 | Gelbblinken |
 
 Pruefen: im Selbsttest meldet jeder Schalter beim Umlegen genau eine Flanke. Prellt er
 sichtbar mehrfach, ist das kein Problem, die Steuerung entprellt mit 100 ms.
@@ -144,8 +141,10 @@ solchen Aufbauten ist eine abgerissene Litze, nicht der Code.
 
 | Symptom | Ursache |
 |---|---|
-| Eine Lampe bleibt dunkel | LED verpolt oder kalte Loetstelle |
-| Falsche Lampe leuchtet | zwei Leitungen vertauscht, Konfiguration anpassen statt umloeten |
+| Alle Sticks bleiben dunkel | SPI1 nicht aktiv, Datenleitung oder 5 V fehlt |
+| Nur der erste Stick leuchtet | DO zu DI der Kette nicht verbunden |
+| Erste LED flackert oder falsche Farbe | Pegel der Datenleitung, Pegelwandler noetig |
+| Falscher Kopf leuchtet | Kette in anderer Reihenfolge gesteckt |
 | Ein Sensor meldet dauernd geschlossen | Magnet zu nah oder Kontakt gebrochen |
 | Ein Sensor meldet nie | Decke zu dick, Magnet falsch herum oder Litze ab |
 | Display bleibt dunkel | SPI nicht aktiv, oder Nutzer `ampel` nicht in der Gruppe `spi` |

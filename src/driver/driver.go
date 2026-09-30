@@ -24,3 +24,8 @@ type OutputLine interface {
 	Set(high bool) error
 	Close() error
 }
+
+type Transport interface {
+	Write(data []byte) error
+	Close() error
+}

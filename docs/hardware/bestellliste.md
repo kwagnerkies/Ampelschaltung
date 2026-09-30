@@ -7,10 +7,7 @@ Einlegen, LEDs werden beim Loeten zu heiss.
 
 | Menge | Teil | Anmerkung |
 |---|---|---|
-| 5 | LED 5 mm rot, diffus | 4 verbaut |
-| 5 | LED 5 mm gelb, diffus | 4 verbaut |
-| 5 | LED 5 mm gruen, diffus | 4 verbaut |
-| 15 | Widerstand 330 Ohm, 1/4 W | 12 verbaut, je LED einer |
+| 5 | WS2812-Stick mit 8 Pixeln (Neopixel Stick oder baugleich) | 4 verbaut, einer Reserve |
 | 10 | Reed-Kontakt, Schliesser, Glaskoerper 14 mm | 4 verbaut, der Rest ist Bruchreserve |
 | 20 | Neodym-Scheibenmagnet 5 x 2 mm | einer je Modellauto |
 | 2 | Kippschalter, ein Umschalter, Einbau 6 mm | Hauptschalter und Notschalter |
@@ -18,6 +15,9 @@ Einlegen, LEDs werden beim Loeten zu heiss.
 
 Achte beim Display auf die SPI-Bauart. Module mit `D0` bis `D7` sind parallel und passen
 nicht.
+
+Die Ampelgehaeuse stammen aus dem Modell "Traffic Lights (Ampel) for Arduino / ESP32 & Co."
+von Mofantastico auf Printables, Modellnummer 864750. Je Gehaeuse ein Stick.
 
 ## Verkabelung
 
@@ -49,9 +49,12 @@ nicht.
 
 ## Was du nicht brauchst
 
-Keine Schieberegister, keine Pegelwandler, keine externe 5-V-Schiene: die LEDs haengen
-unmittelbar an den GPIO-Leitungen. Es leuchten nie mehr als sechs gleichzeitig, das sind bei
-330 Ohm etwa 24 mA und damit deutlich unter der Grenze des Pi.
+Keine Vorwiderstaende und keine externe Stromversorgung: die Sticks bringen ihre Treiber mit
+und haengen an der 5-V-Schiene des Pi. Es leuchten nie mehr als sechs Pixel gleichzeitig, bei
+Helligkeit 60 sind das etwa 25 mA.
+
+Einen Pegelwandler brauchst du meistens nicht. Falls die erste LED flackert, ist er die
+Loesung, dann ein Stueck 74AHCT125 oder eine Diode in der 5-V-Zuleitung des ersten Sticks.
 
 ## Kosten grob
 

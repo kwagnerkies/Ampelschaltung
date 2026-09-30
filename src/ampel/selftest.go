@@ -6,6 +6,8 @@ import (
 	"ampel/src/controller"
 	"ampel/src/driver"
 	"ampel/src/driver/gpio"
+	"ampel/src/driver/spi"
+	"ampel/src/driver/ws2812"
 	"ampel/src/light"
 	"context"
 	"errors"
@@ -26,7 +28,7 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	}
 	defer func() { _ = chip.Close() }()
 
-	driver, err := openLamps(chip, cfg)
+	driver, err := openLamps(cfg)
 	if err != nil {
 		return err
 	}
@@ -55,7 +57,7 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	go printEvents(ctx, out, inputs.Events(), labels)
 
 	fmt.Fprintln(out, "Lampentest, jede Lampe leuchtet einzeln:")
-	if err := walkLamps(ctx, out, driver, cfg, lampDwell); err != nil {
+	if err := walkLamps(ctx, out, driver, lampDwell); err != nil {
 		return err
 	}
 
@@ -70,32 +72,28 @@ func runSelftest(ctx context.Context, cfg *config.Config, out io.Writer) error {
 	return nil
 }
 
-func openLamps(chip *gpio.Chip, cfg *config.Config) (driver.LampDriver, error) {
-	var lines []driver.OutputLine
-	for i, head := range cfg.Hardware.Lamps.Heads() {
-		for j, pin := range head {
-			line, err := chip.Output(pin)
-			if err != nil {
-				for _, opened := range lines {
-					_ = opened.Close()
-				}
-				return nil, fmt.Errorf("lampe %s %s: %w", approachNames[i], lampNames[j], err)
-			}
-			lines = append(lines, line)
-		}
+func openLamps(cfg *config.Config) (driver.LampDriver, error) {
+	bus, err := spi.OpenSPI(cfg.Hardware.Lamps.Device, cfg.Hardware.Lamps.SpeedHz)
+	if err != nil {
+		return nil, err
 	}
-	return gpio.NewLamps(lines), nil
+	strip, err := ws2812.New(bus, light.DirectionCount, byte(cfg.Hardware.Lamps.Brightness))
+	if err != nil {
+		_ = bus.Close()
+		return nil, err
+	}
+	return strip, nil
 }
 
-func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, cfg *config.Config, dwell time.Duration) error {
+func walkLamps(ctx context.Context, out io.Writer, driver driver.LampDriver, dwell time.Duration) error {
 	for index := 0; index < controller.LampCount; index++ {
 		pattern := make([]bool, controller.LampCount)
 		pattern[index] = true
 		if err := driver.Write(pattern); err != nil {
 			return fmt.Errorf("lampe %d schalten: %w", index, err)
 		}
-		pin := cfg.Hardware.Lamps.Heads()[index/3][index%3]
-		fmt.Fprintf(out, "  BCM %2d  %s %s\n", pin, approachNames[index/3], lampNames[index%3])
+		fmt.Fprintf(out, "  Stick %d Pixel %d  %s %s\n",
+			index/3, ws2812.Pixels[index%3], approachNames[index/3], lampNames[index%3])
 		select {
 		case <-ctx.Done():
 			return driver.Clear()

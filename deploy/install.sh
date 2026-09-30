@@ -66,9 +66,13 @@ for doc in aufbau.md vorfuehrung.md architektur.md projektziel.md; do
 done
 
 # Die Anzeige haengt an SPI. Ohne diese Zeile in /boot/config.txt gibt es kein spidev.
-if [ -e /boot/config.txt ] && ! grep -q "^dtparam=spi=on" /boot/config.txt; then
-	echo "dtparam=spi=on" >> /boot/config.txt
-	echo "SPI eingeschaltet, die Anzeige arbeitet erst nach einem Neustart."
+if [ -e /boot/config.txt ]; then
+	for line in "dtparam=spi=on" "dtoverlay=spi1-1cs"; do
+		if ! grep -q "^$line" /boot/config.txt; then
+			echo "$line" >> /boot/config.txt
+			echo "$line eingetragen, wirksam nach einem Neustart."
+		fi
+	done
 fi
 
 "$BIN" -config "$CONFIG" -validate

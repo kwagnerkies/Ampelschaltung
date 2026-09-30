@@ -27,14 +27,9 @@ type Hardware struct {
 }
 
 type Lamps struct {
-	North [3]int `yaml:"north"`
-	East  [3]int `yaml:"east"`
-	South [3]int `yaml:"south"`
-	West  [3]int `yaml:"west"`
-}
-
-func (l Lamps) Heads() [4][3]int {
-	return [4][3]int{l.North, l.East, l.South, l.West}
+	Device     string `yaml:"spi"`
+	SpeedHz    int    `yaml:"speed_hz"`
+	Brightness int    `yaml:"brightness"`
 }
 
 type Sensors struct {
@@ -81,10 +76,9 @@ func Default() Config {
 		Hardware: Hardware{
 			Chip: "gpiochip0",
 			Lamps: Lamps{
-				North: [3]int{17, 27, 22},
-				East:  [3]int{5, 6, 13},
-				South: [3]int{19, 26, 12},
-				West:  [3]int{16, 20, 21},
+				Device:     "/dev/spidev1.0",
+				SpeedHz:    2400000,
+				Brightness: 60,
 			},
 			Sensors: Sensors{
 				North: 23,
@@ -93,7 +87,7 @@ func Default() Config {
 				West:  3,
 			},
 			PowerSwitch: 4,
-			FaultSwitch: 18,
+			FaultSwitch: 27,
 			Debounce:    millis(15),
 		},
 		Timing: Timing{
