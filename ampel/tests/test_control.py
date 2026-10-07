@@ -75,6 +75,33 @@ class SwitchTest(unittest.TestCase):
         self.controller.warn(now, False)
         self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
 
+    def test_starting_switched_off_stays_dark(self):
+        self.controller.power(0.0, False)
+        run(self.controller, 10)
+        self.assertTrue(self.lamps.frames)
+        for frame in self.lamps.frames:
+            self.assertEqual(frame, [False] * 12)
+
+    def test_warning_is_ignored_while_switched_off(self):
+        now = run(self.controller, 8)
+        self.controller.power(now, False)
+        self.controller.warn(now, True)
+        run(self.controller, 5, start=now)
+        self.assertEqual(self.lamps.frames[-1], [False] * 12)
+
+    def test_shutdown_after_power_off_in_green_stays_dark(self):
+        now = run(self.controller, 8)
+        self.assertIs(self.controller.machine.state.stage, Stage.GREEN)
+        self.controller.power(now, False)
+        self.controller.shutdown()
+        self.assertEqual(self.lamps.frames[-1], [False] * 12)
+
+    def test_shutdown_in_green_passes_yellow_to_red(self):
+        run(self.controller, 8)
+        self.controller.shutdown()
+        self.assertIn(Aspect.YELLOW, aspects_of(self.lamps.frames[-2]))
+        self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
+
 
 class DisplayValuesTest(unittest.TestCase):
     def test_running_direction_counts_down_and_jumps(self):
@@ -91,23 +118,6 @@ class DisplayValuesTest(unittest.TestCase):
         controller.step(now + 1.6)
         after = controller.snapshot(now + 1.6).green[direction]
         self.assertGreater(after, before)
-
-
-def aspects_of(frame):
-    aspects = []
-    for direction in DIRECTIONS:
-        red, yellow, green = frame[direction * 3:direction * 3 + 3]
-        if red and yellow:
-            aspects.append(Aspect.RED_YELLOW)
-        elif red:
-            aspects.append(Aspect.RED)
-        elif yellow:
-            aspects.append(Aspect.YELLOW)
-        elif green:
-            aspects.append(Aspect.GREEN)
-        else:
-            aspects.append(Aspect.OFF)
-    return aspects
 
 
 if __name__ == "__main__":

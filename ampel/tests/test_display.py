@@ -35,3 +35,9 @@ class ScreenTest(unittest.TestCase):
         north, east, south, west = (self.screen.boxes[d] for d in range(4))
         self.assertLess(north[1], south[1])
         self.assertLess(west[0], east[0])
+
+    def test_lit_segments_are_drawn_last(self):
+        from ..display import GREEN, GREY
+        self.screen.update({0: (11, GREEN), 1: (11, GREEN), 2: (11, GREEN), 3: (11, GREEN)})
+        digit = [fill[4] for fill in self.canvas.fills[1:8]]
+        self.assertEqual(digit, [GREY] * 5 + [GREEN] * 2)

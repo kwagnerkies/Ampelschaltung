@@ -1,9 +1,4 @@
-import unittest
-
-from ..control import Controller, Timing
-from ..phase import Stage
-from ..rule import Following
-from ..signal import Aspect, DIRECTIONS, ConflictError, check
+from ..signal import Aspect, DIRECTIONS
 
 
 class Lamps:

@@ -1,3 +1,5 @@
+import threading
+
 from .phase import Machine, Phase, Stage, phase_of
 from .signal import Aspect, DIRECTIONS, check
 
@@ -50,12 +52,20 @@ class Controller:
         self.warning = False
         self.on = True
         self.begun = False
+        self.lock = threading.RLock()
 
     def step(self, now):
+        with self.lock:
+            self._step(now)
+
+    def _step(self, now):
         if not self.begun:
             self.begun = True
-            self.output.show(self.machine.state.aspects)
-            self._notify("phase", now, self.machine.state)
+            if self.on:
+                self.output.show(self.machine.state.aspects)
+                self._notify("phase", now, self.machine.state)
+            else:
+                self.output.show_all(Aspect.OFF)
         if not self.on:
             return
         if self.warning or self.machine.state.phase is Phase.FAULT:
@@ -79,65 +89,78 @@ class Controller:
             self.machine.state.target = self.rule.target(self.following)
 
     def crossing(self, now, direction):
-        state = self.machine.state
-        if not self.on or state.stage is not Stage.GREEN or phase_of(direction) is not state.phase:
-            return
-        last = self.last_crossing[direction]
-        if last is not None and now - last <= self.follow:
-            self.following += 1
-        self.last_crossing[direction] = now
-        self._notify("sensor", now, direction)
+        with self.lock:
+            state = self.machine.state
+            if not self.on or state.stage is not Stage.GREEN or phase_of(direction) is not state.phase:
+                return
+            last = self.last_crossing[direction]
+            if last is not None and now - last <= self.follow:
+                self.following += 1
+            self.last_crossing[direction] = now
+            self._notify("sensor", now, direction)
 
     def power(self, now, on):
-        if on == self.on:
-            return
-        self.on = on
-        if on:
-            self.restart(now)
-        else:
-            self.output.show_all(Aspect.OFF)
-            self._notify("power", now, False)
+        with self.lock:
+            if on == self.on and self.begun:
+                return
+            self.on = on
+            self.begun = True
+            if on:
+                self.restart(now)
+            else:
+                self.warning = False
+                self.output.show_all(Aspect.OFF)
+                self._notify("power", now, False)
 
     def warn(self, now, on):
-        if on == self.warning:
-            return
-        self.warning = on
-        if on:
-            self.enter_fault(now, Warning("notzustand ueber den schalter"))
-        else:
-            self.restart(now)
+        with self.lock:
+            if not self.on or on == self.warning:
+                return
+            self.warning = on
+            if on:
+                self.enter_fault(now, Warning("notzustand ueber den schalter"))
+            else:
+                self.restart(now)
 
     def restart(self, now):
-        self.warning = False
-        self.flash_on = False
-        self.following = 0
-        self.last_crossing = [None] * len(DIRECTIONS)
-        self.machine.restart(now)
-        self.output.show(self.machine.state.aspects)
-        self._notify("power", now, True)
-        self._notify("phase", now, self.machine.state)
+        with self.lock:
+            self.warning = False
+            self.flash_on = False
+            self.following = 0
+            self.last_crossing = [None] * len(DIRECTIONS)
+            self.machine.restart(now)
+            self.output.show(self.machine.state.aspects)
+            self._notify("power", now, True)
+            self._notify("phase", now, self.machine.state)
 
     def enter_fault(self, now, error):
-        self.machine.fault(now)
-        self.flash_on = False
-        self._notify("fault", now, error)
-        self._flash(now)
+        with self.lock:
+            self.machine.fault(now)
+            self.flash_on = False
+            self._notify("fault", now, error)
+            self._flash(now)
 
     def shutdown(self):
-        state = self.machine.state
-        if state.stage is Stage.GREEN:
-            self.output.show(State_yellow(state).aspects)
-        self.output.show([Aspect.RED for _ in DIRECTIONS])
+        with self.lock:
+            if not self.on:
+                return
+            shown = self.output.shown
+            if Aspect.GREEN in shown:
+                self.output.show([Aspect.YELLOW if aspect is Aspect.GREEN else aspect
+                                  for aspect in shown])
+            self.output.show_all(Aspect.RED)
 
     def snapshot(self, now):
-        state = self.machine.state
-        green = {}
-        for direction in DIRECTIONS:
-            if phase_of(direction) is state.phase and state.stage is Stage.GREEN:
-                green[direction] = max(0.0, state.target - (now - state.since))
-            else:
-                green[direction] = self.rule.target(0)
-        return Snapshot(state, self.following, state.aspects, green, self.on, self.warning)
+        with self.lock:
+            state = self.machine.state
+            green = {}
+            for direction in DIRECTIONS:
+                if phase_of(direction) is state.phase and state.stage is Stage.GREEN:
+                    green[direction] = max(0.0, state.target - (now - state.since))
+                else:
+                    green[direction] = self.rule.target(0)
+            return Snapshot(state, self.following, list(self.output.shown), green,
+                            self.on, self.warning)
 
     def _flash(self, now):
         on = int((now - self.machine.state.since) / FLASH_HALF) % 2 == 0
@@ -149,11 +172,6 @@ class Controller:
     def _notify(self, event, now, payload):
         for observer in self.observers:
             observer(event, now, payload)
-
-
-def State_yellow(state):
-    from .phase import State
-    return State(state.phase, Stage.YELLOW, state.since)
 
 
 class Snapshot:

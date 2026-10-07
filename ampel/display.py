@@ -75,7 +75,8 @@ class Screen:
             (x, y, thick, half),
             (x, y + half, width, thick),
         )
-        for lit, box in zip(SEGMENTS[value], boxes):
+        segments = list(zip(SEGMENTS[value], boxes))
+        for lit, box in sorted(segments, key=lambda segment: segment[0]):
             self.canvas.fill(*box, color if lit else GREY)
 
 

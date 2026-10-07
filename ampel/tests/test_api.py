@@ -15,3 +15,13 @@ class ApiTest(unittest.TestCase):
         self.assertTrue(status["an"])
         self.assertFalse(status["notzustand"])
         self.assertIn("Nord", status["gruenzeiten_s"])
+
+    def test_warning_reports_fault_and_lit_lamps(self):
+        from ..api import status_of
+        controller = Controller(Lamps(), Following(5, 3, 20), Timing())
+        controller.step(0.0)
+        controller.warn(1.0, True)
+        status = status_of(controller.snapshot(1.1))
+        self.assertTrue(status["notzustand"])
+        self.assertEqual(status["phase"], "Stoerung")
+        self.assertEqual(set(status["signalbilder"].values()), {"GelbBlinken"})

@@ -18,7 +18,11 @@ def main(argv=None):
     parser.add_argument("-selftest", action="store_true")
     args = parser.parse_args(argv)
 
-    settings = config.load(args.config)
+    try:
+        settings = config.load(args.config)
+    except config.ConfigError as error:
+        print(f"Konfigurationsfehler: {error}", file=sys.stderr)
+        return 1
     if args.validate:
         summary(settings)
         return 0
@@ -42,7 +46,7 @@ def summary(settings):
     print(f"  Verlaengerung {timing['extension']}s je Fahrzeug binnen {timing['follow']}s")
 
 
-def build(settings, lines):
+def build(settings):
     lamps = settings["lamps"]
     strip = driver.Strip(
         driver.Spi(lamps["spi"], lamps["speed_hz"]),
@@ -60,18 +64,31 @@ def open_screen(settings, lines):
     shown = settings["display"]
     if not shown["enabled"]:
         return None, None
-    panel = driver.Tft(
-        driver.Spi(shown["spi"], shown["speed_hz"]),
-        lines.output(shown["dc"]),
-        driver.Tft.PORTRAIT if shown["rotation"] == "hoch" else driver.Tft.LANDSCAPE,
-    )
+    try:
+        panel = driver.Tft(
+            driver.Spi(shown["spi"], shown["speed_hz"]),
+            lines.output(shown["dc"]),
+            driver.Tft.PORTRAIT if shown["rotation"] == "hoch" else driver.Tft.LANDSCAPE,
+        )
+    except Exception as error:
+        print(f"Anzeige nicht verfuegbar, Steuerung laeuft ohne: {error}", file=sys.stderr)
+        return None, None
     return display.Screen(panel), panel
+
+
+def draw(screen, controller, now):
+    try:
+        screen.update(display.fields_from(controller.snapshot(now)))
+    except Exception as error:
+        print(f"Anzeige ausgefallen, Steuerung laeuft ohne: {error}", file=sys.stderr)
+        return None
+    return screen
 
 
 def run(settings):
     from .driver.gpio import Lines
     lines = Lines()
-    controller, strip = build(settings, lines)
+    controller, strip = build(settings)
     screen, panel = open_screen(settings, lines)
 
     sensors = {pin: direction for direction, pin in
@@ -91,7 +108,8 @@ def run(settings):
             controller.warn(now, closed)
 
     lines.watch(list(sensors) + [power_pin, fault_pin], edge)
-    controller.power(time.monotonic(), lines.read(power_pin) or True)
+    controller.power(time.monotonic(), lines.read(power_pin))
+    controller.warn(time.monotonic(), lines.read(fault_pin))
 
     server = None
     if settings["api"]["enabled"]:
@@ -111,28 +129,31 @@ def run(settings):
             now = time.monotonic()
             controller.step(now)
             if screen:
-                screen.update(display.fields_from(controller.snapshot(now)))
+                screen = draw(screen, controller, now)
             time.sleep(TICK)
     finally:
-        controller.shutdown()
-        if server:
-            server.shutdown()
-        if panel:
-            panel.close()
-        strip.close()
-        lines.close()
+        try:
+            controller.shutdown()
+        finally:
+            if server:
+                server.shutdown()
+            if panel:
+                panel.close()
+            strip.close()
+            lines.close()
     return 0
 
 
 def selftest(settings):
     from .driver.gpio import Lines
     lines = Lines()
-    controller, strip = build(settings, lines)
+    _, strip = build(settings)
     screen, panel = open_screen(settings, lines)
 
     if screen:
-        print("Anzeigetest: vier mal 88")
-        screen.update({d: (88, display.GREEN) for d in DIRECTIONS})
+        print("Anzeigetest: vier mal 88 in Gruen, Rot, Gelb und Weiss")
+        colors = (display.GREEN, display.RED, display.YELLOW, display.WHITE)
+        screen.update({d: (88, color) for d, color in zip(DIRECTIONS, colors)})
     print("Lampentest, jede Lampe einzeln:")
     for index in range(len(DIRECTIONS) * 3):
         lamps = [False] * (len(DIRECTIONS) * 3)

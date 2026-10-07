@@ -20,3 +20,24 @@ class ConfigTest(unittest.TestCase):
         settings["switches"] = dict(settings["switches"], fault=23)
         with self.assertRaises(ConfigError):
             validate(settings)
+
+    def test_unknown_key_is_refused(self):
+        import os
+        import tempfile
+        from ..config import ConfigError, load
+        with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as handle:
+            handle.write("[sensors]\nnort = 5\n")
+        try:
+            with self.assertRaises(ConfigError):
+                load(handle.name)
+        finally:
+            os.remove(handle.name)
+
+    def test_out_of_range_values_are_refused(self):
+        from ..config import ConfigError, validate, DEFAULTS
+        for section, key, value in (("lamps", "brightness", 300), ("timing", "yellow", 0),
+                                    ("display", "rotation", "schraeg"), ("sensors", "north", "23")):
+            settings = {name: dict(values) for name, values in DEFAULTS.items()}
+            settings[section][key] = value
+            with self.subTest(key=key), self.assertRaises(ConfigError):
+                validate(settings)

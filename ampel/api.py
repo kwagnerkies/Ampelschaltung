@@ -11,7 +11,6 @@ class UnixServer(HTTPServer):
     address_family = socket.AF_UNIX
 
 
-
 def serve(path, state, command):
     if os.path.exists(path):
         os.remove(path)

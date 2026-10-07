@@ -38,6 +38,8 @@ class State:
 
     @property
     def name(self):
+        if self.phase is Phase.FAULT:
+            return Phase.FAULT.value
         if self.stage is Stage.ALL_RED:
             return Stage.ALL_RED.value
         return f"{self.phase.value}_{self.stage.value}"

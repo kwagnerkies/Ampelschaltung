@@ -23,8 +23,9 @@ done
 getent passwd ampel >/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin --gid gpio ampel
 usermod --append --groups gpio,spi ampel
 
-install -d -m 0755 /etc/ampel "$LIB/ampel"
+install -d -m 0755 /etc/ampel "$LIB/ampel" "$LIB/ampel/driver"
 install -m 0644 "$SRC"/ampel/*.py "$LIB/ampel/"
+install -m 0644 "$SRC"/ampel/driver/*.py "$LIB/ampel/driver/"
 install -m 0755 "$SRC/ampelctl" /usr/local/bin/ampelctl
 install -m 0644 "$SRC/deploy/ampel.service" /etc/systemd/system/ampel.service
 [ -f "$CONFIG" ] || install -m 0644 "$SRC/config.toml" "$CONFIG"

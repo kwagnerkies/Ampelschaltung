@@ -28,16 +28,34 @@ def load(path=None):
                 for section, values in tomllib.load(handle).items():
                     if section not in config:
                         raise ConfigError(f"unbekannter Abschnitt {section}")
+                    if not isinstance(values, dict):
+                        raise ConfigError(f"{section} muss ein Abschnitt sein")
+                    for key in values:
+                        if key not in DEFAULTS[section]:
+                            raise ConfigError(f"unbekannter Schluessel {section}.{key}")
                     config[section].update(values)
         except FileNotFoundError:
             pass
+        except tomllib.TOMLDecodeError as error:
+            raise ConfigError(f"{path}: {error}") from error
     validate(config)
     return config
 
 
+def is_integer(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def validate(config):
     used = {}
+
     def claim(pin, name):
+        if not is_integer(pin):
+            raise ConfigError(f"{name}: {pin!r} ist keine Pinnummer")
         if not 0 <= pin <= 27:
             raise ConfigError(f"{name}: BCM {pin} liegt ausserhalb von 0 bis 27")
         if pin in used:
@@ -53,6 +71,20 @@ def validate(config):
     if config["display"]["enabled"]:
         claim(config["display"]["dc"], "display.dc")
 
-    pixels = config["lamps"]["pixels"]
-    if len(pixels) != 3 or len(set(pixels)) != 3 or not all(0 <= p <= 7 for p in pixels):
+    lamps = config["lamps"]
+    pixels = lamps["pixels"]
+    if (not isinstance(pixels, list) or len(pixels) != 3 or len(set(pixels)) != 3
+            or not all(is_integer(p) and 0 <= p <= 7 for p in pixels)):
         raise ConfigError(f"lamps.pixels {pixels}: drei verschiedene Werte von 0 bis 7")
+    if not is_integer(lamps["brightness"]) or not 0 <= lamps["brightness"] <= 255:
+        raise ConfigError(f"lamps.brightness {lamps['brightness']!r}: ganze Zahl von 0 bis 255")
+
+    if config["display"]["rotation"] not in ("quer", "hoch"):
+        raise ConfigError(f"display.rotation {config['display']['rotation']!r}: quer oder hoch")
+
+    timing = config["timing"]
+    for name, value in timing.items():
+        if not is_number(value) or value <= 0:
+            raise ConfigError(f"timing.{name} {value!r}: Zahl groesser 0")
+    if timing["max_green"] < timing["base_green"]:
+        raise ConfigError("timing.max_green ist kleiner als timing.base_green")
