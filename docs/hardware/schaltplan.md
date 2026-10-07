@@ -21,7 +21,7 @@ Alle Angaben in BCM-Nummern, in Klammern die Nummer auf der 40-poligen Stiftleis
         +------------------------------------+
         |          Raspberry Pi              |
         |                                    |
-        |  12 x GPIO ---[330]--->|--- GND    |  Ampel-LEDs
+        |  SPI1 MOSI ---> 4 x WS2812-Stick   |  Ampelkoepfe
         |   4 x A3144 ---- OUT -------- GPIO |  Magnetsensoren
         |   2 x GPIO ----o/ o---- GND        |  Schalter
         |   SPI0 + DC ----------------- TFT  |  Anzeige
@@ -115,17 +115,17 @@ Haupt BCM 4  ( 7) ( 8) BCM 14
       BCM  6 (31) (32) BCM 12
       BCM 13 (33) (34) GND
 spi1 BCM 19  (35) (36) BCM 16
-spi1 BCM 26  (37) (38) BCM 20  Daten Sticks
+      BCM 26 (37) (38) BCM 20  Daten Sticks
         GND  (39) (40) BCM 21  spi1 sclk
 ```
 
-Frei bleiben BCM 0, 1, 5, 6, 7, 9, 12, 13, 14, 15, 16, 17 und 22. BCM 7 bis 11 gehoeren SPI0
+Frei bleiben BCM 0, 1, 5, 6, 12, 13, 14, 15, 16, 17, 22 und 26. BCM 7 bis 11 gehoeren SPI0
 fuer die Anzeige, BCM 18 bis 21 gehoeren SPI1 fuer die Lampenkette; beide Gruppen duerfen nicht
 anders belegt werden.
 
 ## Masse
 
-Alle Rueckleitungen von Sticks, Kontakten und Schaltern laufen auf eine gemeinsame Masseschiene
+Alle Rueckleitungen von Sticks, Sensoren und Schaltern laufen auf eine gemeinsame Masseschiene
 auf der Lochrasterplatine. Von dort eine Leitung an Pin 6 oder Pin 39 des Pi. Ohne diese
 gemeinsame Masse verhaelt sich die Anlage zufaellig, und das ist der haeufigste Fehler beim
 Aufbau.

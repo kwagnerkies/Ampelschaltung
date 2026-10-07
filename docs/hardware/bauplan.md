@@ -42,10 +42,12 @@ Erst einen einzigen Kopf, nicht alle vier.
 Den WS2812-Stick in das gedruckte Gehaeuse schieben und drei Leitungen anloeten: 5 V an Pin 2,
 GND an die Masseschiene, DI an BCM 20 (Pin 38).
 
-SPI1 muss eingeschaltet sein, sonst passiert nichts:
+SPI1 muss eingeschaltet sein, sonst passiert nichts. `make install` hat
+`dtoverlay=spi1-1cs` bereits in die `config.txt` eingetragen (`/boot/firmware/config.txt`,
+bei aelteren Systemen `/boot/config.txt`); wirksam wird es erst nach einem Neustart:
 
 ```
-grep dtoverlay=spi1-1cs /boot/config.txt || sudo sh -c 'echo dtoverlay=spi1-1cs >> /boot/config.txt'
+grep spi1-1cs /boot/firmware/config.txt /boot/config.txt
 sudo reboot
 ```
 
@@ -100,12 +102,13 @@ Beide Schalter verbinden ihren Pin mit Masse.
 | Hauptschalter | 4 | 7 | Anlage laeuft |
 | Notschalter | 27 | 13 | Gelbblinken |
 
-Pruefen: im Selbsttest meldet jeder Schalter beim Umlegen genau eine Flanke. Prellt er
-sichtbar mehrfach, ist das kein Problem, die Steuerung entprellt mit 100 ms.
+Pruefen: im Selbsttest meldet jeder Schalter beim Umlegen eine Flanke. Die Steuerung
+entprellt mit 15 ms; meldet ein Schalter trotzdem mehrere Flanken, prellt er laenger und
+sollte getauscht werden.
 
 ## Schritt 6: Die Anzeige
 
-Sieben Leitungen, alle mit Jumperkabeln.
+Acht Leitungen, alle mit Jumperkabeln.
 
 | Modul | BCM | Pin der Leiste |
 |---|---|---|
@@ -120,16 +123,12 @@ Sieben Leitungen, alle mit Jumperkabeln.
 
 RESET und LED gehen fest auf 3,3 V. Der Treiber setzt den Controller per Befehl zurueck.
 
-SPI muss aktiv sein:
-
-```
-grep dtparam=spi=on /boot/config.txt || sudo sh -c 'echo dtparam=spi=on >> /boot/config.txt'
-sudo reboot
-```
+SPI muss aktiv sein. Auch `dtparam=spi=on` hat `make install` schon eingetragen.
 
 Pruefen: der Selbsttest zeigt zuerst ein Testbild mit vier mal **88** in Gruen, Rot, Gelb und
 Weiss. Steht die Zahl auf dem Kopf, `rotation = "hoch"` im Abschnitt `[display]` stellen. Ist Rot blau, sind
-die Farbkanaele des Moduls vertauscht; dann meldest du dich, das sind zwei Zeilen im Treiber.
+die Farbkanaele des Moduls vertauscht; dann in `ampel/driver/tft.py` bei `LANDSCAPE` und
+`PORTRAIT` das BGR-Bit loeschen, also `0x20` und `0x40` statt `0x28` und `0x48`.
 
 ## Abschluss
 
@@ -154,6 +153,7 @@ solchen Aufbauten ist eine abgerissene Litze, nicht der Code.
 | Falscher Kopf leuchtet | Kette in anderer Reihenfolge gesteckt |
 | Ein Sensor meldet dauernd geschlossen | Magnet liegt zu nah am Sensor |
 | Ein Sensor meldet nie | Magnet falsch herum, Decke zu dick, oder Sensor an 3,3 V statt 5 V |
-| Display bleibt dunkel | SPI nicht aktiv, oder Nutzer `ampel` nicht in der Gruppe `spi` |
+| Display bleibt dunkel | SPI nicht aktiv, oder Nutzer `ampel` nicht in der Gruppe `spi`; Grund im Journal |
 | Alles blinkt gelb | Notschalter liegt um, oder die Sicherheitspruefung hat angeschlagen |
+| Alles dunkel | Hauptschalter offen |
 | `device or resource busy` | der Dienst laeuft noch, erst `systemctl stop ampel` |

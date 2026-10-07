@@ -26,7 +26,7 @@ von Mofantastico auf Printables, Modellnummer 864750. Je Gehaeuse ein Stick.
 | Menge | Teil | Anmerkung |
 |---|---|---|
 | 1 | GPIO-Breakout mit Flachbandkabel, 40-polig | erspart das Stochern an der Stiftleiste |
-| 1 | Lochrasterplatine 80 x 50 mm | traegt die Widerstaende und die Masseschiene |
+| 1 | Lochrasterplatine 80 x 50 mm | traegt die Masseschiene und die 5-V-Verteilung |
 | 10 m | Litze 0,14 mm2, mehrere Farben | rund 40 Verbindungen |
 | 1 | Satz Jumperkabel Buchse-Buchse | fuer das Display |
 | 2 | Stiftleiste 40-polig, gerade | zum Auftrennen |

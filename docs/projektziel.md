@@ -42,7 +42,8 @@ Flanken wie die beiden Kippschalter.
 **Sicherheit.** Eine Konfliktmatrix prueft jedes Signalbild unmittelbar vor der Ausgabe an die
 Hardware; kein Weg fuehrt daran vorbei. Zusaetzlich wird die Signalfolge geprueft, sodass von
 Gruen nur Gelb folgen kann. Schlaegt die Pruefung an, geht die Anlage in den Notzustand mit
-gelbem Blinken und bleibt dort, bis jemand sie aus und wieder an schaltet.
+gelbem Blinken und bleibt dort, bis jemand den Notschalter umlegt und zuruecklegt oder die
+Anlage aus und wieder an schaltet.
 
 ## Abgrenzung
 
@@ -61,11 +62,12 @@ Auswertung von Wartezeiten, Lernen eines Tagesprofils, Fernsteuerung oder Netzwe
 
 ## Software
 
-Python 3, Standardbibliothek plus `gpiozero` fuer die sechs GPIO-Leitungen. SPI, das
+Python 3.11, Standardbibliothek plus `gpiozero` fuer die sieben GPIO-Leitungen (vier
+Sensoren, zwei Schalter, DC der Anzeige). SPI, das
 WS2812-Bitmuster und der Displaycontroller sind selbst geschrieben. Der gesamte Regelkreis ist
 ohne Kreuzung testbar, weil Zeit und Ausgabe uebergeben werden statt fest verdrahtet zu sein.
 
-Umfang rund 950 Zeilen Programmcode und 300 Zeilen Tests. Die Anlage laeuft als systemd-Dienst
+Umfang rund 1000 Zeilen Programmcode und 400 Zeilen Tests. Die Anlage laeuft als systemd-Dienst
 und startet nach einem Stromausfall selbstaendig.
 
 ## Abnahmekriterien
@@ -81,6 +83,6 @@ und startet nach einem Stromausfall selbstaendig.
 
 ## Nachweis
 
-Kriterien 1 bis 5 werden an der Kreuzung vorgefuehrt und sind zusaetzlich durch 25 Tests
+Kriterien 1 bis 5 werden an der Kreuzung vorgefuehrt und sind zusaetzlich durch 33 Tests
 abgedeckt, die den Regelkreis mit uebergebener Zeit und einer Attrappe der Lampen durchfahren.
 Kriterium 6 wird durch einen Neustart des Pi gezeigt.

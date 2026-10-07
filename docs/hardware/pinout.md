@@ -118,15 +118,18 @@ braucht dreizehn Leitungen, die hier nicht frei sind.
 | Funktion | BCM | Pin der Leiste | Wirkung |
 |---|---|---|---|
 | Hauptschalter | 4 | 7 | geschlossen laeuft die Anlage, offen sind alle Lichter aus |
-| Notschalter | 18 | 12 | geschlossen blinken alle Lichter gelb, offen beginnt die Anlage bei Allrot |
+| Notschalter | 27 | 13 | geschlossen blinken alle Lichter gelb, offen beginnt die Anlage bei Allrot |
 
-Er schaltet wie die Sensoren gegen Masse und wird zyklisch abgefragt, entprellt mit 100 ms,
-weil ein mechanischer Schalter prellt, ein Hall-Sensor dagegen nicht.
+Beide schalten wie die Sensoren gegen Masse. `gpiozero` meldet jede Flanke aus einem eigenen
+Thread und entprellt mit 15 ms; abgefragt wird nichts.
+
+Beim Start liest die Steuerung beide Schalter einmal ein: steht der Hauptschalter offen, bleibt
+die Kreuzung dunkel, steht der Notschalter geschlossen, blinkt sie gelb. Bei ausgeschalteter
+Anlage wirkt der Notschalter nicht, die Kreuzung bleibt dunkel.
 
 ## Masse und Versorgung
 
-Pi, Register und LED-Versorgung brauchen eine gemeinsame Masse. Fehlt sie, schaltet die Kette
-scheinbar zufaellig. Der Pi selbst wird ueber sein Netzteil versorgt, nicht ueber die
-5-V-Schiene der Register.
+Pi, Sticks, Sensoren und Schalter brauchen eine gemeinsame Masse. Fehlt sie, schaltet die
+Kette scheinbar zufaellig. Der Pi selbst wird ueber sein Netzteil versorgt.
 
 Die gezeichnete Fassung steht in `schaltplan.md`.

@@ -34,9 +34,11 @@ Das Skript
 - installiert `python3-gpiozero`, die einzige Abhaengigkeit,
 - legt den Systemnutzer `ampel` in den Gruppen `gpio` und `spi` an,
 - legt `/etc/ampel` an,
-- installiert den Code nach `/usr/local/lib/ampel`, `ampelctl` und den Dienst,
+- installiert den Code samt `ampel/driver` nach `/usr/local/lib/ampel`, `ampelctl` und den
+  Dienst,
+- traegt `dtparam=spi=on` und `dtoverlay=spi1-1cs` in `/boot/firmware/config.txt` ein, bei
+  aelteren Systemen in `/boot/config.txt`,
 - prueft die Konfiguration mit `-validate`,
-- traegt `dtparam=spi=on` und `dtoverlay=spi1-1cs` in `/boot/config.txt` ein,
 - aktiviert den Dienst und startet ihn.
 
 Eine vorhandene `/etc/ampel/config.toml` wird nie ueberschrieben.
@@ -58,21 +60,24 @@ sudo -u ampel PYTHONPATH=/usr/local/lib/ampel python3 -m ampel.main \
   -config /etc/ampel/config.toml -selftest
 ```
 
-Der Selbsttest prueft auch die Anzeige: alle vier Felder zeigen 88 in Gruen, Rot, Gelb und
-Weiss. Steht die Zahl auf dem Kopf, ist `display.rotation` falsch; ist Rot blau, sind die
-Farbkanaele des Moduls vertauscht und `display.rotation` muss auf die andere Variante.
+Der Selbsttest prueft zuerst die Anzeige: die vier Felder zeigen 88 in Gruen, Rot, Gelb und
+Weiss. Steht die Zahl auf dem Kopf oder ist sie verzerrt, `display.rotation` zwischen
+`"quer"` und `"hoch"` umstellen. Ist Rot blau, sind die Farbkanaele des Moduls vertauscht;
+dann in `ampel/driver/tft.py` bei `LANDSCAPE` und `PORTRAIT` das BGR-Bit loeschen, also
+`0x20` und `0x40` statt `0x28` und `0x48`.
 
-Der Selbsttest laesst zuerst jede der zwoelf LEDs einzeln leuchten und nennt dabei Position
-in der Kette und Lampe. Leuchtet die falsche Lampe, ist die Bitreihenfolge in der
-Konfiguration falsch, nicht der Code. Danach zeigt er beide Freigabephasen in der deutschen
-Signalfolge und wartet am Ende auf den Abbruch mit Strg-C. Sensorflanken gibt er von Anfang
-an aus, also auch waehrend des Lampentests: ein Modellauto ueber die Kontakte schieben und
-pruefen, ob Zufahrt und Sensornummer stimmen.
+Danach laesst er jede der zwoelf Lampen einzeln leuchten und nennt dabei Stick, Pixel,
+Zufahrt und Farbe. Leuchtet ein Licht neben dem Fenster, passt `pixels` im Abschnitt `[lamps]`
+nicht zum Druck, nicht der Code.
+
+Zuletzt gibt er jede Flanke der vier Sensoren und der beiden Schalter mit ihrer BCM-Nummer aus
+und wartet auf den Abbruch mit Strg-C: ein Modellauto ueber jede Haltelinie schieben und beide
+Schalter umlegen.
 
 Haeufige Befunde:
 
-- Eine Lampe bleibt dunkel: LED verpolt oder Vorwiderstand nicht durchkontaktiert.
-- Alle Lampen einer Zufahrt falsch zugeordnet: `bit_order` in der Konfiguration anpassen.
+- Ein Kopf bleibt dunkel: DO des vorigen Sticks nicht mit DI verbunden, oder 5 V fehlt.
+- Lampen hinter den falschen Fenstern: `pixels` in der Konfiguration anpassen.
 - Ein Sensor meldet dauernd geschlossen: Magnet liegt zu nah am Sensor.
 - Ein Sensor meldet nichts: Magnet falsch herum, Decke zu dick, oder der A3144 haengt an
   3,3 V statt an 5 V.
@@ -86,11 +91,12 @@ journalctl -u ampel -f
 
 Der Betrieb ist immer adaptiv. Der Hauptschalter schaltet die ganze Anlage: offen gehen alle
 Lichter aus, geschlossen beginnt die Kreuzung mit Allrot und laeuft von dort die normale
-Folge. Aus dem dunklen Zustand folgt nie unmittelbar eine Freigabe.
+Folge. Aus dem dunklen Zustand folgt nie unmittelbar eine Freigabe. Beim Start des Dienstes
+werden beide Schalter eingelesen; steht der Hauptschalter offen, bleibt die Kreuzung dunkel.
 
-Das Einschalten beginnt zugleich eine neue Messung mit neuer Lauf-Kennung im Log. Wer zwei
-Abschnitte sauber trennen will, schaltet dazwischen kurz aus. Auch ein Notzustand endet so:
-aus und wieder an ist der Neustart, den die Sicherheitsregel verlangt.
+Ein Notzustand endet mit dem Zuruecklegen des Notschalters oder mit aus und wieder an. Beides
+ist der Neustart bei Allrot, den die Sicherheitsregel verlangt. Bei ausgeschalteter Anlage
+wirkt der Notschalter nicht.
 
 ## 6. Kaltstart pruefen
 
@@ -105,11 +111,13 @@ Nach dem Neustart muss die Kreuzung ohne Anmeldung steuern. Kontrolle aus der Fe
 
 ```
 systemctl status ampel
-ls -l /var/log/ampel
+journalctl -u ampel -b
+ampelctl status
 ```
 
 Faellt das Programm aus, startet systemd es nach zwei Sekunden neu. Beim geordneten Beenden
-gehen alle Signale auf Rot.
+gehen alle Signale auf Rot, eine laufende Freigabe ueber Gelb. Ist die Anlage ausgeschaltet,
+bleibt sie dunkel.
 
 ## 7. Wenn nichts leuchtet
 
@@ -119,11 +127,14 @@ gehen alle Signale auf Rot.
   `gpio`, oder die udev-Regel des Systems fehlt.
 - `device or resource busy`: ein zweiter Prozess haelt die Leitungen, meist ein vergessener
   Selbsttest.
-- Alle Lichter blinken gelb: der Regelkreis ist im Notzustand. Ursache steht im Journal, aus
-  dem Notzustand fuehrt nur ein Neustart.
-- Die Anzeige bleibt dunkel, die Kreuzung laeuft: der Grund steht im Journal. Meist fehlt
-  `dtparam=spi=on` in `/boot/config.txt`, oder der Nutzer `ampel` ist nicht in der Gruppe
-  `spi`. Die Anzeige ist bewusst Zubehoer und haelt die Steuerung nie an.
+- Alle Lichter blinken gelb: der Regelkreis ist im Notzustand, `ampelctl status` zeigt die
+  Phase `Stoerung`. Heraus fuehrt der Notschalter (umlegen und zuruecklegen, oder
+  `ampelctl not an` und `ampelctl not aus`) oder der Hauptschalter aus und wieder an.
+- Die Anzeige bleibt dunkel, die Kreuzung laeuft: der Grund steht im Journal unter
+  "Anzeige nicht verfuegbar" oder "Anzeige ausgefallen". Meist fehlt `dtparam=spi=on` in der
+  `config.txt`, oder der Nutzer `ampel` ist nicht in der Gruppe `spi`. Die Anzeige ist bewusst
+  Zubehoer: faellt sie aus, laeuft die Steuerung ohne sie weiter, bis zum naechsten Neustart
+  des Dienstes.
 
 ## 8. Zusammenspiel der Programme
 

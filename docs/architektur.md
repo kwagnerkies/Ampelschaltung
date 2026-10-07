@@ -17,20 +17,20 @@ Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 | Datei | Zeilen | Aufgabe |
 |---|---|---|
 | `ampel/signal.py` | 73 | Signalbilder, deutsche Folge, Konfliktmatrix |
-| `ampel/phase.py` | 93 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
+| `ampel/phase.py` | 95 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
 | `ampel/rule.py` | 11 | die ganze adaptive Regel |
-| `ampel/control.py` | 166 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
-| `ampel/driver/spi.py` | 23 | SPI-Zugriff ueber ioctl |
-| `ampel/driver/ws2812.py` | 40 | Lampenkette, drei SPI-Bits je WS2812-Bit |
-| `ampel/driver/tft.py` | 62 | ILI9341 mit Startfolge und Rechteckfuellung |
-| `ampel/driver/gpio.py` | 36 | sechs Leitungen ueber gpiozero |
-| `ampel/display.py` | 89 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
-| `ampel/api.py` | 64 | Schnittstelle ueber einen Unix-Socket |
-| `ampel/config.py` | 58 | TOML laden, Pins pruefen |
-| `ampel/main.py` | 163 | Verdrahtung, Selbsttest, Kommandozeile |
-| `ampelctl` | 77 | Bedienung von der Kommandozeile |
+| `ampel/control.py` | 184 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
+| `ampel/driver/spi.py` | 20 | SPI-Zugriff ueber ioctl |
+| `ampel/driver/ws2812.py` | 36 | Lampenkette, drei SPI-Bits je WS2812-Bit |
+| `ampel/driver/tft.py` | 64 | ILI9341 mit Startfolge und Rechteckfuellung |
+| `ampel/driver/gpio.py` | 36 | sieben Leitungen ueber gpiozero: Sensoren, Schalter, DC |
+| `ampel/display.py` | 90 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
+| `ampel/api.py` | 63 | Schnittstelle ueber einen Unix-Socket |
+| `ampel/config.py` | 90 | TOML laden, Pins und Werte pruefen |
+| `ampel/main.py` | 184 | Verdrahtung, Selbsttest, Kommandozeile |
+| `ampelctl` | 80 | Bedienung von der Kommandozeile |
 
-## Die acht Entscheidungen
+## Die neun Entscheidungen
 
 **1. Sicherheit unmittelbar vor der Ausgabe.** `signal.check` prueft jedes Signalbild gegen die
 Konfliktmatrix, `Output.show` in `control.py` ist der einzige Weg zu den Lampen. Die Pruefung
@@ -51,17 +51,27 @@ der Haltelinie das Ereignis, an dem `Controller.crossing` eine Ueberfahrt erkenn
 
 **5. Aus dem Dunkeln kommt immer Allrot.** `Controller.restart` setzt den Automaten zurueck.
 Nach dem Einschalten und nach dem Notzustand darf nie unmittelbar eine Freigabe folgen.
+Ausgeschaltet bleibt die Kreuzung dunkel, auch beim Start des Dienstes, beim Notschalter und
+beim Beenden.
 
 **6. Die Anzeige haengt als Beobachter dran.** `control.py` kennt kein Display; `main.py` holt
 sich jeden Takt einen Abtastwert und gibt ihn an `display.Screen`. Gezeichnet wird nur, was
-sich geaendert hat. Faellt die Anzeige aus, steuert die Kreuzung weiter.
+sich geaendert hat. Der Abtastwert enthaelt die Signalbilder, die wirklich an den Lampen
+stehen, nicht die des Automaten. Faellt die Anzeige aus, faengt `main.draw` den Fehler,
+schreibt ihn ins Journal und steuert ohne Anzeige weiter.
 
 **7. Die Schnittstelle ist ein zweiter Satz Schalter.** `api.py` ruft dieselbe Funktion wie
 eine Flanke am Kippschalter. Sie hoert auf einem Unix-Socket, nicht auf einem Port.
 
 **8. Alles Physikalische steht in der Konfiguration.** Pins, Pixelzuordnung, Zeiten.
-`config.validate` weist doppelte Pins und Pins auf SPI-Leitungen ab; genau das hat einen
-Verdrahtungsfehler gefunden, bevor geloetet wurde.
+`config.validate` weist doppelte Pins, Pins auf SPI-Leitungen, unbekannte Schluessel und
+Werte ausserhalb ihres Bereichs ab; genau das hat einen Verdrahtungsfehler gefunden, bevor
+geloetet wurde.
+
+**9. Ein Lock ordnet die Threads.** Flanken kommen aus dem Thread von `gpiozero`, Befehle aus
+dem Thread der Schnittstelle, der Takt aus der Hauptschleife. Jede oeffentliche Methode des
+`Controller` haelt dasselbe `RLock`, damit nie zwei Threads gleichzeitig an die Lampen
+schreiben. Die Methoden sind kurz, die Hauptschleife wartet hoechstens Mikrosekunden.
 
 ## Lesepfad
 
@@ -85,9 +95,11 @@ Wer nur fuenf Minuten hat, liest `Controller.step` und `Following.target`.
 
 ## Tests
 
-Sieben Dateien in `ampel/tests/`, 25 Tests: Konfliktmatrix, Signalfolge, vollstaendige Phasenfolge,
-jedes geschriebene Muster ueber zwei Minuten, die Regel mit dichtem und vereinzeltem Verkehr,
-beide Schalter, das WS2812-Frame zurueckdekodiert, das Kreuz-Layout, die Pinpruefung.
+Sieben Dateien in `ampel/tests/`, 33 Tests: Konfliktmatrix, Signalfolge, vollstaendige
+Phasenfolge, jedes geschriebene Muster ueber zwei Minuten, die Regel mit dichtem und
+vereinzeltem Verkehr, beide Schalter samt Start im ausgeschalteten Zustand, geordnetes
+Beenden, das WS2812-Frame zurueckdekodiert, das Kreuz-Layout und die Zeichenreihenfolge der
+Segmente, die Konfigurationspruefung, der Zustand der Schnittstelle im Notzustand.
 
 ```
 make test

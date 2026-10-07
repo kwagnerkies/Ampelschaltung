@@ -116,7 +116,7 @@ sudo -u ampel PYTHONPATH=/usr/local/lib/ampel python3 -m ampel.main \
   -config /etc/ampel/config.toml -selftest
 ```
 
-Testbild auf dem Display, dann jede der zwoelf Lampen einzeln, dann Sensorflanken auf der
+Testbild auf dem Display (88 in Gruen, Rot, Gelb, Weiss), dann jede der zwoelf Lampen einzeln, dann Sensorflanken auf der
 Konsole. Abbruch mit Strg-C.
 
 ## Tests
@@ -133,9 +133,9 @@ make test
 | `Permission denied` auf gpiochip0 | Nutzer `ampel` nicht in der Gruppe `gpio` |
 | Alle Sticks dunkel | `dtoverlay=spi1-1cs` fehlt oder Datenleitung ab |
 | Nur der erste Stick leuchtet | DO zu DI der Kette nicht verbunden |
-| Display bleibt dunkel, Anlage laeuft | `dtparam=spi=on` fehlt oder Nutzer nicht in der Gruppe `spi` |
-| Alles blinkt gelb | Notschalter liegt um, oder die Sicherheitspruefung hat angeschlagen |
-| Anlage ganz dunkel | Hauptschalter steht offen |
+| Display bleibt dunkel, Anlage laeuft | `dtparam=spi=on` fehlt oder Nutzer nicht in der Gruppe `spi`; Grund im Journal |
+| Alles blinkt gelb | Notschalter liegt um, oder die Sicherheitspruefung hat angeschlagen; `ampelctl status` zeigt Phase `Stoerung` |
+| Anlage ganz dunkel | Hauptschalter steht offen, auch schon beim Start des Dienstes |
 
 ## Schalter
 
@@ -144,7 +144,8 @@ make test
 | Hauptschalter | 4 | Anlage laeuft |
 | Notschalter | 27 | alle mittleren Lampen blinken gelb |
 
-Beide beginnen beim Zuruecklegen wieder bei Allrot.
+Beide beginnen beim Zuruecklegen wieder bei Allrot. Bei ausgeschalteter Anlage wirkt der
+Notschalter nicht. Beim Start des Dienstes werden beide Schalter eingelesen.
 
 ## Weiterfuehrend
 

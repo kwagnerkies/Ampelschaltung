@@ -4,7 +4,7 @@ Cyberphysisches System auf Raspberry Pi 2 B oder Pi 3, Sprache Python, Zielplatt
 
 ## 1. Projektziel
 
-Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen Ampelkopf aus drei einzelnen 5-mm-LEDs. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch Reed-Kontakte unter der Fahrbahnplatte. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet die ganze Anlage ein und aus, ein zweiter versetzt sie in den Notzustand mit gelbem Blinken. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
+Eine physische Modellkreuzung mit vier Zufahrten (Nord, Ost, Sued, West). Jede Zufahrt hat einen gedruckten Ampelkopf mit einem WS2812-Stick dahinter. Fahrzeuge sind gedruckte Modellautos mit eingelegten Magneten, erkannt durch je einen Hall-Sensor A3144 unter der Haltelinie. Die Steuerung verlaengert die Gruenzeit verkehrsabhaengig: fahren zwei Fahrzeuge dicht hintereinander ueber eine Haltelinie, bekommt diese Richtung mehr Gruen. Ein Kippschalter schaltet die ganze Anlage ein und aus, ein zweiter versetzt sie in den Notzustand mit gelbem Blinken. Ein Display zeigt die Gruenzeiten der vier Ampeln im Kreuz.
 
 Die Anlage misst nichts und beweist nichts: sie steuert, zeigt an und laesst sich schalten.
 
@@ -32,7 +32,7 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 - Python 3.11 oder neuer, wie es Raspberry Pi OS mitbringt. Der Code laeuft direkt auf dem Pi, kein Uebersetzen, kein Cross-Compile.
 
-- Einzige Abhaengigkeit ausserhalb der Standardbibliothek ist `python3-gpiozero` fuer die sechs GPIO-Leitungen. SPI, das WS2812-Bitmuster und der Displaycontroller sind selbst geschrieben.
+- Einzige Abhaengigkeit ausserhalb der Standardbibliothek ist `python3-gpiozero` fuer die sieben GPIO-Leitungen: vier Sensoren, zwei Schalter, DC der Anzeige. SPI, das WS2812-Bitmuster und der Displaycontroller sind selbst geschrieben.
 
 - Der Pi 2 hat kein WLAN an Bord. Netzwerk ueber Ethernet oder USB-Stick.
 
@@ -42,49 +42,28 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 ### 3.1 Strombudget
 
-Zwoelf LEDs haengen unmittelbar an je einer GPIO-Leitung. Das traegt das Budget des Pi, weil nie alle gleichzeitig leuchten: im ungeguenstigsten Fall zeigen zwei Koepfe Rot mit Gelb und zwei Koepfe Rot, also sechs Lampen. Bei etwa 5 mA je LED sind das 30 mA und damit unter der Empfehlung von 50 mA ueber alle Pins.
+Die vier Ampelkoepfe sind WS2812-Sticks mit je acht Pixeln, durchgeschleift an einer Datenleitung. Genutzt werden drei Pixel je Stick (Vorgabe 0, 4, 7 fuer rot, gelb, gruen). Die Daten laufen ueber SPI1, jedes WS2812-Bit als drei SPI-Bits bei 2,4 MHz. Es leuchten nie mehr als sechs Pixel gleichzeitig (zwei Koepfe Rot mit Gelb, zwei Rot); bei Helligkeit 60 von 255 sind das etwa 25 mA aus der 5-V-Schiene.
 
-Die Sensoren liegen am internen Pull-up, ein Reed-Kontakt schaltet gegen Masse. Aktiv ist der Low-Pegel.
+Die Sensoren liegen am internen Pull-up. Der A3144 hat einen offenen Kollektor und zieht bei Magnet gegen Masse. Aktiv ist der Low-Pegel. Die Schalter schalten ebenfalls gegen Masse.
 
 ### 3.2 Pinplan
 
 Der Plan liegt in der Konfigurationsdatei, nicht im Code. Startbelegung (BCM-Nummern):
 
 | Funktion | BCM | Richtung |
-
 |---|---|---|
-
-| Nord Rot, Gelb, Gruen | 17, 27, 22 | out |
-
-| Ost Rot, Gelb, Gruen | 5, 6, 13 | out |
-
-| Sued Rot, Gelb, Gruen | 19, 26, 12 | out |
-
-| West Rot, Gelb, Gruen | 16, 20, 21 | out |
-
-| Haltelinie Nord, Ost, Sued, West | 23, 24, 25, 8 | in, pull-up |
-
+| Lampenkette, Daten (SPI1 MOSI) | 20 | out |
+| Haltelinie Nord, Ost, Sued, West | 23, 24, 25, 3 | in, pull-up |
 | Hauptschalter | 4 | in, pull-up |
+| Notschalter | 27 | in, pull-up |
+| Anzeige SCK, MOSI, CS (SPI0) | 11, 10, 8 | out |
+| Anzeige DC | 2 | out |
 
-| Notschalter | 18 | in, pull-up |
-
-| Anzeige SCK, MOSI, CS, DC, Reset | 11, 10, 8, 7, 2 | out |
+RESET und Hintergrundlicht der Anzeige liegen fest auf 3,3 V. BCM 7 bis 11 (SPI0) und 18 bis 21 (SPI1) duerfen nicht anders belegt werden.
 
 ### 3.3 Sensor je Zufahrt
 
-Drei Reed-Kontakte in Fahrtrichtung hintereinander:
-
-- S0 direkt an der Haltelinie. Dient der Belegungserkennung und der Gruenzeitverlaengerung.
-
-- S1 etwa eine Fahrzeuglaenge plus Abstand dahinter.
-
-- S2 etwa zwei Fahrzeuglaengen dahinter.
-
-Der genaue Abstand haengt von der gedruckten Fahrzeuglaenge ab und wird in der Konfiguration als `queue_positions` hinterlegt.
-
-Wichtige physikalische Eigenschaft: ein Reed-Kontakt meldet Anwesenheit, nicht Durchfahrt. Ein stehendes Fahrzeug haelt den Kontakt dauerhaft geschlossen. Genau das macht die Rueckstaumessung erst moeglich und ist der Unterschied zu einer reinen Zaehlschranke.
-
-Rueckstau wird als Zahl belegter Sensoren von der Haltelinie aufwaerts gefuehrt. Belegt S2, zaehlt das bis dorthin, unabhaengig davon, ob S1 zufaellig in einer Luecke zwischen zwei Autos liegt. Eine Umrechnung in Fahrzeuge findet nicht statt, sie waere eine Annahme ohne Beleg.
+Ein Hall-Sensor A3144 je Zufahrt, unmittelbar an der Haltelinie. Er meldet Anwesenheit, nicht Durchfahrt: ein stehendes Fahrzeug haelt ihn dauerhaft aktiv. Als Ueberfahrt zaehlt deshalb das Freiwerden der Haltelinie. Eine Rueckstaumessung findet nicht statt.
 
 ### 3.4 Signalbild
 
@@ -92,7 +71,7 @@ Deutsche Signalfolge, nicht die amerikanische. Pro Ampelkopf:
 
 `Rot -> Rot und Gelb gleichzeitig (1 s) -> Gruen -> Gelb (3 s) -> Rot`
 
-Das bedeutet, dass zeitweise zwei LEDs eines Kopfes leuchten. Der Treiber muss das koennen.
+Das bedeutet, dass zeitweise zwei Pixel eines Kopfes leuchten. Der Treiber muss das koennen.
 
 ## 4. Softwarearchitektur
 
@@ -142,7 +121,7 @@ ampel/
 
       tft.py           ILI9341
 
-      gpio.py          die sechs Leitungen ueber gpiozero
+      gpio.py          die sieben Leitungen ueber gpiozero
 
     tests/             eine Datei je Gebiet
 
@@ -166,9 +145,9 @@ ampel/
 
 Der Steuerzustand gehoert der Hauptschleife. Sie taktet alle 50 ms, fragt nichts ab und wartet auf nichts.
 
-Zwei Dinge laufen daneben: `gpiozero` meldet Flanken aus einem eigenen Thread, und die Schnittstelle bedient `ampelctl` aus einem weiteren. Beide rufen nur kurze Methoden des Regelkreises auf und geben sofort zurueck; nichts davon blockiert die Schleife.
+Zwei Dinge laufen daneben: `gpiozero` meldet Flanken aus einem eigenen Thread, und die Schnittstelle bedient `ampelctl` aus einem weiteren. Beide rufen nur kurze Methoden des Regelkreises auf und geben sofort zurueck. Jede oeffentliche Methode des Regelkreises haelt dasselbe Lock, damit nie zwei Threads gleichzeitig an die Lampen schreiben.
 
-- Die Anzeige wird aus der Hauptschleife bedient. Ein Fehler der Anzeige haelt die Steuerung nie an.
+- Die Anzeige wird aus der Hauptschleife bedient. Ein Fehler der Anzeige, beim Start oder im Betrieb, wird ins Journal geschrieben; die Steuerung laeuft ohne Anzeige weiter.
 
 ## 5. Domaenenmodell
 
@@ -228,7 +207,13 @@ Ausschalten: alle Lichter gehen aus, der Phasenautomat steht still, Sensorereign
 
 Einschalten: die Anlage beginnt mit Allrot und laeuft von dort die normale Folge. Aus dem dunklen Zustand darf nie unmittelbar eine Freigabe folgen. Zugleich wird ein Notzustand verlassen: aus und wieder an ist der Neustart, den die Sicherheitsregel nach einer Stoerung verlangt.
 
+Beim Start des Dienstes werden beide Schalter eingelesen. Steht der Hauptschalter offen, bleibt die Kreuzung dunkel.
+
 ### 8.2 Notschalter
+
+Ein zweiter Kippschalter, ebenfalls mit 15 ms entprellt. Geschlossen geht die Anlage in den Notzustand: alle gelben Lampen blinken mit 1 Hz, der Phasenautomat steht, Sensorereignisse werden verworfen. Zurueckgelegt beginnt die Anlage bei Allrot.
+
+Bei ausgeschalteter Anlage wirkt der Notschalter nicht, die Kreuzung bleibt dunkel. Steht er beim Start des Dienstes geschlossen, beginnt die Anlage im Notzustand.
 
 ## 9. Anzeige
 
@@ -314,7 +299,7 @@ extension = 3.0
 
 ```
 
-Validierung beim Laden: kein Pin doppelt belegt, kein Pin auf einer SPI-Leitung, `pixels` drei verschiedene Werte von 0 bis 7. Fehlerhafte Konfiguration bricht den Start ab. `-validate` prueft und beendet.
+Validierung beim Laden: keine unbekannten Abschnitte oder Schluessel, Pins ganze Zahlen von 0 bis 27, kein Pin doppelt belegt, kein Pin auf einer SPI-Leitung, `pixels` drei verschiedene Werte von 0 bis 7, `brightness` von 0 bis 255, `rotation` `quer` oder `hoch`, alle Zeiten groesser 0, `max_green` nicht kleiner als `base_green`. Fehlerhafte Konfiguration bricht den Start mit einer Meldung ab. `-validate` prueft und beendet.
 
 ## 11. Sicherheit und Fehlerbehandlung
 
@@ -324,9 +309,9 @@ Auch ein Modell soll nie zwei konfliktaere Gruensignale zeigen. Die Pruefung lie
 
 - Zusaetzlich prueft `Aspect.can_follow` die deutsche Signalfolge: von Gruen kommt nur Gelb, nie direkt Rot.
 
-- Schlaegt eine der beiden Pruefungen fehl, geht die Anlage in den Notzustand: alle mittleren Lampen blinken mit 1 Hz gelb. Heraus fuehrt der Notschalter oder aus und wieder an.
+- Schlaegt eine der beiden Pruefungen fehl, geht die Anlage in den Notzustand: alle mittleren Lampen blinken mit 1 Hz gelb, `ampelctl status` zeigt die Phase `Stoerung`. Heraus fuehrt der Notschalter (umlegen und zuruecklegen) oder aus und wieder an.
 
-- `SIGINT` und `SIGTERM` fuehren zum geordneten Herunterfahren: alle Signale auf Rot, Lampen und GPIO freigeben.
+- `SIGINT` und `SIGTERM` fuehren zum geordneten Herunterfahren: eine laufende Freigabe ueber Gelb, dann alle Signale auf Rot, Lampen und GPIO freigeben. Ist die Anlage ausgeschaltet, bleibt sie dunkel. Lampen und GPIO werden auch dann freigegeben, wenn dabei ein Fehler auftritt.
 
 - Der Notzustand ist auch von Hand erreichbar, ueber den Notschalter oder `ampelctl not an`.
 
@@ -354,19 +339,19 @@ Testumfang, je eine Datei in `ampel/tests/`:
 
 - `test_signal`: kreuzende Freigaben werden abgewiesen, gegenueberliegende nicht, ein dunkler Kopf neben einer Freigabe gilt als Fehler, Rot darf nicht direkt auf Gruen folgen.
 
-- `test_control`: vollstaendige Phasenfolge ueber eine Minute, jedes geschriebene Muster ueber zwei Minuten zulaessig, beide Schalter, Restzeit auf der Anzeige.
+- `test_control`: vollstaendige Phasenfolge ueber eine Minute, jedes geschriebene Muster ueber zwei Minuten zulaessig, beide Schalter, Start im ausgeschalteten Zustand bleibt dunkel, Notschalter bei ausgeschalteter Anlage wirkungslos, geordnetes Beenden, Restzeit auf der Anzeige.
 
 - `test_rule`: zwei dichte Fahrzeuge verlaengern, vereinzelte nicht, die Gegenrichtung zaehlt nicht als Folge, die Hoechstgruenzeit begrenzt.
 
 - `test_driver`: das WS2812-Bitmuster wird zurueckdekodiert und gegen Pixel und Farbe geprueft, Helligkeit skaliert, dunkle Lampen bleiben schwarz.
 
-- `test_display`: Kreuz-Layout, nur geaenderte Felder werden neu gezeichnet.
+- `test_display`: Kreuz-Layout, nur geaenderte Felder werden neu gezeichnet, leuchtende Segmente werden zuletzt gezeichnet.
 
-- `test_config`: doppelte Pins und Pins auf SPI-Leitungen werden abgewiesen.
+- `test_config`: doppelte Pins, Pins auf SPI-Leitungen, unbekannte Schluessel und Werte ausserhalb ihres Bereichs werden abgewiesen.
 
-- `test_api`: der Zustand kommt vollstaendig als JSON heraus.
+- `test_api`: der Zustand kommt vollstaendig als JSON heraus, im Notzustand mit Phase `Stoerung` und den wirklich gezeigten Signalbildern.
 
-`make test` laeuft alle 25 in unter einer Sekunde.
+`make test` laeuft alle 33 in unter einer Sekunde.
 
 ## 13. Deployment
 
@@ -394,7 +379,7 @@ Systemd-Unit `deploy/ampel.service`:
 
 - Logs nach journald, Diagnose ueber `journalctl -u ampel -f`.
 
-`deploy/install.sh` legt Nutzer und Gruppen an, installiert `python3-gpiozero`, kopiert den Code nach `/usr/local/lib/ampel`, installiert `ampelctl` und die Unit und traegt `dtparam=spi=on` sowie `dtoverlay=spi1-1cs` in die `config.txt` des Bootverzeichnisses ein.
+`deploy/install.sh` legt Nutzer und Gruppen an, installiert `python3-gpiozero`, kopiert den Code samt `ampel/driver` nach `/usr/local/lib/ampel`, installiert `ampelctl` und die Unit und traegt `dtparam=spi=on` sowie `dtoverlay=spi1-1cs` in die `config.txt` des Bootverzeichnisses ein.
 
 ## 14. Arbeitspakete
 
@@ -446,24 +431,22 @@ Nicht Teil der Software, aber terminbestimmend, deshalb hier festgehalten.
 
 - Kreuzungsplatte gekachelt in mehrere Segmente, weil sie sonst kaum auf ein uebliches Druckbett passt. Verbindung ueber Steckzapfen.
 
-- Sensorkanaele auf der Unterseite so bemessen, dass Reed-Glaskoerper und Kabel ohne Kraft liegen. Glas bricht.
+- Sensorkanaele auf der Unterseite so bemessen, dass der A3144 und seine Kabel ohne Kraft liegen.
 
 - Fahrbahndecke ueber dem Sensor duenn halten, Richtwert 1,2 bis 1,6 mm, sonst reicht der Magnetfeldabstand nicht.
 
-- Modellautos mit Aufnahme fuer einen Neodymmagneten, Polung bei allen Fahrzeugen gleich. Magnetorientierung erst mit einem Testfahrzeug pruefen, bevor die ganze Serie gedruckt wird.
+- Modellautos mit Aufnahme fuer einen Neodymmagneten, Polung bei allen Fahrzeugen gleich, weil der A3144 nur auf einen Pol reagiert. Magnetorientierung erst mit einem Testfahrzeug pruefen, bevor die ganze Serie gedruckt wird.
 
-- Ampelmasten mit durchgehendem Kabelkanal, Gehaeuse aufsteckbar, damit LEDs tauschbar bleiben.
+- Ampelmasten mit durchgehendem Kabelkanal, Gehaeuse aufsteckbar, damit die Sticks tauschbar bleiben.
 
-- LED-Gehaeuse mit Blende gegen Streulicht, sonst leuchten auf Fotos alle drei Kammern gleichzeitig.
+- Ampelgehaeuse mit Blende gegen Streulicht, sonst leuchten auf Fotos alle drei Kammern gleichzeitig.
 
 - Zugentlastung fuer alle Leitungen an der Plattenunterseite. Die haeufigste Fehlerquelle in solchen Aufbauten ist eine abgerissene Litze, nicht der Code.
 
-## 16. Offene Entscheidungen
+## 16. Entscheidungen
 
-Diese Punkte vor AP2 klaeren, sie beeinflussen die Verdrahtung.
+- Ein Hall-Sensor je Zufahrt statt drei Reed-Kontakten. Sensorabstaende und Fahrzeuglaenge spielen damit keine Rolle mehr.
 
-- Fahrzeuglaenge und damit die Sensorabstaende.
+- Lampen als WS2812-Sticks an SPI1 statt zwoelf einzelner LEDs an GPIO.
 
-- Ob wirklich drei Sensoren pro Zufahrt verbaut werden oder zwei genuegen. Die Software behandelt die Anzahl bereits als konfigurierbar, damit die Entscheidung spaeter fallen kann.
-
-- Ob eine Fussgaengeranforderung ergaenzt wird. Fuer den ersten Ausbau bewusst nicht vorgesehen, das Phasenmodell laesst sich aber ohne Umbau erweitern.
+- Keine Fussgaengeranforderung im ersten Ausbau. Das Phasenmodell laesst sich ohne Umbau erweitern.

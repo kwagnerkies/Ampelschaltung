@@ -7,9 +7,9 @@ Steuerung.
 
 - `make test` und `sudo sh deploy/install.sh .` laufen lassen,
   danach `sudo reboot` und pruefen, ob die Kreuzung ohne Tastatur wieder steuert.
-- Selbsttest fahren, alle zwoelf Lampen und alle zwoelf Sensoren einmal ausloesen.
+- Selbsttest fahren, alle zwoelf Lampen, alle vier Sensoren und beide Schalter einmal ausloesen.
 - Mindestens zwoelf Modellautos bereitlegen, alle mit gleich gepoltem Magneten.
-- Ersatz mitnehmen: geladenes Netzteil, zweite SD-Karte, Ersatz-LEDs und ein zweites Modellauto.
+- Ersatz mitnehmen: Netzteil, zweite SD-Karte, Ersatz-Stick, Ersatz-A3144 und ein zweites Modellauto.
 
 ## Vorbereitung am Tag selbst
 
@@ -19,7 +19,7 @@ systemctl status ampel
 journalctl -u ampel -n 20
 ```
 
-Hauptschalter kurz aus und wieder an. Ab hier laeuft eine frische Messung, und du hast
+Hauptschalter kurz aus und wieder an. Die Kreuzung beginnt damit frisch bei Allrot, und du hast
 zugleich gezeigt, dass der Schalter die Anlage wirklich schaltet.
 
 ## Abschnitt 1, die Anlage laeuft, etwa zwei Minuten
@@ -56,12 +56,12 @@ ist Schluss, sonst wartet die andere Richtung zu lange.
 
 ## Abschnitt 4, Notzustand, etwa zwei Minuten
 
-Notschalter umlegen. Alle zwoelf Lichter blinken im Sekundentakt gelb, der Phasenablauf steht.
+Notschalter umlegen. Die vier gelben Lampen blinken im Sekundentakt, der Phasenablauf steht.
 Das ist das Bild, das jeder von einer gestoerten Ampel kennt: Anlage ausser Betrieb, jeder
 faehrt auf Sicht.
 
 Derselbe Zustand entsteht von allein, wenn die Sicherheitspruefung zwei kreuzende Freigaben
-abweisen muesste.
+abweisen muesste. `ampelctl status` zeigt dann die Phase `Stoerung`.
 
 Notschalter zuruecklegen: die Anlage beginnt wieder bei Allrot und laeuft von dort die normale
 Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
@@ -75,7 +75,8 @@ Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
 - Was passiert bei einem Fehler? Die Sicherheitspruefung sitzt unmittelbar vor der Ausgabe.
   Schlaegt sie an, blinkt alles gelb, bis jemand den Notschalter zuruecklegt oder die Anlage
   aus und wieder an schaltet.
-- Reicht der Strom fuer zwoelf LEDs? Es leuchten nie mehr als sechs gleichzeitig, bei 5 mA je LED sind das 30 mA.
+- Reicht der Strom fuer zwoelf Lampen? Es leuchten nie mehr als sechs Pixel gleichzeitig, bei
+  Helligkeit 60 von 255 sind das etwa 25 mA aus der 5-V-Schiene.
 
 ## Wenn die Hardware streikt
 
