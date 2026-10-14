@@ -124,7 +124,7 @@ def run(settings):
             time.sleep(TICK)
     finally:
         try:
-            controller.shutdown()
+            controller.shutdown(time.monotonic())
         finally:
             if server:
                 server.shutdown()

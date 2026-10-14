@@ -134,11 +134,16 @@ class Controller:
         self.flash_on = False
         self._flash(now)
 
-    def shutdown(self, wait=time.sleep):
+    def shutdown(self, now, wait=time.sleep):
         with self.lock:
             if not self.on or not self.begun:
                 return
-            if Aspect.GREEN in self.output.shown:
+            state = self.machine.state
+            if state.stage is Stage.YELLOW:
+                remaining = self.timing.yellow - (now - state.since)
+                if remaining > 0:
+                    wait(remaining)
+            elif Aspect.GREEN in self.output.shown:
                 yellow = []
                 for aspect in self.output.shown:
                     if aspect is Aspect.GREEN:

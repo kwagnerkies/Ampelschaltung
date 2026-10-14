@@ -1,17 +1,13 @@
 import json
 import os
-import socket
+import socketserver
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler
 
 from .signal import DIRECTION_NAMES, DIRECTIONS
 
 SWITCHES = ["hauptschalter", "notschalter"]
 POSITIONS = ["an", "aus"]
-
-
-class UnixServer(HTTPServer):
-    address_family = socket.AF_UNIX
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -45,7 +41,7 @@ class Handler(BaseHTTPRequestHandler):
 def serve(path, state, command):
     if os.path.exists(path):
         os.remove(path)
-    server = UnixServer(path, Handler)
+    server = socketserver.UnixStreamServer(path, Handler)
     server.state = state
     server.command = command
     os.chmod(path, 0o660)

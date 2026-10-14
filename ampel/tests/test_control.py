@@ -96,21 +96,55 @@ class SwitchTest(unittest.TestCase):
         now = run(self.controller, 8)
         self.assertIs(self.controller.machine.state.stage, Stage.GREEN)
         self.controller.power(now, False)
-        self.controller.shutdown()
+        self.controller.shutdown(now)
         self.assertEqual(self.lamps.frames[-1], [False] * 12)
 
-    def test_shutdown_in_green_holds_yellow_before_red(self):
-        run(self.controller, 8)
+    def record_waits(self):
         waited = []
 
         def wait(seconds):
             waited.append((seconds, aspects_of(self.lamps.frames[-1])))
 
-        self.controller.shutdown(wait)
+        return waited, wait
+
+    def run_until(self, stage, now=0.0):
+        while self.controller.machine.state.stage is not stage:
+            self.controller.step(now)
+            now += 0.05
+        return now
+
+    def test_shutdown_in_green_holds_yellow_before_red(self):
+        now = run(self.controller, 8)
+        waited, wait = self.record_waits()
+        self.controller.shutdown(now, wait)
         self.assertEqual(len(waited), 1)
         self.assertEqual(waited[0][0], Timing().yellow)
         self.assertIn(Aspect.YELLOW, waited[0][1])
         self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
+
+    def test_shutdown_in_running_yellow_waits_the_rest(self):
+        now = self.run_until(Stage.YELLOW)
+        since = self.controller.machine.state.since
+        waited, wait = self.record_waits()
+        self.controller.shutdown(since + 1.0, wait)
+        self.assertEqual(len(waited), 1)
+        self.assertAlmostEqual(waited[0][0], Timing().yellow - 1.0)
+        self.assertIn(Aspect.YELLOW, waited[0][1])
+        self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
+
+    def test_shutdown_after_yellow_is_over_does_not_wait(self):
+        self.run_until(Stage.YELLOW)
+        since = self.controller.machine.state.since
+        waited, wait = self.record_waits()
+        self.controller.shutdown(since + Timing().yellow + 0.5, wait)
+        self.assertEqual(waited, [])
+        self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
+
+    def test_shutdown_in_all_red_does_not_wait(self):
+        self.run_until(Stage.ALL_RED)
+        waited, wait = self.record_waits()
+        self.controller.shutdown(0.0, wait)
+        self.assertEqual(waited, [])
 
     def test_warning_held_through_power_cycle_keeps_flashing(self):
         now = run(self.controller, 8)

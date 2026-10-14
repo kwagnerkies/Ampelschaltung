@@ -5,7 +5,7 @@ After=local-fs.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 -m ampel.main -config /etc/ampel/config.toml
-WorkingDirectory=/usr/local/lib/ampel
+WorkingDirectory=/run/ampel
 Environment=PYTHONPATH=/usr/local/lib/ampel
 User=ampel
 Group=gpio
