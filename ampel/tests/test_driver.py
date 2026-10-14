@@ -30,6 +30,8 @@ class DriverTest(unittest.TestCase):
                     index = bit + offset
                     if frame[index // 8] & (0x80 >> (index % 8)):
                         pattern |= 1 << (2 - offset)
+                if pattern not in (0b100, 0b110):
+                    raise AssertionError(f"Pixel {pixel}: kein gueltiges Bitmuster {pattern:03b}")
                 value = (value << 1) | (1 if pattern == 0b110 else 0)
                 bit += 3
             values.append(value)
@@ -48,6 +50,17 @@ class DriverTest(unittest.TestCase):
         self.strip.write([False] * 12)
         for pixel in range(32):
             self.assertEqual(self.decode(self.tape.frames[0], pixel), [0, 0, 0])
+
+    def test_dark_pixels_between_lit_ones_carry_data(self):
+        lamps = [False] * 12
+        lamps[0] = lamps[5] = True
+        self.strip.write(lamps)
+        frame = self.tape.frames[0]
+        self.assertEqual(len(frame), 32 * 9 + 60)
+        for pixel in range(32):
+            expected = {0: [0, 255, 0], 8 + 7: [255, 0, 0]}.get(pixel, [0, 0, 0])
+            self.assertEqual(self.decode(frame, pixel), expected)
+        self.assertEqual(frame[32 * 9:], bytes(60))
 
     def test_brightness_scales(self):
         from ..driver import Strip

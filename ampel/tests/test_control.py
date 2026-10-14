@@ -1,3 +1,5 @@
+import contextlib
+import io
 import unittest
 
 from .support import Lamps, aspects_of, run
@@ -17,7 +19,7 @@ class SequenceTest(unittest.TestCase):
         now = 0.0
         while now < 60:
             self.controller.step(now)
-            name = self.controller.machine.state.name
+            name = self.controller.machine.state.name()
             if not seen or seen[-1] != name:
                 seen.append(name)
             now += 0.05
@@ -41,6 +43,7 @@ class SequenceTest(unittest.TestCase):
 
 class SwitchTest(unittest.TestCase):
     def setUp(self):
+        self.errors = self.enterContext(contextlib.redirect_stderr(io.StringIO()))
         self.lamps = Lamps()
         self.controller = Controller(self.lamps, Following(5, 3, 20), Timing())
 
@@ -96,11 +99,75 @@ class SwitchTest(unittest.TestCase):
         self.controller.shutdown()
         self.assertEqual(self.lamps.frames[-1], [False] * 12)
 
-    def test_shutdown_in_green_passes_yellow_to_red(self):
+    def test_shutdown_in_green_holds_yellow_before_red(self):
         run(self.controller, 8)
-        self.controller.shutdown()
-        self.assertIn(Aspect.YELLOW, aspects_of(self.lamps.frames[-2]))
+        waited = []
+
+        def wait(seconds):
+            waited.append((seconds, aspects_of(self.lamps.frames[-1])))
+
+        self.controller.shutdown(wait)
+        self.assertEqual(len(waited), 1)
+        self.assertEqual(waited[0][0], Timing().yellow)
+        self.assertIn(Aspect.YELLOW, waited[0][1])
         self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
+
+    def test_warning_held_through_power_cycle_keeps_flashing(self):
+        now = run(self.controller, 8)
+        self.controller.warn(now, True)
+        self.controller.power(now + 1, False)
+        self.controller.power(now + 2, True)
+        run(self.controller, 5, start=now + 2)
+        self.assertTrue(self.controller.snapshot(now + 7).warning)
+        for frame in self.lamps.frames[-5:]:
+            self.assertNotIn(Aspect.GREEN, aspects_of(frame))
+            self.assertNotIn(Aspect.RED, aspects_of(frame))
+
+    def test_warning_switched_while_off_applies_at_power_on(self):
+        now = run(self.controller, 8)
+        self.controller.power(now, False)
+        self.controller.warn(now + 1, True)
+        self.controller.power(now + 2, True)
+        self.assertTrue(self.controller.snapshot(now + 2).warning)
+        self.controller.warn(now + 3, False)
+        self.assertEqual(aspects_of(self.lamps.frames[-1]), [Aspect.RED] * 4)
+        self.assertFalse(self.controller.snapshot(now + 3).warning)
+
+    def test_status_shows_closed_switch_while_off(self):
+        now = run(self.controller, 8)
+        self.controller.power(now, False)
+        self.controller.warn(now + 1, True)
+        snapshot = self.controller.snapshot(now + 1)
+        self.assertFalse(snapshot.on)
+        self.assertTrue(snapshot.warning)
+        self.assertEqual(snapshot.aspects, [Aspect.OFF] * 4)
+
+    def test_snapshot_stays_steady_while_flashing(self):
+        now = run(self.controller, 8)
+        self.controller.warn(now, True)
+        for offset in (0.2, 0.7, 1.2, 1.7):
+            self.controller.step(now + offset)
+            aspects = self.controller.snapshot(now + offset).aspects
+            self.assertEqual(aspects, [Aspect.YELLOW_FLASH] * 4)
+
+    def test_broken_output_in_fault_does_not_escape(self):
+        now = run(self.controller, 8)
+        self.controller.warn(now, True)
+
+        def broken(state):
+            raise OSError("spi weg")
+
+        self.lamps.write = broken
+        run(self.controller, 3, start=now)
+        self.assertIn("Lampen nicht erreichbar: spi weg", self.errors.getvalue())
+
+    def test_illegal_transition_enters_fault(self):
+        now = run(self.controller, 1)
+        self.controller.output.shown = [Aspect.GREEN] * 4
+        self.controller.machine.advance = lambda moment, end: True
+        self.controller.step(now)
+        self.assertTrue(self.controller.snapshot(now).warning)
+        self.assertIn("Notzustand", self.errors.getvalue())
 
 
 class DisplayValuesTest(unittest.TestCase):
@@ -111,7 +178,7 @@ class DisplayValuesTest(unittest.TestCase):
             controller.step(now)
             now += 0.05
         controller.step(now + 1)
-        direction = controller.machine.state.phase.directions[0]
+        direction = controller.machine.state.phase.directions()[0]
         before = controller.snapshot(now + 1).green[direction]
         controller.crossing(now + 1, direction)
         controller.crossing(now + 1.5, direction)

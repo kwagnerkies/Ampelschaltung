@@ -4,6 +4,7 @@ from gpiozero import Button, DigitalOutputDevice
 class Lines:
     def __init__(self):
         self.devices = []
+        self.buttons = {}
 
     def output(self, pin):
         device = DigitalOutputDevice(pin)
@@ -16,12 +17,14 @@ class Lines:
             button.when_pressed = lambda pin=pin: handler(pin, True)
             button.when_released = lambda pin=pin: handler(pin, False)
             self.devices.append(button)
+            self.buttons[pin] = button
 
     def read(self, pin):
-        for device in self.devices:
-            if isinstance(device, Button) and device.pin.number == pin:
-                return device.is_pressed
-        return False
+        return self.buttons[pin].is_pressed
+
+    def release(self, output):
+        self.devices.remove(output.device)
+        output.device.close()
 
     def close(self):
         for device in self.devices:

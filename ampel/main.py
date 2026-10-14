@@ -3,17 +3,19 @@ import signal as unix_signal
 import sys
 import time
 
-from . import api, config, display, driver
+from . import api, config, display
 from .control import Controller, Timing
+from .driver.selftest import selftest
+from .hardware import open_screen, open_strip
 from .rule import Following
-from .signal import DIRECTIONS, DIRECTION_NAMES
+from .signal import EAST, NORTH, SOUTH, WEST
 
 TICK = 0.05
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="ampel")
-    parser.add_argument("-config", default="/etc/ampel/config.toml")
+    parser.add_argument("-config")
     parser.add_argument("-validate", action="store_true")
     parser.add_argument("-selftest", action="store_true")
     args = parser.parse_args(argv)
@@ -35,8 +37,8 @@ def summary(settings):
     print("Konfiguration in Ordnung")
     lamps = settings["lamps"]
     print(f"  Lampen        {lamps['spi']}, Helligkeit {lamps['brightness']}, Pixel {lamps['pixels']}")
-    for name, pin in settings["sensors"].items():
-        print(f"  Haltelinie    {name:<6} BCM {pin}")
+    for name in settings["sensors"]:
+        print(f"  Haltelinie    {name:<6} BCM {settings['sensors'][name]}")
     print(f"  Schalter      Haupt BCM {settings['switches']['power']}, "
           f"Not BCM {settings['switches']['fault']}")
     timing = settings["timing"]
@@ -46,34 +48,12 @@ def summary(settings):
     print(f"  Verlaengerung {timing['extension']}s je Fahrzeug binnen {timing['follow']}s")
 
 
-def build(settings):
-    lamps = settings["lamps"]
-    strip = driver.Strip(
-        driver.Spi(lamps["spi"], lamps["speed_hz"]),
-        len(DIRECTIONS), lamps["brightness"], lamps["pixels"],
-    )
+def build(settings, strip):
     timing = settings["timing"]
     rule = Following(timing["base_green"], timing["extension"], timing["max_green"])
-    controller = Controller(strip, rule,
-                            Timing(timing["yellow"], timing["all_red"], timing["red_yellow"]),
-                            timing["follow"], time.monotonic())
-    return controller, strip
-
-
-def open_screen(settings, lines):
-    shown = settings["display"]
-    if not shown["enabled"]:
-        return None, None
-    try:
-        panel = driver.Tft(
-            driver.Spi(shown["spi"], shown["speed_hz"]),
-            lines.output(shown["dc"]),
-            driver.Tft.PORTRAIT if shown["rotation"] == "hoch" else driver.Tft.LANDSCAPE,
-        )
-    except Exception as error:
-        print(f"Anzeige nicht verfuegbar, Steuerung laeuft ohne: {error}", file=sys.stderr)
-        return None, None
-    return display.Screen(panel), panel
+    return Controller(strip, rule,
+                      Timing(timing["yellow"], timing["all_red"], timing["red_yellow"]),
+                      timing["follow"], time.monotonic())
 
 
 def draw(screen, controller, now):
@@ -87,13 +67,23 @@ def draw(screen, controller, now):
 
 def run(settings):
     from .driver.gpio import Lines
-    lines = Lines()
-    controller, strip = build(settings)
-    screen, panel = open_screen(settings, lines)
+    stopping = []
 
-    sensors = {pin: direction for direction, pin in
-               zip(DIRECTIONS, [settings["sensors"][name.lower()] for name in
-                                ("north", "east", "south", "west")])}
+    def stop(signal_number, frame):
+        stopping.append(True)
+
+    unix_signal.signal(unix_signal.SIGTERM, stop)
+    unix_signal.signal(unix_signal.SIGINT, stop)
+
+    lines = Lines()
+    strip = open_strip(settings)
+    controller = build(settings, strip)
+    screen = None
+    panel = None
+    server = None
+
+    pins = settings["sensors"]
+    sensors = {pins["north"]: NORTH, pins["east"]: EAST, pins["south"]: SOUTH, pins["west"]: WEST}
     power_pin = settings["switches"]["power"]
     fault_pin = settings["switches"]["fault"]
 
@@ -107,24 +97,25 @@ def run(settings):
         elif pin == fault_pin:
             controller.warn(now, closed)
 
-    lines.watch(list(sensors) + [power_pin, fault_pin], edge)
-    controller.power(time.monotonic(), lines.read(power_pin))
-    controller.warn(time.monotonic(), lines.read(fault_pin))
+    def status():
+        return api.status_of(controller.snapshot(time.monotonic()))
 
-    server = None
-    if settings["api"]["enabled"]:
-        server = api.serve(
-            settings["api"]["socket"],
-            lambda: api.status_of(controller.snapshot(time.monotonic())),
-            lambda switch, on: edge(power_pin if switch == "hauptschalter" else fault_pin, on),
-        )
+    def command(switch, on):
+        if switch == "hauptschalter":
+            edge(power_pin, on)
+        else:
+            edge(fault_pin, on)
 
-    stopping = []
-    unix_signal.signal(unix_signal.SIGTERM, lambda *_: stopping.append(True))
-    unix_signal.signal(unix_signal.SIGINT, lambda *_: stopping.append(True))
-
-    print("Betrieb gestartet")
     try:
+        screen, panel = open_screen(settings, lines)
+        lines.watch(list(sensors) + [power_pin, fault_pin], edge)
+        controller.power(time.monotonic(), lines.read(power_pin))
+        controller.warn(time.monotonic(), lines.read(fault_pin))
+
+        if settings["api"]["enabled"]:
+            server = api.serve(settings["api"]["socket"], status, command)
+
+        print("Betrieb gestartet")
         while not stopping:
             now = time.monotonic()
             controller.step(now)
@@ -141,42 +132,6 @@ def run(settings):
                 panel.close()
             strip.close()
             lines.close()
-    return 0
-
-
-def selftest(settings):
-    from .driver.gpio import Lines
-    lines = Lines()
-    _, strip = build(settings)
-    screen, panel = open_screen(settings, lines)
-
-    if screen:
-        print("Anzeigetest: vier mal 88 in Gruen, Rot, Gelb und Weiss")
-        colors = (display.GREEN, display.RED, display.YELLOW, display.WHITE)
-        screen.update({d: (88, color) for d, color in zip(DIRECTIONS, colors)})
-    print("Lampentest, jede Lampe einzeln:")
-    for index in range(len(DIRECTIONS) * 3):
-        lamps = [False] * (len(DIRECTIONS) * 3)
-        lamps[index] = True
-        strip.write(lamps)
-        print(f"  Stick {index // 3} Pixel {settings['lamps']['pixels'][index % 3]}  "
-              f"{DIRECTION_NAMES[index // 3]} {('Rot', 'Gelb', 'Gruen')[index % 3]}")
-        time.sleep(0.4)
-    strip.write([False] * 12)
-
-    print("Sensortest, Fahrzeug ueber die Kontakte schieben. Abbruch mit Strg-C.")
-    lines.watch(list(settings["sensors"].values()) + list(settings["switches"].values()),
-                lambda pin, closed: print(f"  BCM {pin} {'geschlossen' if closed else 'offen'}"))
-    try:
-        while True:
-            time.sleep(0.2)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        if panel:
-            panel.close()
-        strip.close()
-        lines.close()
     return 0
 
 

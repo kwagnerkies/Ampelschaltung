@@ -9,13 +9,17 @@ class Phase(Enum):
     EW = "OW"
     FAULT = "Stoerung"
 
-    @property
     def directions(self):
-        return {Phase.NS: (NORTH, SOUTH), Phase.EW: (EAST, WEST)}.get(self, ())
+        if self is Phase.NS:
+            return [NORTH, SOUTH]
+        if self is Phase.EW:
+            return [EAST, WEST]
+        return []
 
-    @property
     def other(self):
-        return Phase.NS if self is Phase.EW else Phase.EW
+        if self is Phase.EW:
+            return Phase.NS
+        return Phase.EW
 
 
 class Stage(Enum):
@@ -26,7 +30,9 @@ class Stage(Enum):
 
 
 def phase_of(direction):
-    return Phase.NS if direction in (NORTH, SOUTH) else Phase.EW
+    if direction in (NORTH, SOUTH):
+        return Phase.NS
+    return Phase.EW
 
 
 class State:
@@ -36,7 +42,6 @@ class State:
         self.since = since
         self.target = target
 
-    @property
     def name(self):
         if self.phase is Phase.FAULT:
             return Phase.FAULT.value
@@ -44,17 +49,18 @@ class State:
             return Stage.ALL_RED.value
         return f"{self.phase.value}_{self.stage.value}"
 
-    @property
     def aspects(self):
-        showing = {
-            Stage.GREEN: Aspect.GREEN,
-            Stage.YELLOW: Aspect.YELLOW,
-            Stage.RED_YELLOW: Aspect.RED_YELLOW,
-        }.get(self.stage)
         aspects = [Aspect.RED for _ in DIRECTIONS]
-        if showing:
-            for direction in self.phase.directions:
-                aspects[direction] = showing
+        if self.stage is Stage.GREEN:
+            showing = Aspect.GREEN
+        elif self.stage is Stage.YELLOW:
+            showing = Aspect.YELLOW
+        elif self.stage is Stage.RED_YELLOW:
+            showing = Aspect.RED_YELLOW
+        else:
+            return aspects
+        for direction in self.phase.directions():
+            aspects[direction] = showing
         return aspects
 
 
@@ -77,7 +83,7 @@ class Machine:
         elif stage is Stage.ALL_RED:
             if elapsed < self.timing.all_red:
                 return False
-            self._enter(now, self.state.phase.other, Stage.RED_YELLOW)
+            self._enter(now, self.state.phase.other(), Stage.RED_YELLOW)
         else:
             if elapsed < self.timing.red_yellow:
                 return False
@@ -91,5 +97,7 @@ class Machine:
         self.state = State(Phase.FAULT, Stage.ALL_RED, now)
 
     def _enter(self, now, phase, stage):
-        target = self.state.target if stage is Stage.GREEN else 0.0
+        target = 0.0
+        if stage is Stage.GREEN:
+            target = self.state.target
         self.state = State(phase, stage, now, target)

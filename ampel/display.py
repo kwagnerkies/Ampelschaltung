@@ -1,4 +1,4 @@
-from .signal import Aspect, DIRECTIONS
+from .signal import Aspect, DIRECTIONS, EAST, NORTH, SOUTH, WEST
 
 BLACK, GREY, RED, YELLOW, GREEN, WHITE = 0x0000, 0x39E7, 0xF800, 0xFFE0, 0x07E0, 0xFFFF
 
@@ -28,14 +28,16 @@ class Screen:
     def __init__(self, canvas):
         self.canvas = canvas
         width, height = canvas.size()
-        box_width, box_height = width // 3, height // 4
-        center_x, center_y = (width - box_width) // 2, (height - box_height) // 2
+        box_width = width // 3
+        box_height = height // 4
+        center_x = (width - box_width) // 2
+        center_y = (height - box_height) // 2
         margin = box_height // 4
         self.boxes = {
-            0: (center_x, margin, box_width, box_height),
-            1: (width - box_width - margin, center_y, box_width, box_height),
-            2: (center_x, height - box_height - margin, box_width, box_height),
-            3: (margin, center_y, box_width, box_height),
+            NORTH: (center_x, margin, box_width, box_height),
+            EAST: (width - box_width - margin, center_y, box_width, box_height),
+            SOUTH: (center_x, height - box_height - margin, box_width, box_height),
+            WEST: (margin, center_y, box_width, box_height),
         }
         self.last = {}
 
@@ -50,14 +52,8 @@ class Screen:
             self._number(self.boxes[direction], seconds, color)
             self.last[direction] = fields[direction]
 
-    def clear(self):
-        width, height = self.canvas.size()
-        self.canvas.fill(0, 0, width, height, BLACK)
-        self.last = {}
-
     def _number(self, box, value, color):
         x, y, width, height = box
-        value = max(0, min(99, value))
         gap = width // 10
         digit = (width - gap) // 2
         self._digit(x, y, digit, height, value // 10, color)
@@ -75,16 +71,21 @@ class Screen:
             (x, y, thick, half),
             (x, y + half, width, thick),
         )
-        segments = list(zip(SEGMENTS[value], boxes))
-        for lit, box in sorted(segments, key=lambda segment: segment[0]):
-            self.canvas.fill(*box, color if lit else GREY)
+        lit = SEGMENTS[value]
+        for index in range(len(boxes)):
+            if not lit[index]:
+                box_x, box_y, box_width, box_height = boxes[index]
+                self.canvas.fill(box_x, box_y, box_width, box_height, GREY)
+        for index in range(len(boxes)):
+            if lit[index]:
+                box_x, box_y, box_width, box_height = boxes[index]
+                self.canvas.fill(box_x, box_y, box_width, box_height, color)
 
 
 def fields_from(snapshot):
-    return {
-        direction: (
-            round(snapshot.green[direction]),
-            COLORS.get(snapshot.aspects[direction], GREY),
-        )
-        for direction in DIRECTIONS
-    }
+    fields = {}
+    for direction in DIRECTIONS:
+        seconds = round(snapshot.green[direction])
+        color = COLORS.get(snapshot.aspects[direction], GREY)
+        fields[direction] = (seconds, color)
+    return fields

@@ -111,7 +111,9 @@ ampel/
 
     config.py          TOML laden, Pins pruefen
 
-    main.py            Verdrahtung, Selbsttest, Kommandozeile
+    hardware.py        Lampenkette und Anzeige oeffnen
+
+    main.py            Verdrahtung, Kommandozeile
 
     driver/
 
@@ -122,6 +124,8 @@ ampel/
       tft.py           ILI9341
 
       gpio.py          die sieben Leitungen ueber gpiozero
+
+      selftest.py      Selbsttest der Hardware
 
     tests/             eine Datei je Gebiet
 
@@ -213,7 +217,7 @@ Beim Start des Dienstes werden beide Schalter eingelesen. Steht der Hauptschalte
 
 Ein zweiter Kippschalter, ebenfalls mit 15 ms entprellt. Geschlossen geht die Anlage in den Notzustand: alle gelben Lampen blinken mit 1 Hz, der Phasenautomat steht, Sensorereignisse werden verworfen. Zurueckgelegt beginnt die Anlage bei Allrot.
 
-Bei ausgeschalteter Anlage wirkt der Notschalter nicht, die Kreuzung bleibt dunkel. Steht er beim Start des Dienstes geschlossen, beginnt die Anlage im Notzustand.
+Bei ausgeschalteter Anlage wirkt der Notschalter nicht, die Kreuzung bleibt dunkel. Seine Stellung wird aber gemerkt: steht er beim Einschalten oder beim Start des Dienstes geschlossen, beginnt die Anlage im Notzustand.
 
 ## 9. Anzeige
 
@@ -311,7 +315,7 @@ Auch ein Modell soll nie zwei konfliktaere Gruensignale zeigen. Die Pruefung lie
 
 - Schlaegt eine der beiden Pruefungen fehl, geht die Anlage in den Notzustand: alle mittleren Lampen blinken mit 1 Hz gelb, `ampelctl status` zeigt die Phase `Stoerung`. Heraus fuehrt der Notschalter (umlegen und zuruecklegen) oder aus und wieder an.
 
-- `SIGINT` und `SIGTERM` fuehren zum geordneten Herunterfahren: eine laufende Freigabe ueber Gelb, dann alle Signale auf Rot, Lampen und GPIO freigeben. Ist die Anlage ausgeschaltet, bleibt sie dunkel. Lampen und GPIO werden auch dann freigegeben, wenn dabei ein Fehler auftritt.
+- `SIGINT` und `SIGTERM` fuehren zum geordneten Herunterfahren: eine laufende Freigabe ueber die volle Gelbzeit, dann alle Signale auf Rot, Lampen und GPIO freigeben. Ist die Anlage ausgeschaltet, bleibt sie dunkel. Lampen und GPIO werden auch dann freigegeben, wenn dabei ein Fehler auftritt.
 
 - Der Notzustand ist auch von Hand erreichbar, ueber den Notschalter oder `ampelctl not an`.
 

@@ -1,3 +1,4 @@
+import copy
 import tomllib
 
 DEFAULTS = {
@@ -21,70 +22,82 @@ class ConfigError(Exception):
 
 
 def load(path=None):
-    config = {section: dict(values) for section, values in DEFAULTS.items()}
-    if path:
+    config = copy.deepcopy(DEFAULTS)
+    if path is not None:
         try:
             with open(path, "rb") as handle:
-                for section, values in tomllib.load(handle).items():
-                    if section not in config:
-                        raise ConfigError(f"unbekannter Abschnitt {section}")
-                    if not isinstance(values, dict):
-                        raise ConfigError(f"{section} muss ein Abschnitt sein")
-                    for key in values:
-                        if key not in DEFAULTS[section]:
-                            raise ConfigError(f"unbekannter Schluessel {section}.{key}")
-                    config[section].update(values)
+                loaded = tomllib.load(handle)
         except FileNotFoundError:
-            pass
+            raise ConfigError(f"{path} nicht gefunden")
         except tomllib.TOMLDecodeError as error:
-            raise ConfigError(f"{path}: {error}") from error
+            raise ConfigError(f"{path}: {error}")
+        for section in loaded:
+            if section not in config:
+                raise ConfigError(f"unbekannter Abschnitt {section}")
+            for key in loaded[section]:
+                if key not in config[section]:
+                    raise ConfigError(f"unbekannter Schluessel {section}.{key}")
+                config[section][key] = loaded[section][key]
     validate(config)
     return config
 
 
 def is_integer(value):
-    return isinstance(value, int) and not isinstance(value, bool)
+    return type(value) is int
 
 
 def is_number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return type(value) is int or type(value) is float
+
+
+def claim(used, pin, name):
+    if not is_integer(pin):
+        raise ConfigError(f"{name}: {pin!r} ist keine Pinnummer")
+    if pin < 0 or pin > 27:
+        raise ConfigError(f"{name}: BCM {pin} liegt ausserhalb von 0 bis 27")
+    if pin in used:
+        raise ConfigError(f"BCM {pin} ist doppelt belegt: {used[pin]} und {name}")
+    used[pin] = name
 
 
 def validate(config):
     used = {}
-
-    def claim(pin, name):
-        if not is_integer(pin):
-            raise ConfigError(f"{name}: {pin!r} ist keine Pinnummer")
-        if not 0 <= pin <= 27:
-            raise ConfigError(f"{name}: BCM {pin} liegt ausserhalb von 0 bis 27")
-        if pin in used:
-            raise ConfigError(f"BCM {pin} ist doppelt belegt: {used[pin]} und {name}")
-        used[pin] = name
-
-    for name, pin in config["sensors"].items():
-        claim(pin, f"sensors.{name}")
-    for name, pin in config["switches"].items():
-        claim(pin, f"switches.{name}")
-    for pin, name in SPI_PINS.items():
-        claim(pin, name)
+    for name in config["sensors"]:
+        claim(used, config["sensors"][name], f"sensors.{name}")
+    for name in config["switches"]:
+        claim(used, config["switches"][name], f"switches.{name}")
+    for pin in SPI_PINS:
+        claim(used, pin, SPI_PINS[pin])
     if config["display"]["enabled"]:
-        claim(config["display"]["dc"], "display.dc")
+        claim(used, config["display"]["dc"], "display.dc")
 
-    lamps = config["lamps"]
-    pixels = lamps["pixels"]
-    if (not isinstance(pixels, list) or len(pixels) != 3 or len(set(pixels)) != 3
-            or not all(is_integer(p) and 0 <= p <= 7 for p in pixels)):
+    pixels = config["lamps"]["pixels"]
+    if len(pixels) != 3:
         raise ConfigError(f"lamps.pixels {pixels}: drei verschiedene Werte von 0 bis 7")
-    if not is_integer(lamps["brightness"]) or not 0 <= lamps["brightness"] <= 255:
-        raise ConfigError(f"lamps.brightness {lamps['brightness']!r}: ganze Zahl von 0 bis 255")
+    for pixel in pixels:
+        if not is_integer(pixel) or pixel < 0 or pixel > 7 or pixels.count(pixel) > 1:
+            raise ConfigError(f"lamps.pixels {pixels}: drei verschiedene Werte von 0 bis 7")
 
-    if config["display"]["rotation"] not in ("quer", "hoch"):
-        raise ConfigError(f"display.rotation {config['display']['rotation']!r}: quer oder hoch")
+    brightness = config["lamps"]["brightness"]
+    if not is_integer(brightness) or brightness < 0 or brightness > 255:
+        raise ConfigError(f"lamps.brightness {brightness!r}: ganze Zahl von 0 bis 255")
+
+    for section in ["lamps", "display"]:
+        speed = config[section]["speed_hz"]
+        if not is_integer(speed) or speed <= 0:
+            raise ConfigError(f"{section}.speed_hz {speed!r}: ganze Zahl groesser 0")
+
+    for section in ["display", "api"]:
+        if type(config[section]["enabled"]) is not bool:
+            raise ConfigError(f"{section}.enabled: true oder false")
+
+    rotation = config["display"]["rotation"]
+    if rotation not in ("quer", "hoch"):
+        raise ConfigError(f"display.rotation {rotation!r}: quer oder hoch")
 
     timing = config["timing"]
-    for name, value in timing.items():
-        if not is_number(value) or value <= 0:
-            raise ConfigError(f"timing.{name} {value!r}: Zahl groesser 0")
+    for name in timing:
+        if not is_number(timing[name]) or timing[name] <= 0:
+            raise ConfigError(f"timing.{name} {timing[name]!r}: Zahl groesser 0")
     if timing["max_green"] < timing["base_green"]:
         raise ConfigError("timing.max_green ist kleiner als timing.base_green")

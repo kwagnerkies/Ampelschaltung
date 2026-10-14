@@ -1,3 +1,5 @@
+import contextlib
+import io
 import unittest
 
 from .support import Lamps
@@ -6,6 +8,9 @@ from ..rule import Following
 
 
 class ApiTest(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(contextlib.redirect_stderr(io.StringIO()))
+
     def test_status_reports_the_snapshot(self):
         from ..api import status_of
         controller = Controller(Lamps(), Following(5, 3, 20), Timing())

@@ -33,10 +33,21 @@ class ConfigTest(unittest.TestCase):
         finally:
             os.remove(handle.name)
 
+    def test_missing_file_is_refused(self):
+        from ..config import ConfigError, load
+        with self.assertRaises(ConfigError):
+            load("/nicht/vorhanden/config.toml")
+
     def test_out_of_range_values_are_refused(self):
         from ..config import ConfigError, validate, DEFAULTS
         for section, key, value in (("lamps", "brightness", 300), ("timing", "yellow", 0),
-                                    ("display", "rotation", "schraeg"), ("sensors", "north", "23")):
+                                    ("display", "rotation", "schraeg"), ("sensors", "north", "23"),
+                                    ("lamps", "pixels", [[0], [4], [7]]),
+                                    ("lamps", "pixels", [0, 4, 4]),
+                                    ("lamps", "speed_hz", "2400000"),
+                                    ("display", "enabled", "nein"),
+                                    ("api", "enabled", 1),
+                                    ("timing", "yellow", True)):
             settings = {name: dict(values) for name, values in DEFAULTS.items()}
             settings[section][key] = value
             with self.subTest(key=key), self.assertRaises(ConfigError):

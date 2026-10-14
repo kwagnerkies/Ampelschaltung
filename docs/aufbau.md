@@ -95,8 +95,9 @@ Folge. Aus dem dunklen Zustand folgt nie unmittelbar eine Freigabe. Beim Start d
 werden beide Schalter eingelesen; steht der Hauptschalter offen, bleibt die Kreuzung dunkel.
 
 Ein Notzustand endet mit dem Zuruecklegen des Notschalters oder mit aus und wieder an. Beides
-ist der Neustart bei Allrot, den die Sicherheitsregel verlangt. Bei ausgeschalteter Anlage
-wirkt der Notschalter nicht.
+ist der Neustart bei Allrot, den die Sicherheitsregel verlangt. Steht der Notschalter beim
+Einschalten noch geschlossen, blinkt die Anlage weiter. Bei ausgeschalteter Anlage bleibt die
+Kreuzung dunkel; die Stellung des Notschalters gilt ab dem Einschalten.
 
 ## 6. Kaltstart pruefen
 
@@ -116,7 +117,7 @@ ampelctl status
 ```
 
 Faellt das Programm aus, startet systemd es nach zwei Sekunden neu. Beim geordneten Beenden
-gehen alle Signale auf Rot, eine laufende Freigabe ueber Gelb. Ist die Anlage ausgeschaltet,
+gehen alle Signale auf Rot, eine laufende Freigabe ueber die volle Gelbzeit. Ist die Anlage aus,
 bleibt sie dunkel.
 
 ## 7. Wenn nichts leuchtet

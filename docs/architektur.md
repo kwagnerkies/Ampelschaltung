@@ -16,19 +16,21 @@ Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 
 | Datei | Zeilen | Aufgabe |
 |---|---|---|
-| `ampel/signal.py` | 73 | Signalbilder, deutsche Folge, Konfliktmatrix |
-| `ampel/phase.py` | 95 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
+| `ampel/signal.py` | 71 | Signalbilder, deutsche Folge, Konfliktmatrix |
+| `ampel/phase.py` | 103 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
 | `ampel/rule.py` | 11 | die ganze adaptive Regel |
-| `ampel/control.py` | 184 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
+| `ampel/control.py` | 193 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
 | `ampel/driver/spi.py` | 20 | SPI-Zugriff ueber ioctl |
 | `ampel/driver/ws2812.py` | 36 | Lampenkette, drei SPI-Bits je WS2812-Bit |
 | `ampel/driver/tft.py` | 64 | ILI9341 mit Startfolge und Rechteckfuellung |
-| `ampel/driver/gpio.py` | 36 | sieben Leitungen ueber gpiozero: Sensoren, Schalter, DC |
-| `ampel/display.py` | 90 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
-| `ampel/api.py` | 63 | Schnittstelle ueber einen Unix-Socket |
-| `ampel/config.py` | 90 | TOML laden, Pins und Werte pruefen |
-| `ampel/main.py` | 184 | Verdrahtung, Selbsttest, Kommandozeile |
-| `ampelctl` | 80 | Bedienung von der Kommandozeile |
+| `ampel/driver/gpio.py` | 39 | sieben Leitungen ueber gpiozero: Sensoren, Schalter, DC |
+| `ampel/driver/selftest.py` | 52 | Selbsttest von Anzeige, Lampen und Sensoren |
+| `ampel/display.py` | 91 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
+| `ampel/api.py` | 71 | Schnittstelle ueber einen Unix-Socket |
+| `ampel/config.py` | 103 | TOML laden, Pins und Werte pruefen |
+| `ampel/hardware.py` | 35 | Lampenkette und Anzeige oeffnen |
+| `ampel/main.py` | 139 | Verdrahtung, Kommandozeile |
+| `ampelctl` | 84 | Bedienung von der Kommandozeile |
 
 ## Die neun Entscheidungen
 

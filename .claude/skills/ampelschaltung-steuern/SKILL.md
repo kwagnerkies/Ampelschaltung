@@ -145,7 +145,8 @@ make test
 | Notschalter | 27 | alle mittleren Lampen blinken gelb |
 
 Beide beginnen beim Zuruecklegen wieder bei Allrot. Bei ausgeschalteter Anlage wirkt der
-Notschalter nicht. Beim Start des Dienstes werden beide Schalter eingelesen.
+Notschalter nicht, seine Stellung gilt aber ab dem Einschalten. Beim Start des Dienstes werden
+beide Schalter eingelesen.
 
 ## Weiterfuehrend
 

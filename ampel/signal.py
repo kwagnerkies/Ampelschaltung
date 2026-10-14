@@ -9,18 +9,18 @@ class Aspect(Enum):
     OFF = "Aus"
     YELLOW_FLASH = "GelbBlinken"
 
-    @property
     def lamps(self):
-        return {
-            Aspect.RED: (True, False, False),
-            Aspect.RED_YELLOW: (True, True, False),
-            Aspect.GREEN: (False, False, True),
-            Aspect.YELLOW: (False, True, False),
-            Aspect.YELLOW_FLASH: (False, True, False),
-        }.get(self, (False, False, False))
+        if self is Aspect.RED:
+            return [True, False, False]
+        if self is Aspect.RED_YELLOW:
+            return [True, True, False]
+        if self is Aspect.GREEN:
+            return [False, False, True]
+        if self is Aspect.YELLOW or self is Aspect.YELLOW_FLASH:
+            return [False, True, False]
+        return [False, False, False]
 
-    @property
-    def releasing(self):
+    def is_releasing(self):
         return self in (Aspect.RED_YELLOW, Aspect.GREEN, Aspect.YELLOW)
 
     def can_follow(self, previous):
@@ -30,23 +30,26 @@ class Aspect(Enum):
 
 
 SUCCESSORS = {
-    Aspect.RED: (Aspect.RED_YELLOW,),
-    Aspect.RED_YELLOW: (Aspect.GREEN, Aspect.RED),
-    Aspect.GREEN: (Aspect.YELLOW,),
-    Aspect.YELLOW: (Aspect.RED,),
-    Aspect.OFF: (Aspect.RED,),
-    Aspect.YELLOW_FLASH: (Aspect.RED,),
+    Aspect.RED: [Aspect.RED_YELLOW],
+    Aspect.RED_YELLOW: [Aspect.GREEN, Aspect.RED],
+    Aspect.GREEN: [Aspect.YELLOW],
+    Aspect.YELLOW: [Aspect.RED],
+    Aspect.OFF: [Aspect.RED],
+    Aspect.YELLOW_FLASH: [Aspect.RED],
 }
 
-NORTH, EAST, SOUTH, WEST = range(4)
-DIRECTIONS = (NORTH, EAST, SOUTH, WEST)
-DIRECTION_NAMES = ("Nord", "Ost", "Sued", "West")
+NORTH = 0
+EAST = 1
+SOUTH = 2
+WEST = 3
+DIRECTIONS = [NORTH, EAST, SOUTH, WEST]
+DIRECTION_NAMES = ["Nord", "Ost", "Sued", "West"]
 
 CONFLICTS = {
-    NORTH: (EAST, WEST),
-    EAST: (NORTH, SOUTH),
-    SOUTH: (EAST, WEST),
-    WEST: (NORTH, SOUTH),
+    NORTH: [EAST, WEST],
+    EAST: [NORTH, SOUTH],
+    SOUTH: [EAST, WEST],
+    WEST: [NORTH, SOUTH],
 }
 
 
@@ -55,19 +58,14 @@ class ConflictError(Exception):
 
 
 def check(aspects):
-    for direction, own in enumerate(aspects):
-        if not own.releasing:
+    for direction in DIRECTIONS:
+        own = aspects[direction]
+        if not own.is_releasing():
             continue
-        for other in range(len(aspects)):
-            if other == direction:
-                continue
-            if other in CONFLICTS[direction] and aspects[other].releasing:
-                raise ConflictError(
-                    f"{DIRECTION_NAMES[direction]} zeigt {own.value}, "
-                    f"{DIRECTION_NAMES[other]} zeigt {aspects[other].value}"
-                )
+        for other in DIRECTIONS:
+            if other in CONFLICTS[direction] and aspects[other].is_releasing():
+                raise ConflictError(f"{DIRECTION_NAMES[direction]} zeigt {own.value}, "
+                                    f"{DIRECTION_NAMES[other]} zeigt {aspects[other].value}")
             if aspects[other] is Aspect.OFF:
-                raise ConflictError(
-                    f"{DIRECTION_NAMES[direction]} zeigt {own.value}, "
-                    f"{DIRECTION_NAMES[other]} ist dunkel"
-                )
+                raise ConflictError(f"{DIRECTION_NAMES[direction]} zeigt {own.value}, "
+                                    f"{DIRECTION_NAMES[other]} ist dunkel")

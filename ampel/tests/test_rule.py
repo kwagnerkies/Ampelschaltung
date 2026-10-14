@@ -19,7 +19,7 @@ class RuleTest(unittest.TestCase):
 
     def test_two_close_vehicles_extend(self):
         now = self.green_phase()
-        direction = self.controller.machine.state.phase.directions[0]
+        direction = self.controller.machine.state.phase.directions()[0]
         self.controller.crossing(now, direction)
         self.controller.crossing(now + 0.7, direction)
         self.assertEqual(self.controller.following, 1)
@@ -27,14 +27,14 @@ class RuleTest(unittest.TestCase):
 
     def test_scattered_vehicles_do_not_extend(self):
         now = self.green_phase()
-        direction = self.controller.machine.state.phase.directions[0]
+        direction = self.controller.machine.state.phase.directions()[0]
         self.controller.crossing(now, direction)
         self.controller.crossing(now + 5, direction)
         self.assertEqual(self.controller.following, 0)
 
     def test_opposite_approach_is_not_a_sequence(self):
         now = self.green_phase()
-        first, second = self.controller.machine.state.phase.directions
+        first, second = self.controller.machine.state.phase.directions()
         self.controller.crossing(now, first)
         self.controller.crossing(now + 0.1, second)
         self.assertEqual(self.controller.following, 0)
