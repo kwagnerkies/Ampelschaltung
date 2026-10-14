@@ -36,11 +36,11 @@ def phase_of(direction):
 
 
 class State:
-    def __init__(self, phase, stage, since, target=0.0):
+    def __init__(self, phase, stage, since):
         self.phase = phase
         self.stage = stage
         self.since = since
-        self.target = target
+        self.target = 0.0
 
     def name(self):
         if self.phase is Phase.FAULT:
@@ -97,7 +97,4 @@ class Machine:
         self.state = State(Phase.FAULT, Stage.ALL_RED, now)
 
     def _enter(self, now, phase, stage):
-        target = 0.0
-        if stage is Stage.GREEN:
-            target = self.state.target
-        self.state = State(phase, stage, now, target)
+        self.state = State(phase, stage, now)

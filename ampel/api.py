@@ -11,6 +11,8 @@ POSITIONS = ["an", "aus"]
 
 
 class Handler(BaseHTTPRequestHandler):
+    timeout = 3
+
     def log_message(self, format, *args):
         pass
 
@@ -41,7 +43,8 @@ class Handler(BaseHTTPRequestHandler):
 def serve(path, state, command):
     if os.path.exists(path):
         os.remove(path)
-    server = socketserver.UnixStreamServer(path, Handler)
+    server = socketserver.ThreadingUnixStreamServer(path, Handler)
+    server.daemon_threads = True
     server.state = state
     server.command = command
     os.chmod(path, 0o660)

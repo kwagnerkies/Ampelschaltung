@@ -17,7 +17,7 @@ Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 | Datei | Zeilen | Aufgabe |
 |---|---|---|
 | `ampel/signal.py` | 71 | Signalbilder, deutsche Folge, Konfliktmatrix |
-| `ampel/phase.py` | 103 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
+| `ampel/phase.py` | 100 | Phasen, Abschnitte, Zwischenzeiten, Zustandsautomat |
 | `ampel/rule.py` | 11 | die ganze adaptive Regel |
 | `ampel/control.py` | 198 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
 | `ampel/driver/spi.py` | 20 | SPI-Zugriff ueber ioctl |
@@ -26,7 +26,7 @@ Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 | `ampel/driver/gpio.py` | 39 | sieben Leitungen ueber gpiozero: Sensoren, Schalter, DC |
 | `ampel/driver/selftest.py` | 53 | Selbsttest von Anzeige, Lampen und Sensoren |
 | `ampel/display.py` | 91 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
-| `ampel/api.py` | 67 | Schnittstelle ueber einen Unix-Socket |
+| `ampel/api.py` | 70 | Schnittstelle ueber einen Unix-Socket |
 | `ampel/config.py` | 103 | TOML laden, Pins und Werte pruefen |
 | `ampel/hardware.py` | 35 | Lampenkette und Anzeige oeffnen |
 | `ampel/main.py` | 139 | Verdrahtung, Kommandozeile |

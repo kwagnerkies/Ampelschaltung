@@ -85,6 +85,29 @@ class SocketTest(unittest.TestCase):
         self.assertEqual(self.ask("POST", "/notschalter/vielleicht")[0], 400)
         self.assertEqual(self.commands, [])
 
+    def test_silent_client_does_not_block_the_server(self):
+        from ..api import Handler
+        original = Handler.timeout
+        self.assertIsNotNone(original)
+        Handler.timeout = 0.2
+        self.addCleanup(setattr, Handler, "timeout", original)
+        silent = socket.socket(socket.AF_UNIX)
+        silent.connect(self.path)
+        self.addCleanup(silent.close)
+        self.assertEqual(self.ask("GET", "/status")[0], 200)
+
+    def test_silent_clients_do_not_delay_others(self):
+        import time
+        silent = []
+        for _ in range(3):
+            client = socket.socket(socket.AF_UNIX)
+            client.connect(self.path)
+            silent.append(client)
+            self.addCleanup(client.close)
+        started = time.monotonic()
+        self.assertEqual(self.ask("GET", "/status")[0], 200)
+        self.assertLess(time.monotonic() - started, 1.0)
+
     def test_stale_socket_file_is_replaced(self):
         from ..api import serve
         self.server.shutdown()

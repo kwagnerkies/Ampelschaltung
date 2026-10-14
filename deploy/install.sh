@@ -43,8 +43,9 @@ fi
 
 PYTHONPATH=$LIB python3 -m ampel.main -config "$CONFIG" -validate
 systemctl daemon-reload
-systemctl enable --now ampel.service
-systemctl --no-pager --lines=5 status ampel.service
+systemctl enable ampel.service
+systemctl restart ampel.service
+systemctl --no-pager --lines=5 status ampel.service || true
 
 echo
 echo "Fertig. Falls oben eine Zeile fuer /boot eingetragen wurde: sudo reboot"

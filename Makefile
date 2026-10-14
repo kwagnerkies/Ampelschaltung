@@ -15,4 +15,4 @@ run:
 	python3 -m ampel.main -config config.toml
 
 deploy:
-	ssh $(PI) 'cd ampel && git pull && sudo sh deploy/install.sh . && sudo systemctl restart ampel'
+	ssh $(PI) 'cd ampel && git pull && sudo sh deploy/install.sh .'

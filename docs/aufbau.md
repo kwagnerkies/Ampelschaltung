@@ -39,7 +39,7 @@ Das Skript
 - traegt `dtparam=spi=on` und `dtoverlay=spi1-1cs` in `/boot/firmware/config.txt` ein, bei
   aelteren Systemen in `/boot/config.txt`,
 - prueft die Konfiguration mit `-validate`,
-- aktiviert den Dienst und startet ihn.
+- aktiviert den Dienst und startet ihn neu, damit ein laufender Dienst den neuen Stand nimmt.
 
 Eine vorhandene `/etc/ampel/config.toml` wird nie ueberschrieben.
 
