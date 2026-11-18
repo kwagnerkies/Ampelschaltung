@@ -18,7 +18,8 @@ class Strip:
         self.bus = bus
         self.heads = heads
         self.brightness = brightness
-        self.lamp_at = {pixel: lamp for lamp, pixel in enumerate(pixels)}
+        self.lamp_at = {pixel: lamp for lamp, entry in enumerate(pixels)
+                        for pixel in (entry if isinstance(entry, (list, tuple)) else [entry])}
 
     def write(self, lamps):
         frame = bytearray()

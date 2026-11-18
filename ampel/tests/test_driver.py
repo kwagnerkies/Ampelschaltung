@@ -62,6 +62,17 @@ class DriverTest(unittest.TestCase):
             self.assertEqual(self.decode(frame, pixel), expected)
         self.assertEqual(frame[32 * 9:], bytes(60))
 
+    def test_several_pixels_per_lamp(self):
+        from ..driver import Strip
+        strip = Strip(self.tape, 4, 255, [[7, 6], [4, 3], [1, 0]])
+        lamps = [False] * 12
+        lamps[0] = True
+        strip.write(lamps)
+        frame = self.tape.frames[0]
+        for pixel in range(8):
+            expected = [0, 255, 0] if pixel in (6, 7) else [0, 0, 0]
+            self.assertEqual(self.decode(frame, pixel), expected)
+
     def test_brightness_scales(self):
         from ..driver import Strip
         strip = Strip(self.tape, 4, 51, (0, 4, 7))

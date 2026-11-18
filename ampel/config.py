@@ -71,12 +71,13 @@ def validate(config):
     if config["display"]["enabled"]:
         claim(used, config["display"]["dc"], "display.dc")
 
+    # je Lampe (Rot, Gelb, Gruen) ein Pixel oder eine Liste von Pixeln, z. B. [[7, 6], [4, 3], [1, 0]]
     pixels = config["lamps"]["pixels"]
-    if len(pixels) != 3:
-        raise ConfigError(f"lamps.pixels {pixels}: drei verschiedene Werte von 0 bis 7")
-    for pixel in pixels:
-        if not is_integer(pixel) or pixel < 0 or pixel > 7 or pixels.count(pixel) > 1:
-            raise ConfigError(f"lamps.pixels {pixels}: drei verschiedene Werte von 0 bis 7")
+    groups = [entry if isinstance(entry, list) else [entry] for entry in pixels] if isinstance(pixels, list) else []
+    flat = [pixel for group in groups for pixel in group]
+    if (len(groups) != 3 or not all(groups) or len(set(flat)) != len(flat)
+            or any(not is_integer(pixel) or pixel < 0 or pixel > 7 for pixel in flat)):
+        raise ConfigError(f"lamps.pixels {pixels}: drei Lampen, je ein Pixel oder eine Liste von Pixeln 0 bis 7, keiner doppelt")
 
     brightness = config["lamps"]["brightness"]
     if not is_integer(brightness) or brightness < 0 or brightness > 255:

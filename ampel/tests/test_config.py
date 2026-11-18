@@ -38,11 +38,18 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaises(ConfigError):
             load("/nicht/vorhanden/config.toml")
 
+    def test_several_pixels_per_lamp_are_accepted(self):
+        from ..config import validate, DEFAULTS
+        settings = {name: dict(values) for name, values in DEFAULTS.items()}
+        settings["lamps"]["pixels"] = [[7, 6], [4, 3], [1, 0]]
+        validate(settings)
+
     def test_out_of_range_values_are_refused(self):
         from ..config import ConfigError, validate, DEFAULTS
         for section, key, value in (("lamps", "brightness", 300), ("timing", "yellow", 0),
                                     ("display", "rotation", "schraeg"), ("sensors", "north", "23"),
-                                    ("lamps", "pixels", [[0], [4], [7]]),
+                                    ("lamps", "pixels", [[0], [4, 0], [7]]),
+                                    ("lamps", "pixels", [[0], [], [7]]),
                                     ("lamps", "pixels", [0, 4, 4]),
                                     ("lamps", "speed_hz", "2400000"),
                                     ("display", "enabled", "nein"),
