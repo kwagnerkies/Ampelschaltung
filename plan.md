@@ -42,7 +42,7 @@ Diese Regeln gelten fuer jede erzeugte Datei und sind nicht verhandelbar.
 
 ### 3.1 Strombudget
 
-Die vier Ampelkoepfe sind WS2812-Sticks mit je acht Pixeln, durchgeschleift an einer Datenleitung. Genutzt werden drei Pixel je Stick (Vorgabe 0, 4, 7 fuer rot, gelb, gruen). Die Daten laufen ueber SPI1, jedes WS2812-Bit als drei SPI-Bits bei 2,4 MHz. Es leuchten nie mehr als sechs Pixel gleichzeitig (zwei Koepfe Rot mit Gelb, zwei Rot); bei Helligkeit 60 von 255 sind das etwa 25 mA aus der 5-V-Schiene.
+Die vier Ampelkoepfe sind WS2812-Sticks mit je acht Pixeln, durchgeschleift an einer Datenleitung. Genutzt werden zwei Pixel je Lampe, Rot oben (7 und 6 fuer rot, 4 und 3 fuer gelb, 1 und 0 fuer gruen). Die Daten laufen ueber SPI0, jedes WS2812-Bit als drei SPI-Bits bei 2,4 MHz. Es leuchten nie mehr als zwoelf Pixel gleichzeitig (zwei Koepfe Rot mit Gelb, zwei Rot); bei Helligkeit 60 von 255 sind das etwa 50 mA aus der 5-V-Schiene.
 
 Die Sensoren liegen am internen Pull-up. Der A3144 hat einen offenen Kollektor und zieht bei Magnet gegen Masse. Aktiv ist der Low-Pegel. Die Schalter schalten ebenfalls gegen Masse.
 
@@ -52,11 +52,11 @@ Der Plan liegt in der Konfigurationsdatei, nicht im Code. Startbelegung (BCM-Num
 
 | Funktion | BCM | Richtung |
 |---|---|---|
-| Lampenkette, Daten (SPI1 MOSI) | 20 | out |
+| Lampenkette, Daten (SPI0 MOSI) | 10 | out |
 | Haltelinie Nord, Ost, Sued, West | 23, 24, 25, 3 | in, pull-up |
 | Hauptschalter | 4 | in, pull-up |
 | Notschalter | 27 | in, pull-up |
-| Anzeige SCK, MOSI, CS (SPI0) | 11, 10, 8 | out |
+| Anzeige SCK, MOSI, CS (SPI1) | 21, 20, 18 | out |
 | Anzeige DC | 2 | out |
 
 RESET und Hintergrundlicht der Anzeige liegen fest auf 3,3 V. BCM 7 bis 11 (SPI0) und 18 bis 21 (SPI1) duerfen nicht anders belegt werden.
@@ -233,13 +233,13 @@ Eine TOML-Datei, Pfad per `-config`. Alles Physikalische und alle Regelparameter
 
 [lamps]
 
-spi = "/dev/spidev1.0"
+spi = "/dev/spidev0.0"
 
 speed_hz = 2400000
 
 brightness = 60
 
-pixels = [0, 4, 7]
+pixels = [[7, 6], [4, 3], [1, 0]]
 
 
 
@@ -267,7 +267,7 @@ fault = 27
 
 enabled = true
 
-spi = "/dev/spidev0.0"
+spi = "/dev/spidev1.0"
 
 speed_hz = 24000000
 
@@ -303,7 +303,7 @@ extension = 3.0
 
 ```
 
-Validierung beim Laden: keine unbekannten Abschnitte oder Schluessel, Pins ganze Zahlen von 0 bis 27, kein Pin doppelt belegt, kein Pin auf einer SPI-Leitung, `pixels` drei verschiedene Werte von 0 bis 7, `brightness` von 0 bis 255, `rotation` `quer` oder `hoch`, alle Zeiten groesser 0, `max_green` nicht kleiner als `base_green`. Fehlerhafte Konfiguration bricht den Start mit einer Meldung ab. `-validate` prueft und beendet.
+Validierung beim Laden: keine unbekannten Abschnitte oder Schluessel, Pins ganze Zahlen von 0 bis 27, kein Pin doppelt belegt, kein Pin auf einer SPI-Leitung, `pixels` drei Lampen mit je einem Pixel oder einer Liste von Pixeln von 0 bis 7 und keinem doppelt, Anzeige und Lampen nicht am selben SPI-Geraet, `brightness` von 0 bis 255, `rotation` `quer` oder `hoch`, alle Zeiten groesser 0, `max_green` nicht kleiner als `base_green`. Fehlerhafte Konfiguration bricht den Start mit einer Meldung ab. `-validate` prueft und beendet.
 
 ## 11. Sicherheit und Fehlerbehandlung
 
@@ -351,11 +351,11 @@ Testumfang, je eine Datei in `ampel/tests/`:
 
 - `test_display`: Kreuz-Layout, nur geaenderte Felder werden neu gezeichnet, leuchtende Segmente werden zuletzt gezeichnet.
 
-- `test_config`: doppelte Pins, Pins auf SPI-Leitungen, unbekannte Schluessel und Werte ausserhalb ihres Bereichs werden abgewiesen.
+- `test_config`: doppelte Pins, Pins auf SPI-Leitungen, Anzeige am SPI-Geraet der Lampen, unbekannte Schluessel und Werte ausserhalb ihres Bereichs werden abgewiesen.
 
 - `test_api`: der Zustand kommt vollstaendig als JSON heraus, im Notzustand mit Phase `Stoerung` und den wirklich gezeigten Signalbildern.
 
-`make test` laeuft alle 33 in unter einer Sekunde.
+`make test` laeuft alle 53 in wenigen Sekunden.
 
 ## 13. Deployment
 
@@ -451,6 +451,6 @@ Nicht Teil der Software, aber terminbestimmend, deshalb hier festgehalten.
 
 - Ein Hall-Sensor je Zufahrt statt drei Reed-Kontakten. Sensorabstaende und Fahrzeuglaenge spielen damit keine Rolle mehr.
 
-- Lampen als WS2812-Sticks an SPI1 statt zwoelf einzelner LEDs an GPIO.
+- Lampen als WS2812-Sticks an SPI0 statt zwoelf einzelner LEDs an GPIO. An SPI1 reagieren die Sticks am Pi 3 nicht, deshalb haengt dort die Anzeige.
 
 - Keine Fussgaengeranforderung im ersten Ausbau. Das Phasenmodell laesst sich ohne Umbau erweitern.

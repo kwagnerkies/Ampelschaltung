@@ -49,7 +49,7 @@ Fehlschläge:
 
 Gemacht:
 
-- Pinbelegung geändert: Lampenkette von SPI1 (Pin 38) auf SPI0 (Pin 19) umgelegt und `config.toml` angepasst. Die Anzeige ist vorerst abgeschaltet, bis sie an SPI1 hängt. `lamps.pixels` in `config.py` erweitert, sodass je Farbe zwei LEDs leuchten.
+- Pinbelegung geändert: Lampenkette von SPI1 (Pin 38) auf SPI0 (Pin 19) umgelegt und `config.toml` angepasst. Die Anzeige ist dafür auf SPI1 umgezogen. `lamps.pixels` in `config.py` erweitert, sodass je Farbe zwei LEDs leuchten.
 - An `rule.py` und der Erkennung der Überfahrt in `control.py` weitergearbeitet.
 
 Fehlschläge:
