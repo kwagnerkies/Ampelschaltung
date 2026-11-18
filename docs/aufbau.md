@@ -41,7 +41,9 @@ Das Skript
 - prueft die Konfiguration mit `-validate`,
 - aktiviert den Dienst und startet ihn neu, damit ein laufender Dienst den neuen Stand nimmt.
 
-Eine vorhandene `/etc/ampel/config.toml` wird nie ueberschrieben.
+Eine vorhandene `/etc/ampel/config.toml` wird nie ueberschrieben. Aendert sich die Vorlage
+`config.toml` im Repo, etwa bei einer neuen Pinbelegung, muss die Datei auf dem Pi von Hand
+nachgezogen werden.
 
 Der Neustart danach ist noetig, damit SPI wirkt. Ohne ihn bleiben Display und Lampen dunkel.
 

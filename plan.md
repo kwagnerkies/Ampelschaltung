@@ -71,7 +71,7 @@ Deutsche Signalfolge, nicht die amerikanische. Pro Ampelkopf:
 
 `Rot -> Rot und Gelb gleichzeitig (1 s) -> Gruen -> Gelb (3 s) -> Rot`
 
-Das bedeutet, dass zeitweise zwei Pixel eines Kopfes leuchten. Der Treiber muss das koennen.
+Das bedeutet, dass zeitweise zwei Lampen eines Kopfes leuchten, also vier Pixel. Der Treiber muss das koennen.
 
 ## 4. Softwarearchitektur
 
@@ -347,7 +347,7 @@ Testumfang, je eine Datei in `ampel/tests/`:
 
 - `test_rule`: zwei dichte Fahrzeuge verlaengern, vereinzelte nicht, die Gegenrichtung zaehlt nicht als Folge, die Hoechstgruenzeit begrenzt.
 
-- `test_driver`: das WS2812-Bitmuster wird zurueckdekodiert und gegen Pixel und Farbe geprueft, Helligkeit skaliert, dunkle Lampen bleiben schwarz.
+- `test_driver`: das WS2812-Bitmuster wird zurueckdekodiert und gegen Pixel und Farbe geprueft, Helligkeit skaliert, dunkle Lampen bleiben schwarz, mehrere Pixel je Lampe leuchten gemeinsam.
 
 - `test_display`: Kreuz-Layout, nur geaenderte Felder werden neu gezeichnet, leuchtende Segmente werden zuletzt gezeichnet.
 

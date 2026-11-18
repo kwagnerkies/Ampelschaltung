@@ -21,13 +21,13 @@ Anlage und Notzustand. Die Lampen sind vier WS2812-Sticks an einer Datenleitung.
 | `ampel/rule.py` | 11 | die ganze adaptive Regel |
 | `ampel/control.py` | 198 | Regelkreis, Ausgabe, Schalter, Notzustand, Zustand fuer Anzeige |
 | `ampel/driver/spi.py` | 20 | SPI-Zugriff ueber ioctl |
-| `ampel/driver/ws2812.py` | 36 | Lampenkette, drei SPI-Bits je WS2812-Bit |
+| `ampel/driver/ws2812.py` | 37 | Lampenkette, drei SPI-Bits je WS2812-Bit |
 | `ampel/driver/tft.py` | 64 | ILI9341 mit Startfolge und Rechteckfuellung |
 | `ampel/driver/gpio.py` | 39 | sieben Leitungen ueber gpiozero: Sensoren, Schalter, DC |
 | `ampel/driver/selftest.py` | 53 | Selbsttest von Anzeige, Lampen und Sensoren |
 | `ampel/display.py` | 91 | vier Zahlen im Kreuz, Ziffern aus sieben Segmenten |
 | `ampel/api.py` | 70 | Schnittstelle ueber einen Unix-Socket |
-| `ampel/config.py` | 103 | TOML laden, Pins und Werte pruefen |
+| `ampel/config.py` | 115 | TOML laden, Pins und Werte pruefen |
 | `ampel/hardware.py` | 35 | Lampenkette und Anzeige oeffnen |
 | `ampel/main.py` | 139 | Verdrahtung, Kommandozeile |
 | `ampelctl` | 84 | Bedienung von der Kommandozeile |
@@ -66,8 +66,8 @@ schreibt ihn ins Journal und steuert ohne Anzeige weiter.
 eine Flanke am Kippschalter. Sie hoert auf einem Unix-Socket, nicht auf einem Port.
 
 **8. Alles Physikalische steht in der Konfiguration.** Pins, Pixelzuordnung, Zeiten.
-`config.validate` weist doppelte Pins, Pins auf SPI-Leitungen, unbekannte Schluessel und
-Werte ausserhalb ihres Bereichs ab; genau das hat einen Verdrahtungsfehler gefunden, bevor
+`config.validate` weist doppelte Pins, Pins auf SPI-Leitungen, Anzeige und Lampen am selben
+SPI-Geraet, unbekannte Schluessel und Werte ausserhalb ihres Bereichs ab; genau das hat einen Verdrahtungsfehler gefunden, bevor
 geloetet wurde.
 
 **9. Ein Lock ordnet die Threads.** Flanken kommen aus dem Thread von `gpiozero`, Befehle aus
