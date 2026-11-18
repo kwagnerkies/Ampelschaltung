@@ -49,15 +49,15 @@ Fehlschläge:
 
 Gemacht:
 
-- Pinbelegung geändert: Sensor West und die DC-Leitung der Anzeige lagen auf SPI-Pins und wurden umgelegt, `config.toml` angepasst. Pinprüfung in `config.py` ergänzt (kein Pin auf einer SPI-Leitung).
+- Pinbelegung geändert: Lampenkette von SPI1 (Pin 38) auf SPI0 (Pin 19) umgelegt und `config.toml` angepasst. Die Anzeige ist vorerst abgeschaltet, bis sie an SPI1 hängt. `lamps.pixels` in `config.py` erweitert, sodass je Farbe zwei LEDs leuchten.
 - An `rule.py` und der Erkennung der Überfahrt in `control.py` weitergearbeitet.
 
 Fehlschläge:
 
-- Ben hat gemeldet, dass der Sensor West nichts meldet. Die Ursache (Pin von SPI belegt) war nicht gleich klar, weil es keine Fehlermeldung gab.
+- Ben hat gemeldet, dass die WS2812-Sticks am Pi 3 über SPI1 gar nicht reagieren. Die Ursache war nicht gleich klar, weil es keine Fehlermeldung gab.
 - Beim Umlegen einmal BCM-Nummer und Nummer auf der Stiftleiste verwechselt.
+- Rot leuchtete zuerst unten statt oben, weil Pixel 7 am Stick oben sitzt und nicht Pixel 0.
 - Ein stehendes Auto an der roten Ampel wurde schon als Überfahrt gezählt. Jetzt zählt erst das Freiwerden der Haltelinie.
-- Autos der Gegenrichtung haben die Grünzeit mit verlängert.
 
 ## KW 48 (23.11. – 29.11.)
 
