@@ -1,9 +1,7 @@
 [lamps]
-# SPI0 (Pin 19): an SPI1 (Pin 38) reagieren die WS2812-Sticks am Pi 3 nicht
 spi = "/dev/spidev0.0"
 speed_hz = 2400000
 brightness = 60
-# je Farbe zwei LEDs, Rot oben (Pixel 7 sitzt am Stick oben)
 pixels = [[7, 6], [4, 3], [1, 0]]
 
 [sensors]
@@ -17,9 +15,8 @@ power = 4
 fault = 27
 
 [display]
-# aus, bis das Display an SPI1 umgezogen ist (SPI0 belegen jetzt die Lampen)
-enabled = false
-spi = "/dev/spidev0.0"
+enabled = true
+spi = "/dev/spidev1.0"
 speed_hz = 24000000
 dc = 2
 rotation = "quer"

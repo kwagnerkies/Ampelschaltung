@@ -2,10 +2,10 @@ import copy
 import tomllib
 
 DEFAULTS = {
-    "lamps": {"spi": "/dev/spidev1.0", "speed_hz": 2400000, "brightness": 60, "pixels": [0, 4, 7]},
+    "lamps": {"spi": "/dev/spidev0.0", "speed_hz": 2400000, "brightness": 60, "pixels": [0, 4, 7]},
     "sensors": {"north": 23, "east": 24, "south": 25, "west": 3},
     "switches": {"power": 4, "fault": 27},
-    "display": {"enabled": True, "spi": "/dev/spidev0.0", "speed_hz": 24000000, "dc": 2, "rotation": "quer"},
+    "display": {"enabled": True, "spi": "/dev/spidev1.0", "speed_hz": 24000000, "dc": 2, "rotation": "quer"},
     "api": {"enabled": True, "socket": "/run/ampel/ampel.sock"},
     "timing": {
         "yellow": 3.0, "all_red": 2.0, "red_yellow": 1.0,
@@ -71,13 +71,24 @@ def validate(config):
     if config["display"]["enabled"]:
         claim(used, config["display"]["dc"], "display.dc")
 
-    # je Lampe (Rot, Gelb, Gruen) ein Pixel oder eine Liste von Pixeln, z. B. [[7, 6], [4, 3], [1, 0]]
     pixels = config["lamps"]["pixels"]
-    groups = [entry if isinstance(entry, list) else [entry] for entry in pixels] if isinstance(pixels, list) else []
-    flat = [pixel for group in groups for pixel in group]
-    if (len(groups) != 3 or not all(groups) or len(set(flat)) != len(flat)
-            or any(not is_integer(pixel) or pixel < 0 or pixel > 7 for pixel in flat)):
-        raise ConfigError(f"lamps.pixels {pixels}: drei Lampen, je ein Pixel oder eine Liste von Pixeln 0 bis 7, keiner doppelt")
+    message = f"lamps.pixels {pixels}: drei Lampen, je ein Pixel oder eine Liste von Pixeln 0 bis 7, keiner doppelt"
+    if type(pixels) is not list or len(pixels) != 3:
+        raise ConfigError(message)
+    seen = []
+    for entry in pixels:
+        group = entry
+        if type(entry) is not list:
+            group = [entry]
+        if len(group) == 0:
+            raise ConfigError(message)
+        for pixel in group:
+            if not is_integer(pixel) or pixel < 0 or pixel > 7 or pixel in seen:
+                raise ConfigError(message)
+            seen.append(pixel)
+
+    if config["display"]["enabled"] and config["display"]["spi"] == config["lamps"]["spi"]:
+        raise ConfigError("display.spi und lamps.spi duerfen nicht dasselbe Geraet sein")
 
     brightness = config["lamps"]["brightness"]
     if not is_integer(brightness) or brightness < 0 or brightness > 255:

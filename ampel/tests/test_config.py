@@ -44,6 +44,13 @@ class ConfigTest(unittest.TestCase):
         settings["lamps"]["pixels"] = [[7, 6], [4, 3], [1, 0]]
         validate(settings)
 
+    def test_display_on_the_spi_device_of_the_lamps_is_refused(self):
+        from ..config import validate, DEFAULTS, ConfigError
+        settings = {name: dict(values) for name, values in DEFAULTS.items()}
+        settings["display"]["spi"] = settings["lamps"]["spi"]
+        with self.assertRaises(ConfigError):
+            validate(settings)
+
     def test_out_of_range_values_are_refused(self):
         from ..config import ConfigError, validate, DEFAULTS
         for section, key, value in (("lamps", "brightness", 300), ("timing", "yellow", 0),
