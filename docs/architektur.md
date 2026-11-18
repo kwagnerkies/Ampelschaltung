@@ -92,12 +92,12 @@ Wer nur fuenf Minuten hat, liest `Controller.step` und `Following.target`.
 | Koennen zwei kreuzende Richtungen gleichzeitig gruen werden? | `signal.check`, geprueft in `tests/test_control.py` |
 | Was passiert bei einem Fehler? | `Controller.enter_fault`, alles blinkt gelb |
 | Wann gilt ein Fahrzeug als ueberfahren? | `Controller.crossing`, die Haltelinie wird wieder frei |
-| Warum acht Pixel je Ampel, aber nur drei genutzt? | Ein WS2812 ist ein RGB-Pixel; 0, 4 und 7 sitzen hinter den drei Fenstern |
-| Traegt der Pi die Lampen? | Nie mehr als sechs Pixel leuchten, siehe `docs/hardware/pinout.md` |
+| Warum acht Pixel je Ampel, aber nur sechs genutzt? | Ein WS2812 ist ein RGB-Pixel; je zwei sitzen hinter einem der drei Fenster |
+| Traegt der Pi die Lampen? | Nie mehr als zwoelf Pixel leuchten, siehe `docs/hardware/pinout.md` |
 
 ## Tests
 
-Sieben Dateien in `ampel/tests/`, 33 Tests: Konfliktmatrix, Signalfolge, vollstaendige
+Sieben Dateien in `ampel/tests/`, 53 Tests: Konfliktmatrix, Signalfolge, vollstaendige
 Phasenfolge, jedes geschriebene Muster ueber zwei Minuten, die Regel mit dichtem und
 vereinzeltem Verkehr, beide Schalter samt Start im ausgeschalteten Zustand, geordnetes
 Beenden, das WS2812-Frame zurueckdekodiert, das Kreuz-Layout und die Zeichenreihenfolge der

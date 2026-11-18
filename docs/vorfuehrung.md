@@ -75,8 +75,8 @@ Folge. Aus dem Blinken darf nie unmittelbar eine Freigabe folgen.
 - Was passiert bei einem Fehler? Die Sicherheitspruefung sitzt unmittelbar vor der Ausgabe.
   Schlaegt sie an, blinkt alles gelb, bis jemand den Notschalter zuruecklegt oder die Anlage
   aus und wieder an schaltet.
-- Reicht der Strom fuer zwoelf Lampen? Es leuchten nie mehr als sechs Pixel gleichzeitig, bei
-  Helligkeit 60 von 255 sind das etwa 25 mA aus der 5-V-Schiene.
+- Reicht der Strom fuer zwoelf Lampen? Es leuchten nie mehr als zwoelf Pixel gleichzeitig, bei
+  Helligkeit 60 von 255 sind das etwa 50 mA aus der 5-V-Schiene.
 
 ## Wenn die Hardware streikt
 

@@ -21,20 +21,20 @@ Alle Angaben in BCM-Nummern, in Klammern die Nummer auf der 40-poligen Stiftleis
         +------------------------------------+
         |          Raspberry Pi              |
         |                                    |
-        |  SPI1 MOSI ---> 4 x WS2812-Stick   |  Ampelkoepfe
+        |  SPI0 MOSI ---> 4 x WS2812-Stick   |  Ampelkoepfe
         |   4 x A3144 ---- OUT -------- GPIO |  Magnetsensoren
         |   2 x GPIO ----o/ o---- GND        |  Schalter
-        |   SPI0 + DC ----------------- TFT  |  Anzeige
+        |   SPI1 + DC ----------------- TFT  |  Anzeige
         +------------------------------------+
 ```
 
 ## Ampelkoepfe
 
-Vier WS2812-Sticks zu acht Pixeln, durchgeschleift. Genutzt werden Pixel 0 rot, 4 gelb,
-7 gruen.
+Vier WS2812-Sticks zu acht Pixeln, durchgeschleift. Genutzt werden je zwei Pixel: 7 und 6 rot,
+4 und 3 gelb, 1 und 0 gruen.
 
 ```
-BCM 20 (38) ----------> DI [Stick Nord] DO ---> DI [Stick Ost] DO ---.
+BCM 10 (19) ----------> DI [Stick Nord] DO ---> DI [Stick Ost] DO ---.
                                                                       |
    .------------------------------------------------------------------
    |
@@ -79,18 +79,18 @@ BCM 27 (13) ----o/ o---- GND     Notschalter
 
 ## Anzeige
 
-2,4-Zoll-TFT mit ILI9341 an SPI0. RESET und LED liegen fest auf 3,3 V, MISO bleibt frei.
+2,4-Zoll-TFT mit ILI9341 an SPI1. RESET und LED liegen fest auf 3,3 V, MISO bleibt frei.
 
 ```
 Modul            Pi
 -----            --
 VCC   ---------- 3,3 V   ( 1)
 GND   ---------- GND     ( 6)
-CS    ---------- BCM  8  (24)
+CS    ---------- BCM 18  (12)
 RESET ---------- 3,3 V   (17)
 DC    ---------- BCM  2  ( 3)
-SDI   ---------- BCM 10  (19)
-SCK   ---------- BCM 11  (23)
+SDI   ---------- BCM 20  (38)
+SCK   ---------- BCM 21  (40)
 LED   ---------- 3,3 V   (17)
 ```
 
@@ -102,25 +102,25 @@ LED   ---------- 3,3 V   (17)
 West BCM  3  ( 5) ( 6) GND     Sticks
 Haupt BCM 4  ( 7) ( 8) BCM 14
         GND  ( 9) (10) BCM 15
-      BCM 17 (11) (12) BCM 18  spi1 ce0
+      BCM 17 (11) (12) BCM 18  CS Anzeige
  Not BCM 27  (13) (14) GND
       BCM 22 (15) (16) BCM 23  Nord
        3,3V  (17) (18) BCM 24  Ost
- SDI BCM 10  (19) (20) GND
+Daten BCM 10 (19) (20) GND
       BCM  9 (21) (22) BCM 25  Sued
- SCK BCM 11  (23) (24) BCM  8  CS Anzeige
+spi0 BCM 11  (23) (24) BCM  8  spi0 ce0
         GND  (25) (26) BCM  7
       BCM  0 (27) (28) BCM  1
       BCM  5 (29) (30) GND
       BCM  6 (31) (32) BCM 12
       BCM 13 (33) (34) GND
 spi1 BCM 19  (35) (36) BCM 16
-      BCM 26 (37) (38) BCM 20  Daten Sticks
-        GND  (39) (40) BCM 21  spi1 sclk
+      BCM 26 (37) (38) BCM 20  SDI Anzeige
+        GND  (39) (40) BCM 21  SCK Anzeige
 ```
 
 Frei bleiben BCM 0, 1, 5, 6, 12, 13, 14, 15, 16, 17, 22 und 26. BCM 7 bis 11 gehoeren SPI0
-fuer die Anzeige, BCM 18 bis 21 gehoeren SPI1 fuer die Lampenkette; beide Gruppen duerfen nicht
+fuer die Lampenkette, BCM 18 bis 21 gehoeren SPI1 fuer die Anzeige; beide Gruppen duerfen nicht
 anders belegt werden.
 
 ## Masse

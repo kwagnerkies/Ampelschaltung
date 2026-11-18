@@ -7,37 +7,39 @@ ausgeliefert wird.
 ## Ampelkoepfe
 
 Vier gedruckte Ampeln nach dem Modell von Mofantastico, je ein WS2812-Stick mit acht Pixeln
-dahinter. Von den acht Pixeln werden drei genutzt, so wie es das Modell vorsieht:
+dahinter. Von den acht Pixeln werden sechs genutzt, zwei je Fenster:
 
 | Pixel | Fenster |
 |---|---|
-| 0 | oben, rot |
-| 4 | Mitte, gelb |
-| 7 | unten, gruen |
+| 7 und 6 | oben, rot |
+| 4 und 3 | Mitte, gelb |
+| 1 und 0 | unten, gruen |
 
-Ein WS2812 ist ein RGB-Pixel, jedes der acht kann jede Farbe zeigen. Die drei Nummern sagen
-also nicht, welche Farbe eine LED hat, sondern welches Pixel hinter welchem Fenster des
-Gehaeuses sitzt. Die fuenf uebrigen liegen hinter der Wand und bleiben dunkel.
+Ein WS2812 ist ein RGB-Pixel, jedes der acht kann jede Farbe zeigen. Die Nummern sagen
+also nicht, welche Farbe eine LED hat, sondern welche Pixel hinter welchem Fenster des
+Gehaeuses sitzen. Pixel 7 sitzt am Stick oben. Die zwei uebrigen, 5 und 2, liegen hinter der
+Wand und bleiben dunkel.
 
 Passt die Zuordnung bei deinem Druck nicht, ist das eine Zeile in der Konfiguration:
-`pixels = [0, 4, 7]` im Abschnitt `[lamps]` in der Reihenfolge rot, gelb, gruen.
+`pixels = [[7, 6], [4, 3], [1, 0]]` im Abschnitt `[lamps]` in der Reihenfolge rot, gelb, gruen.
+Je Lampe steht dort ein Pixel oder eine Liste von Pixeln.
 
 Die vier Sticks haengen in einer Kette: die Steuerung schickt eine Datenleitung an den ersten
 Stick, dessen DO geht an DI des naechsten. Reihenfolge Nord, Ost, Sued, West.
 
 | Signal | BCM | Pin der Leiste |
 |---|---|---|
-| Daten (DI des ersten Sticks) | 20 | 38 |
+| Daten (DI des ersten Sticks) | 10 | 19 |
 | 5 V | 5 V | 2 oder 4 |
 | Masse | GND | 6 |
 
 Das Zeitverhalten von WS2812 laesst sich auf dem Pi nicht per GPIO takten, deshalb laeuft die
-Datenleitung ueber SPI1: jedes WS2812-Bit wird als drei SPI-Bits bei 2,4 MHz geschrieben.
-Dafuer muss `dtoverlay=spi1-1cs` in `/boot/config.txt` stehen; das Installationsskript traegt
-es ein. SPI1 belegt damit BCM 18, 19, 20 und 21.
+Datenleitung ueber SPI0: jedes WS2812-Bit wird als drei SPI-Bits bei 2,4 MHz geschrieben.
+Dafuer muss `dtparam=spi=on` in `/boot/config.txt` stehen; das Installationsskript traegt
+es ein. SPI0 belegt damit BCM 7 bis 11. An SPI1 reagieren die Sticks am Pi 3 nicht.
 
-Zum Strom: 32 Pixel, aber nie mehr als sechs leuchten gleichzeitig. Bei der eingestellten
-Helligkeit von 60 von 255 sind das etwa 25 mA, die aus der 5-V-Schiene des Pi kommen.
+Zum Strom: 32 Pixel, aber nie mehr als zwoelf leuchten gleichzeitig. Bei der eingestellten
+Helligkeit von 60 von 255 sind das etwa 50 mA, die aus der 5-V-Schiene des Pi kommen.
 
 Die Datenleitung liefert 3,3 V, der Stick erwartet 5-V-Pegel. In der Praxis laeuft das
 meistens; wenn die erste LED flackert oder falsche Farben zeigt, hilft ein Pegelwandler oder
@@ -89,13 +91,13 @@ und geht nicht kaputt, wenn man ihn falsch anfasst.
 
 ## Anzeige
 
-Ein 2,4-Zoll-TFT mit ILI9341 an SPI0.
+Ein 2,4-Zoll-TFT mit ILI9341 an SPI1.
 
 | Signal des Moduls | BCM | Pin der Leiste |
 |---|---|---|
-| SCK | 11 | 23 |
-| MOSI (SDI) | 10 | 19 |
-| CS | 8 | 24 |
+| SCK | 21 | 40 |
+| MOSI (SDI) | 20 | 38 |
+| CS | 18 | 12 |
 | DC (RS) | 2 | 3 |
 | RESET | fest auf 3,3 V | 1 oder 17 |
 | LED | fest auf 3,3 V | 1 oder 17 |
@@ -103,10 +105,10 @@ Ein 2,4-Zoll-TFT mit ILI9341 an SPI0.
 | GND | Masse | 6 |
 
 MISO bleibt frei, gelesen wird nichts. RESET wird nicht geschaltet: der Treiber setzt den
-Controller per Befehl zurueck, das genuegt. SPI muss eingeschaltet sein, `dtparam=spi=on` in
+Controller per Befehl zurueck, das genuegt. SPI1 muss eingeschaltet sein, `dtoverlay=spi1-1cs` in
 `/boot/config.txt`, danach Neustart; das Installationsskript traegt die Zeile ein.
 
-Die Pins 7, 8, 9, 10 und 11 gehoeren dem SPI-Treiber, sobald SPI aktiv ist. Sie duerfen nicht
+Die Pins 18, 19, 20 und 21 gehoeren dem SPI-Treiber, sobald SPI1 aktiv ist. Sie duerfen nicht
 anderweitig belegt werden; die Konfigurationspruefung weist das ab.
 
 Wichtig beim Kauf: es muss die SPI-Bauart sein, erkennbar an einer Stiftreihe mit `SDI`,

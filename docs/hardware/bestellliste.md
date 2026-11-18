@@ -52,8 +52,8 @@ von Mofantastico auf Printables, Modellnummer 864750. Je Gehaeuse ein Stick.
 ## Was du nicht brauchst
 
 Keine Vorwiderstaende und keine externe Stromversorgung: die Sticks bringen ihre Treiber mit
-und haengen an der 5-V-Schiene des Pi. Es leuchten nie mehr als sechs Pixel gleichzeitig, bei
-Helligkeit 60 sind das etwa 25 mA.
+und haengen an der 5-V-Schiene des Pi. Es leuchten nie mehr als zwoelf Pixel gleichzeitig, bei
+Helligkeit 60 sind das etwa 50 mA.
 
 Einen Pegelwandler brauchst du meistens nicht. Falls die erste LED flackert, ist er die
 Loesung, dann ein Stueck 74AHCT125 oder eine Diode in der 5-V-Zuleitung des ersten Sticks.

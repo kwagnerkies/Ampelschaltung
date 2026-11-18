@@ -131,9 +131,9 @@ make test
 |---|---|
 | Dienst startet nicht | `journalctl -u ampel -n 50`, meist fehlerhafte Konfiguration |
 | `Permission denied` auf gpiochip0 | Nutzer `ampel` nicht in der Gruppe `gpio` |
-| Alle Sticks dunkel | `dtoverlay=spi1-1cs` fehlt oder Datenleitung ab |
+| Alle Sticks dunkel | `dtparam=spi=on` fehlt oder Datenleitung ab |
 | Nur der erste Stick leuchtet | DO zu DI der Kette nicht verbunden |
-| Display bleibt dunkel, Anlage laeuft | `dtparam=spi=on` fehlt oder Nutzer nicht in der Gruppe `spi`; Grund im Journal |
+| Display bleibt dunkel, Anlage laeuft | `dtoverlay=spi1-1cs` fehlt oder Nutzer nicht in der Gruppe `spi`; Grund im Journal |
 | Alles blinkt gelb | Notschalter liegt um, oder die Sicherheitspruefung hat angeschlagen; `ampelctl status` zeigt Phase `Stoerung` |
 | Anlage ganz dunkel | Hauptschalter steht offen, auch schon beim Start des Dienstes |
 

@@ -40,21 +40,21 @@ Fehler beim Aufbau.
 Erst einen einzigen Kopf, nicht alle vier.
 
 Den WS2812-Stick in das gedruckte Gehaeuse schieben und drei Leitungen anloeten: 5 V an Pin 2,
-GND an die Masseschiene, DI an BCM 20 (Pin 38).
+GND an die Masseschiene, DI an BCM 10 (Pin 19).
 
-SPI1 muss eingeschaltet sein, sonst passiert nichts. `make install` hat
-`dtoverlay=spi1-1cs` bereits in die `config.txt` eingetragen (`/boot/firmware/config.txt`,
+SPI0 muss eingeschaltet sein, sonst passiert nichts. `make install` hat
+`dtparam=spi=on` bereits in die `config.txt` eingetragen (`/boot/firmware/config.txt`,
 bei aelteren Systemen `/boot/config.txt`); wirksam wird es erst nach einem Neustart:
 
 ```
-grep spi1-1cs /boot/firmware/config.txt /boot/config.txt
+grep spi=on /boot/firmware/config.txt /boot/config.txt
 sudo reboot
 ```
 
 Pruefen: `-selftest` laufen lassen. Im ersten Gehaeuse muss nacheinander das obere Fenster rot,
 das mittlere gelb und das untere gruen leuchten. Erscheint ein Licht neben dem Fenster statt
 darin, passt die Pixelzuordnung nicht zu deinem Druck: dann in der Konfiguration
-`pixels` im Abschnitt `[lamps]` auf die Nummern setzen, die tatsaechlich hinter den Fenstern sitzen. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI1 aktiv ist.
+`pixels` im Abschnitt `[lamps]` auf die Nummern setzen, die tatsaechlich hinter den Fenstern sitzen. Bleibt alles dunkel, pruefe die Datenleitung und ob SPI0 aktiv ist.
 
 ## Schritt 3: Die restlichen drei Koepfe
 
@@ -114,16 +114,16 @@ Acht Leitungen, alle mit Jumperkabeln.
 |---|---|---|
 | VCC | 3,3 V | 1 |
 | GND | Masse | 6 |
-| CS | 8 | 24 |
+| CS | 18 | 12 |
 | RESET | 3,3 V | 17 |
 | DC (RS) | 2 | 3 |
-| SDI (MOSI) | 10 | 19 |
-| SCK | 11 | 23 |
+| SDI (MOSI) | 20 | 38 |
+| SCK | 21 | 40 |
 | LED | 3,3 V | 17 |
 
 RESET und LED gehen fest auf 3,3 V. Der Treiber setzt den Controller per Befehl zurueck.
 
-SPI muss aktiv sein. Auch `dtparam=spi=on` hat `make install` schon eingetragen.
+SPI1 muss aktiv sein. Auch `dtoverlay=spi1-1cs` hat `make install` schon eingetragen.
 
 Pruefen: der Selbsttest zeigt zuerst ein Testbild mit vier mal **88** in Gruen, Rot, Gelb und
 Weiss. Steht die Zahl auf dem Kopf, `rotation = "hoch"` im Abschnitt `[display]` stellen. Ist Rot blau, sind
@@ -147,13 +147,13 @@ solchen Aufbauten ist eine abgerissene Litze, nicht der Code.
 
 | Symptom | Ursache |
 |---|---|
-| Alle Sticks bleiben dunkel | SPI1 nicht aktiv, Datenleitung oder 5 V fehlt |
+| Alle Sticks bleiben dunkel | SPI0 nicht aktiv, Datenleitung oder 5 V fehlt |
 | Nur der erste Stick leuchtet | DO zu DI der Kette nicht verbunden |
 | Erste LED flackert oder falsche Farbe | Pegel der Datenleitung, Pegelwandler noetig |
 | Falscher Kopf leuchtet | Kette in anderer Reihenfolge gesteckt |
 | Ein Sensor meldet dauernd geschlossen | Magnet liegt zu nah am Sensor |
 | Ein Sensor meldet nie | Magnet falsch herum, Decke zu dick, oder Sensor an 3,3 V statt 5 V |
-| Display bleibt dunkel | SPI nicht aktiv, oder Nutzer `ampel` nicht in der Gruppe `spi`; Grund im Journal |
+| Display bleibt dunkel | SPI1 nicht aktiv, oder Nutzer `ampel` nicht in der Gruppe `spi`; Grund im Journal |
 | Alles blinkt gelb | Notschalter liegt um, oder die Sicherheitspruefung hat angeschlagen |
 | Alles dunkel | Hauptschalter offen |
 | `device or resource busy` | der Dienst laeuft noch, erst `systemctl stop ampel` |

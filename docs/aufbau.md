@@ -132,7 +132,7 @@ bleibt sie dunkel.
   Phase `Stoerung`. Heraus fuehrt der Notschalter (umlegen und zuruecklegen, oder
   `ampelctl not an` und `ampelctl not aus`) oder der Hauptschalter aus und wieder an.
 - Die Anzeige bleibt dunkel, die Kreuzung laeuft: der Grund steht im Journal unter
-  "Anzeige nicht verfuegbar" oder "Anzeige ausgefallen". Meist fehlt `dtparam=spi=on` in der
+  "Anzeige nicht verfuegbar" oder "Anzeige ausgefallen". Meist fehlt `dtoverlay=spi1-1cs` in der
   `config.txt`, oder der Nutzer `ampel` ist nicht in der Gruppe `spi`. Die Anzeige ist bewusst
   Zubehoer: faellt sie aus, laeuft die Steuerung ohne sie weiter, bis zum naechsten Neustart
   des Dienstes.

@@ -54,7 +54,7 @@ Auswertung von Wartezeiten, Lernen eines Tagesprofils, Fernsteuerung oder Netzwe
 
 - Raspberry Pi 2 B oder Pi 3, Raspberry Pi OS Lite
 - 4 gedruckte Ampeln nach dem Modell 864750 von Mofantastico, je ein WS2812-Stick mit acht
-  Pixeln dahinter, durchgeschleift an SPI1; genutzt werden Pixel 0, 4 und 7
+  Pixeln dahinter, durchgeschleift an SPI0; genutzt werden je zwei Pixel fuer rot, gelb und gruen
 - 4 Hall-Sensoren A3144 an 5 V, Ausgang gegen Masse am internen Pull-up
 - 2 Kippschalter fuer Betrieb und Notzustand
 - 1 TFT mit ILI9341 ueber SPI
@@ -83,6 +83,6 @@ und startet nach einem Stromausfall selbstaendig.
 
 ## Nachweis
 
-Kriterien 1 bis 5 werden an der Kreuzung vorgefuehrt und sind zusaetzlich durch 33 Tests
+Kriterien 1 bis 5 werden an der Kreuzung vorgefuehrt und sind zusaetzlich durch 53 Tests
 abgedeckt, die den Regelkreis mit uebergebener Zeit und einer Attrappe der Lampen durchfahren.
 Kriterium 6 wird durch einen Neustart des Pi gezeigt.
